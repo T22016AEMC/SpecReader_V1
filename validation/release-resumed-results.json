@@ -1,0 +1,32 @@
+[
+  {
+    "phase": "release-resumed",
+    "name": "assets",
+    "exitCode": 0,
+    "durationMs": 633
+  },
+  {
+    "phase": "release-resumed",
+    "name": "typecheck",
+    "exitCode": 0,
+    "durationMs": 13276
+  },
+  {
+    "phase": "release-resumed",
+    "name": "test",
+    "exitCode": 0,
+    "durationMs": 43300
+  },
+  {
+    "phase": "release-resumed",
+    "name": "build",
+    "exitCode": 0,
+    "durationMs": 11824
+  },
+  {
+    "phase": "release-resumed",
+    "name": "server-build",
+    "exitCode": 0,
+    "durationMs": 1200
+  }
+]

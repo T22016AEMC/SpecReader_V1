@@ -41,3 +41,7 @@
 ## 實測來源與資料權利
 
 [NIST Chemistry WebBook SRD 69](https://webbook.nist.gov/chemistry/)，DOI [10.18434/T4D303](https://doi.org/10.18434/T4D303)。只在本機讀取四份氣相 IR 作有限驗證，URL／狀態／SHA-256 見 `validation/measured-ir-manifest.json`；原始資料聲明 NIST SRD collection copyright，未放入 Git／公開網站。資料權利不由解析器的 MIT 或 RDKit BSD 授權代替。
+
+## 既有 PubChem API 的契約更新
+
+[官方 PUG REST 規格](https://pubchem.ncbi.nlm.nih.gov/docs/pug-rest)與論文 DOI [10.1093/nar/gky294](https://pmc.ncbi.nlm.nih.gov/articles/PMC6030920/)。使用 SMILES 保留完整表示，ConnectivitySMILES 只含連接層；單同位素值使用 MonoisotopicMass，ExactMass 是最可能同位素組成。來源／實際 API 回應見 validation/pubchem-field-contract.json；這是公共化學參考值，不是實測 MS 或新的預測模型。

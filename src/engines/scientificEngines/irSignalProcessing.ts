@@ -56,6 +56,7 @@ export function irRangeCovered(s: ExperimentalSpectrumData, min: number, max: nu
   // Peak lists don't prove the absence of unreported bands.
   const xs = s.rawExperimentalSnapshot?.rawX ?? s.points.map(p=>p.x);
   const scale=resolveIRScale(s.yUnit,s.irIntensityScale);
+  if(scale==='UNKNOWN')return false; // 未知強度方向不能據缺峰作陰性證據。
   const raw=s.rawExperimentalSnapshot?.rawPoints ?? s.points;
   if (raw.some(p=>p.x>=min&&p.x<=max&&toAbsorbance(p.y,scale)===null)) return false;
   return xs.length >= 30 && Math.min(...xs)<=min && Math.max(...xs)>=max;

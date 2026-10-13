@@ -151,7 +151,7 @@ export class MassSpectrometryEngine
       isTheoretical: method === "THEORETICAL",
       isEmpirical: method === "EMPIRICAL",
       isReferenceBased: false,
-      isHeuristic: false,
+      isHeuristic: method === "EMPIRICAL",
       isQuantumBackend: false,
       confidence: normConf,
     };
@@ -404,7 +404,7 @@ export class MassSpectrometryEngine
         ],
         contradictingSignals: [],
         interpretation:
-          "Strong M/M+2 (~1:1) isotope cluster confirms presence of 1 Br atom.",
+          "M/M+2 (~1:1) is compatible with a monobromo hypothesis; ion assignment, the complete cluster and interfering peaks must be checked.",
         possibleFunctionalGroups: ["Bromo-substituted compound (C-Br)"],
         possibleStructuralMotifs: ["-Br"],
         evidenceStrength: "Strong",
@@ -446,7 +446,7 @@ export class MassSpectrometryEngine
         ],
         contradictingSignals: [],
         interpretation:
-          "M/M+2 (~3:1) isotope cluster confirms presence of 1 Cl atom.",
+          "M/M+2 (~3:1) is compatible with a monochloro hypothesis; ion assignment, the complete cluster and interfering peaks must be checked.",
         possibleFunctionalGroups: ["Chloro-substituted compound (C-Cl)"],
         possibleStructuralMotifs: ["-Cl"],
         evidenceStrength: "Strong",
@@ -526,3 +526,4 @@ export class MassSpectrometryEngine
     };
   }
 }
+

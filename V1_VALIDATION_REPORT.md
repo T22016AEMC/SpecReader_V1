@@ -62,3 +62,7 @@ V0／V1 使用同資料、同 truth、同候選集合／容差，原失敗計為
 
 
 本機發布驗證：89 項 unit／integration／API／科學規則測試與 strict TypeScript／production build 檢查見 release-final-checked-results.json；Windows Chrome 八項桌面測試全部通過（local-desktop-summary.json），含六模態單獨無式上傳、人工標峰、校正頁／排名與 Mode B 六模態。遠端最終結果待 public-desktop-summary.json／public-smoke.json 更新，不能將本機通過等同遠端通過。
+
+恢復後發布檢查：release-complete-results.json 的 strict、91 項測試及兩種 production build 全通過。中斷期間曾有 Vitest worker 載入 evidenceLedger 逾時（release-pubchem-results.json），該輪只有 62 項通過且一套件未執行；保留失敗紀錄，沒有 skip 或刪除。重跑 release-resumed／release-complete 都全通過。新增 API 契約／外部失效測試；PubChem 含溴質量值是參考資料，不當作實測準確率。
+
+最終科學語意檢查：release-final-audit-results.json 為 strict／92 項測試／前後端 production build 全通過；新增未知 IR 強度方向不得作陰性證據的測試，舊同位素診斷改為相容假設。四份實測 IR 比較未外推为整体準確率。

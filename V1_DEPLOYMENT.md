@@ -59,3 +59,5 @@ E2E 包含健康／WASM MIME／首頁／Mode B 六模態實際結構預測／Mod
 - Gemini 不可用：人工圖片校正、CSV、Mode A／B 本地科學仍可使用；AI 錯誤是外部能力未配置。
 - Health 回傳提交不一致：等部署完成後重新比對，不能只憑首頁 HTTP 200 宣稱最新版本上線。
 - `.env`、node_modules、dist、驗證快取及 NIST 原始資料禁止上傳；執行 `scripts/verify-distribution.mjs`。
+
+桌面 Edge 可使用相同測試：設定 E2E_BROWSER_CHANNEL=msedge，再執行 test:e2e；預設仍為 chrome，未改 UI。

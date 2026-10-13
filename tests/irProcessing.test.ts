@@ -1,7 +1,13 @@
 import {describe,it,expect} from 'vitest';
 import {asymmetricBaseline} from '../src/engines/scientificEngines/whittakerBaseline';
-import {processIRSeries} from '../src/engines/scientificEngines/irSignalProcessing';
+import {processIRSeries,irRangeCovered} from '../src/engines/scientificEngines/irSignalProcessing';
+import {spectrum} from './fixtures';
 describe('IR 前處理與寬峰（合成資料）',()=>{
+  it('未知強度方向的完整掃描仍不能作缺峰反證',()=>{
+    const s=spectrum('IR',[], 'Unknown');s.points=Array.from({length:901},(_,i)=>({x:400+4*i,y:.5}));
+    expect(irRangeCovered(s,2500,3670)).toBe(false);
+    expect(irRangeCovered({...s,yUnit:'Absorbance'},2500,3670)).toBe(true);
+  });
   it('Whittaker 二階懲罰保留線性基線',()=>{
     const y=Array.from({length:101},(_,i)=>.1+.001*i);
     const z=asymmetricBaseline(y,1e5);

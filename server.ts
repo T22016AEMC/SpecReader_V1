@@ -82,7 +82,7 @@ export async function createApp(options: { serveClient?: boolean } = {}) {
 
       const encoded = encodeURIComponent(query);
       const propFields =
-        "IUPACName,MolecularFormula,MolecularWeight,ExactMass,CanonicalSMILES,InChI,InChIKey";
+        "IUPACName,MolecularFormula,MolecularWeight,ExactMass,MonoisotopicMass,SMILES,ConnectivitySMILES,InChI,InChIKey";
 
       let response: Response;
       if (type === "inchi" || query.startsWith("InChI=")) {
@@ -128,8 +128,10 @@ export async function createApp(options: { serveClient?: boolean } = {}) {
         iupacName: props.IUPACName || query,
         molecularFormula: props.MolecularFormula,
         molecularWeight: Number(props.MolecularWeight),
-        exactMass: Number(props.ExactMass),
-        canonicalSmiles: props.CanonicalSMILES,
+        exactMass: Number(props.MonoisotopicMass??props.ExactMass),
+        mostAbundantIsotopeMass: Number(props.ExactMass),
+        canonicalSmiles: props.SMILES??props.ConnectivitySMILES??props.IsomericSMILES??props.CanonicalSMILES,
+        connectivitySmiles: props.ConnectivitySMILES??props.CanonicalSMILES,
         inchi: props.InChI,
         inchiKey: props.InChIKey,
         pubchemUrl: `https://pubchem.ncbi.nlm.nih.gov/compound/${props.CID}`,

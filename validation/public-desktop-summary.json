@@ -1,0 +1,12 @@
+{
+  "base": "https://specreader-v1.onrender.com",
+  "revision": "37dc8c9932072ac216b8a2384b9c3d4e52ff19c0",
+  "browser": "Windows Chrome",
+  "viewport": "1440x1000",
+  "startTime": "2026-10-13T11:53:40.713Z",
+  "duration": 63191.966,
+  "expected": 8,
+  "skipped": 0,
+  "unexpected": 0,
+  "flaky": 0
+}

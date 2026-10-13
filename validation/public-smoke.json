@@ -1,0 +1,51 @@
+{
+  "checkedAt": "2026-10-13T11:53:36.574Z",
+  "base": "https://specreader-v1.onrender.com",
+  "revision": "37dc8c9932072ac216b8a2384b9c3d4e52ff19c0",
+  "expectedRevision": "37dc8c9932072ac216b8a2384b9c3d4e52ff19c0",
+  "results": [
+    {
+      "route": "/api/health",
+      "status": 200,
+      "contentType": "application/json; charset=utf-8",
+      "passed": true
+    },
+    {
+      "route": "/api/system-status",
+      "status": 200,
+      "contentType": "application/json; charset=utf-8",
+      "passed": true
+    },
+    {
+      "route": "/",
+      "status": 200,
+      "contentType": "text/html; charset=UTF-8",
+      "passed": true
+    },
+    {
+      "route": "/rdkit/RDKit_minimal.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=UTF-8",
+      "passed": true
+    },
+    {
+      "route": "/rdkit/RDKit_minimal.wasm",
+      "status": 200,
+      "contentType": "application/wasm",
+      "passed": true
+    },
+    {
+      "route": "/api/not-a-route",
+      "status": 404,
+      "contentType": "application/json; charset=utf-8",
+      "passed": true
+    },
+    {
+      "route": "/desktop-refresh-route",
+      "status": 200,
+      "contentType": "text/html; charset=UTF-8",
+      "passed": true
+    }
+  ],
+  "allPassed": true
+}

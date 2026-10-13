@@ -28,3 +28,7 @@
 保留的 IR／NMR 知識庫仍為經驗區間。候選生成仍由既有片段／結構庫與組合器提供有限集合，不是全部異構物；MS/MS／ToF 預測為圖碎片候選，不是經訓練的強度或碰撞能量模型。完整限制見 `V1_KNOWN_LIMITATIONS.md`。
 
 公開依賴安全：原 SheetJS 0.18.5 的兩項 high 公告已改為官方固定 0.20.3；實際 xlsx 二進位回歸保留積分／多重性，更新後 production audit 公告 0 件。來源與授權見官方文件及 THIRD_PARTY_NOTICES.md。
+
+PubChem 相容修正：server.ts 請求 SMILES／ConnectivitySMILES，保留立體資訊與舊 API 回傳欄位；MonoisotopicMass 與最可能同位素組成 ExactMass 分開。tests/api.test.ts 包含新欄位、含溴參考值与外部失效契約回歸。
+
+發布審查補正：未知 IR 強度方向不能產生缺峰陰性證據；保留正向相對特徵假設。舊 MS 診斷的單鹵素同位素文字改為相容假設而非唯一確認，經驗片段來源標記 heuristic。最終相關回歸見 release-final-audit-results.json。
