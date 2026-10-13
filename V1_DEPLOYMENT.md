@@ -2,7 +2,7 @@
 
 Repository：[T22016AEMC/SpecReader_V1](https://github.com/T22016AEMC/SpecReader_V1)，公開、main。使用者已明確授權公開原始碼。
 
-獨立服務：[specreader-v1](https://specreader-v1.onrender.com)，Render `srv-db6udpgu01pc73bl1tog`，My Workspace `tea-db6qffon74is738k4q30`，Singapore，Web Service／Node／free。不修改 EluSim 或任何其他服務。原早期基準已 LIVE；本輪最終版本狀態與測試使用 `validation/public-deployment.json`、`validation/public-smoke.json`（完成後產出）確認，不能把基準部署算作最新科學版本。
+獨立服務：[specreader-v1](https://specreader-v1.onrender.com)，Render `srv-db6udpgu01pc73bl1tog`，My Workspace `tea-db6qffon74is738k4q30`，Singapore，Web Service／Node／free。不修改 EluSim 或任何其他服務。最終科學版已 LIVE；版本狀態與測試使用 `validation/public-deployment.json`、`validation/public-smoke.json`確認，不能把基準部署算作最新科學版本。
 
 ## 設定
 
@@ -49,7 +49,7 @@ pnpm test:e2e
 node scripts/public-smoke.mjs https://specreader-v1.onrender.com
 ```
 
-E2E 包含健康／WASM MIME／首頁／Mode B 六模態實際結構預測／Mode A CSV與人工標峰／校正頁／判讀排名／重新整理；詳細通過時間與遠端結果見驗證報告。未做手機適配；Edge／macOS 尚無同等獨立實機證據。
+E2E 包含健康／WASM MIME／首頁／Mode B 六模態實際結構預測／Mode A CSV與人工標峰／校正頁／判讀排名／重新整理；詳細通過時間與遠端結果見驗證報告。未做手機適配；Windows Edge 已驗收，macOS 尚無獨立實機證據。
 
 ## 常見問題
 
@@ -61,3 +61,6 @@ E2E 包含健康／WASM MIME／首頁／Mode B 六模態實際結構預測／Mod
 - `.env`、node_modules、dist、驗證快取及 NIST 原始資料禁止上傳；執行 `scripts/verify-distribution.mjs`。
 
 桌面 Edge 可使用相同測試：設定 E2E_BROWSER_CHANNEL=msedge，再執行 test:e2e；預設仍為 chrome，未改 UI。
+
+
+最終交付驗收（2026-10-13）：92 項 unit／integration／API／科學規則測試、strict TypeScript 與 production build 全通過。公開 HTTPS 的 Windows Chrome 8／8、Windows Edge 8／8 通過，沒有 skip／flaky；含六模態單獨無式輸入、人工標峰、校正頁、排名、Mode B 六模態與重新整理。Render 免費獨立服務 LIVE；已驗收程式碼為 0fb180fc35fbb2753a94e024b36900c9fed0611a，health 提交一致，PubChem SMILES 修正已確認。詳見 validation/public-deployment.json、public-smoke.json、public-desktop-summary.json、public-edge-summary.json。

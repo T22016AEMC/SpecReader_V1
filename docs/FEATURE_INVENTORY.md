@@ -10,7 +10,7 @@ V0 來源逐檔比較見 `validation/v0-v1-file-comparison.json`；沒有刪除�
 |峰值校正／人工覆核|App 第 1／2 頁、SpectrumParser 校正 API|原圖與快照保留；未校正像素不進入科學證據|
 |IR／¹H／¹³C／MS|`ChemicalFeatureEngine.extractIntegratedConstraints` 呼叫既有引擎與物理模組|六模態獨立正式管線／無式、63 組合|
 |MS/MS／ToF-SIMS|extraInput／平行來源 → 獨立科學引擎|與一般 MS 分開，不要求先上傳 MS|
-|分子式／元素／DBE|化學硬限制／FormulaGenerator|選填；分子式單獨只提供组成限制，質量不是實測|
+|分子式／元素／DBE|化學硬限制／FormulaGenerator|選填；分子式單獨只提供組成限制，質量不是實測|
 |分子圖／官能基／化學環境|RDKit adapter → 內建圖環境 → NMR／IR predictors|等價 SMILES／非法價態／正負離子／SMARTS|
 |候選生成／排名|CandidateGenerator.executeUnifiedPipelineFromBundle → graph validator → crossSpectrumValidator／evidenceLedger|最終分數可重建，非只加入新診斷模組|
 |Mode B 六模態|WorkbenchOrchestrator → PredictionAndValidationFramework／ReasoningEngine|十二結構與六單模態預測，不污染 Mode A|

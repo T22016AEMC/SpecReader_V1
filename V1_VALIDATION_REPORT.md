@@ -30,9 +30,9 @@
 
 *沒有任何陽性輸出時 precision 定義分母為零，本腳本以 0 的計算慣例記錄，不能解讀為有量測 precision 的樣本。V0 原始流程讀出 0 點，核心比較是輸入流程修復；第二列還受到 V0 未正規化尺度限制，且使用 V1 峰值，不是獨立端對端 V0。不得把這結果稱為普遍「V1 準確率提升 66.67%」。
 
-已看到的限制：ethanol 誤報羧酸；acetone 的酯候選誤報；phenol 只被 Alcohol 泛用假設包含而沒有專屬 Phenol 類別，造成一個漏報及另一個類別誤報。其他不在十類標籤中的指紋假設沒有納入本指标，完整輸出保留 JSON。此為四份便利／開發樣本，無信賴區間或盲測分割，不代表不同相態、溶劑或儀器。
+已看到的限制：ethanol 誤報羧酸；acetone 的酯候選誤報；phenol 只被 Alcohol 泛用假設包含而沒有專屬 Phenol 類別，造成一個漏報及另一個類別誤報。其他不在十類標籤中的指紋假設沒有納入本指標，完整輸出保留 JSON。此為四份便利／開發樣本，無信賴區間或盲測分割，不代表不同相態、溶劑或儀器。
 
-Mode B IR 與同一實測的模型相容分亦保存，但這不是完整振動波形／強度误差，不作準確率證據。
+Mode B IR 與同一實測的模型相容分亦保存，但這不是完整振動波形／強度誤差，不作準確率證據。
 
 重現（PowerShell）：
 ```powershell
@@ -48,13 +48,13 @@ pnpm test:measured
 |指標|本輪狀態|可重現驗收設計|
 |---|---|---|
 |IR precision／recall／F1|四份便利樣本，有限|多相態／儀器、固定分子留出集，區分競爭假設／確定判讀，micro／macro 與 bootstrap|
-|¹H 環境／片段|合成規則，無實測准确率|來源峰表／FID、溶劑／溫度／J 與相對積分，分子留出精確／部分匹配|
-|¹³C MAE／RMSE|未取得獨立實測配對|以已指認等價原子對齊，不以預測作 ground truth；記錄 coverage 与误差|
-|MS formula／adduct|精確常數／合成測試|實測 HRMS、電荷、加合／偏差記錄；Top-k formula 與歸屬准确率|
+|¹H 環境／片段|合成規則，無實測準確率|來源峰表／FID、溶劑／溫度／J 與相對積分，分子留出精確／部分匹配|
+|¹³C MAE／RMSE|未取得獨立實測配對|以已指認等價原子對齊，不以預測作 ground truth；記錄 coverage 與誤差|
+|MS formula／adduct|精確常數／合成測試|實測 HRMS、電荷、加合／偏差記錄；Top-k formula 與歸屬準確率|
 |MS/MS 碎片匹配|圖／合成相容，未實測|固定前驅、極性、離子化／CE，獨立譜庫；precision／recall 與一對一匹配|
 |ToF-SIMS|合成表面片段，未實測|相同基底／矩陣／束流條件的已知樣品，正負極性分開；不可用 ESI 代替|
-|Mode A Top-1／Top-5|未實測|同候選集合與真實结构，含候選缺失率、並列政策、無式／各單模態／任意組合|
-|Mode B 波形／強度|未證明|相態／條件匹配，峰位 MAE 與匹配覆盖；示意強度不作物理预测误差|
+|Mode A Top-1／Top-5|未實測|同候選集合與真實结構，含候選缺失率、並列政策、無式／各單模態／任意組合|
+|Mode B 波形／強度|未證明|相態／條件匹配，峰位 MAE 與匹配覆盖；示意強度不作物理预測誤差|
 
 V0／V1 使用同資料、同 truth、同候選集合／容差，原失敗計為流程失敗而不當作錯誤化學預測；學習／校準資料與驗收分子分開。任何高精度模型在完成此程序前不得宣稱充分科學驗證。
 
@@ -65,4 +65,7 @@ V0／V1 使用同資料、同 truth、同候選集合／容差，原失敗計為
 
 恢復後發布檢查：release-complete-results.json 的 strict、91 項測試及兩種 production build 全通過。中斷期間曾有 Vitest worker 載入 evidenceLedger 逾時（release-pubchem-results.json），該輪只有 62 項通過且一套件未執行；保留失敗紀錄，沒有 skip 或刪除。重跑 release-resumed／release-complete 都全通過。新增 API 契約／外部失效測試；PubChem 含溴質量值是參考資料，不當作實測準確率。
 
-最終科學語意檢查：release-final-audit-results.json 為 strict／92 項測試／前後端 production build 全通過；新增未知 IR 強度方向不得作陰性證據的測試，舊同位素診斷改為相容假設。四份實測 IR 比較未外推为整体準確率。
+最終科學語意檢查：release-final-audit-results.json 為 strict／92 項測試／前後端 production build 全通過；新增未知 IR 強度方向不得作陰性證據的測試，舊同位素診斷改為相容假設。四份實測 IR 比較未外推為整體準確率。
+
+
+最終交付驗收（2026-10-13）：92 項 unit／integration／API／科學規則測試、strict TypeScript 與 production build 全通過。公開 HTTPS 的 Windows Chrome 8／8、Windows Edge 8／8 通過，沒有 skip／flaky；含六模態單獨無式輸入、人工標峰、校正頁、排名、Mode B 六模態與重新整理。Render 免費獨立服務 LIVE；已驗收程式碼為 0fb180fc35fbb2753a94e024b36900c9fed0611a，health 提交一致，PubChem SMILES 修正已確認。詳見 validation/public-deployment.json、public-smoke.json、public-desktop-summary.json、public-edge-summary.json。

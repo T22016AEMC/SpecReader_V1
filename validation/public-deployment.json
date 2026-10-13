@@ -1,0 +1,32 @@
+{
+  "checkedOn": "2026-10-13",
+  "repository": "https://github.com/T22016AEMC/SpecReader_V1",
+  "branch": "main",
+  "workspace": "tea-db6qffon74is738k4q30",
+  "serviceId": "srv-db6udpgu01pc73bl1tog",
+  "url": "https://specreader-v1.onrender.com",
+  "plan": "free",
+  "status": "live",
+  "validatedCodeCommit": "0fb180fc35fbb2753a94e024b36900c9fed0611a",
+  "deployId": "dep-db72gl3rjlhs739nhk90",
+  "finishedAt": "2026-10-13T12:47:56.956424Z",
+  "healthPath": "/api/health",
+  "healthRevisionMatched": true,
+  "platformHealthCheckPath": "default TCP; API field empty",
+  "typecheck": "passed",
+  "productionBuild": "passed",
+  "unitIntegrationApiTests": 92,
+  "publicChrome": {
+    "passed": 8,
+    "failed": 0,
+    "skipped": 0
+  },
+  "publicEdge": {
+    "passed": 8,
+    "failed": 0,
+    "skipped": 0
+  },
+  "pubchem": "SMILES CCO and mass fields verified",
+  "externalAI": "not configured; controlled 503; local science works",
+  "note": "後續文件提交不改動已驗收科學程式；此記錄描述已驗收的程式碼提交，不自我引用文件 commit。"
+}

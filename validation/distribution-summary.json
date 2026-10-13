@@ -1,6 +1,7 @@
 {
   "checkedOn": "2026-10-13",
-  "sourceFiles": 131,
+  "sourceFiles": 145,
+  "validatedCodeCommit": "0fb180fc35fbb2753a94e024b36900c9fed0611a",
   "forbiddenPaths": [],
   "recognizedCredentials": [],
   "excluded": [
@@ -11,5 +12,5 @@
     "audit_workspace",
     "temporary caches"
   ],
-  "limitations": "格式與檔案檢查，非完整人工法律／安全審查"
+  "limitations": "格式與檔案檢查；非完整滲透或法律審查"
 }

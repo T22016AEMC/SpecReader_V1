@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-13T11:57:11.110Z",
+  "checkedAt": "2026-10-13T12:51:04.040Z",
   "pubchem": {
     "status": 200,
     "body": {
@@ -10,6 +10,9 @@
       "molecularFormula": "C2H6O",
       "molecularWeight": 46.07,
       "exactMass": 46.041864811,
+      "mostAbundantIsotopeMass": 46.041864811,
+      "canonicalSmiles": "CCO",
+      "connectivitySmiles": "CCO",
       "inchi": "InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3",
       "inchiKey": "LFQSCWFLJHTTHZ-UHFFFAOYSA-N",
       "pubchemUrl": "https://pubchem.ncbi.nlm.nih.gov/compound/702"

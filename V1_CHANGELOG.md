@@ -17,7 +17,7 @@
 |6 Mode B|`irEngine.ts`、`msEngine.ts`、`fragmentSpectrumPrediction.ts`、`predictionAndValidationFramework.ts`、`reasoningEngine.ts`|IR 官能基不以 SMILES regex 判定；去除 MS 固定 MW−15 與特定範例強度；六模態預測獨立且標示預測／示意權重；峰匹配一對一，可能碎片缺席不視為必然缺峰|
 |6／8 輸入|`jcampAdapter.ts`、`spectrumParser.ts`、`scientificInputValidation.ts`|JCAMP 使用 MIT 固定版本解壓並保留單位／因素；CSV 不截斷 HRMS m/z；24 筆 NMR 標注仍保留；錯誤電荷／多加合不使其他模態失效|
 |7 公開服務|`server.ts`、`render.yaml`、`pnpm-workspace.yaml`|PORT／0.0.0.0、正式靜態檔及 SPA、health、大小／頻率限制、逾時／受控 API 錯誤。沒有 Gemini Key 仍可數值分析與分子圖預測|
-|8 驗證|`tests/`、`validation/`、`scripts/validate-measured-ir.mts`|六模態無式、63 種組合、十二個結構、圖一致性、質量／同位素、證據去重、API 與桌面 E2E；四份公開實測 IR 小样本配對比較|
+|8 驗證|`tests/`、`validation/`、`scripts/validate-measured-ir.mts`|六模態無式、63 種組合、十二個結構、圖一致性、質量／同位素、證據去重、API 與桌面 E2E；四份公開實測 IR 小樣本配對比較|
 
 ## 功能保留
 
@@ -29,6 +29,6 @@
 
 公開依賴安全：原 SheetJS 0.18.5 的兩項 high 公告已改為官方固定 0.20.3；實際 xlsx 二進位回歸保留積分／多重性，更新後 production audit 公告 0 件。來源與授權見官方文件及 THIRD_PARTY_NOTICES.md。
 
-PubChem 相容修正：server.ts 請求 SMILES／ConnectivitySMILES，保留立體資訊與舊 API 回傳欄位；MonoisotopicMass 與最可能同位素組成 ExactMass 分開。tests/api.test.ts 包含新欄位、含溴參考值与外部失效契約回歸。
+PubChem 相容修正：server.ts 請求 SMILES／ConnectivitySMILES，保留立體資訊與舊 API 回傳欄位；MonoisotopicMass 與最可能同位素組成 ExactMass 分開。tests/api.test.ts 包含新欄位、含溴參考值與外部失效契約回歸。
 
 發布審查補正：未知 IR 強度方向不能產生缺峰陰性證據；保留正向相對特徵假設。舊 MS 診斷的單鹵素同位素文字改為相容假設而非唯一確認，經驗片段來源標記 heuristic。最終相關回歸見 release-final-audit-results.json。

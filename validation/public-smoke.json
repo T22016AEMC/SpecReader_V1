@@ -1,8 +1,8 @@
 {
-  "checkedAt": "2026-10-13T11:53:36.574Z",
+  "checkedAt": "2026-10-13T12:51:01.282Z",
   "base": "https://specreader-v1.onrender.com",
-  "revision": "37dc8c9932072ac216b8a2384b9c3d4e52ff19c0",
-  "expectedRevision": "37dc8c9932072ac216b8a2384b9c3d4e52ff19c0",
+  "revision": "0fb180fc35fbb2753a94e024b36900c9fed0611a",
+  "expectedRevision": "0fb180fc35fbb2753a94e024b36900c9fed0611a",
   "results": [
     {
       "route": "/api/health",

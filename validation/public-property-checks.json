@@ -1,0 +1,46 @@
+{
+  "checkedAt": "2026-10-13T13:01:30.365Z",
+  "dataNature": "PUBLIC_REFERENCE_PROPERTIES_NOT_MEASURED_SPECTRA",
+  "rows": [
+    {
+      "name": "carbon tetrabromide",
+      "status": 200,
+      "body": {
+        "found": true,
+        "pubchemStatus": "SUCCESS",
+        "cid": 11205,
+        "iupacName": "tetrabromomethane",
+        "molecularFormula": "CBr4",
+        "molecularWeight": 331.63,
+        "exactMass": 327.67335,
+        "mostAbundantIsotopeMass": 331.66925,
+        "canonicalSmiles": "C(Br)(Br)(Br)Br",
+        "connectivitySmiles": "C(Br)(Br)(Br)Br",
+        "inchi": "InChI=1S/CBr4/c2-1(3,4)5",
+        "inchiKey": "HJUGFYREWKUQJT-UHFFFAOYSA-N",
+        "pubchemUrl": "https://pubchem.ncbi.nlm.nih.gov/compound/11205"
+      },
+      "passed": true
+    },
+    {
+      "name": "L-alanine",
+      "status": 200,
+      "body": {
+        "found": true,
+        "pubchemStatus": "SUCCESS",
+        "cid": 5950,
+        "iupacName": "(2S)-2-aminopropanoic acid",
+        "molecularFormula": "C3H7NO2",
+        "molecularWeight": 89.09,
+        "exactMass": 89.047678466,
+        "mostAbundantIsotopeMass": 89.047678466,
+        "canonicalSmiles": "C[C@@H](C(=O)O)N",
+        "connectivitySmiles": "CC(C(=O)O)N",
+        "inchi": "InChI=1S/C3H7NO2/c1-2(4)3(5)6/h2H,4H2,1H3,(H,5,6)/t2-/m0/s1",
+        "inchiKey": "QNAYBMKLOCPYGJ-REOHCLBHSA-N",
+        "pubchemUrl": "https://pubchem.ncbi.nlm.nih.gov/compound/5950"
+      },
+      "passed": true
+    }
+  ]
+}
