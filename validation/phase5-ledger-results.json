@@ -1,0 +1,32 @@
+[
+  {
+    "phase": "phase5-ledger",
+    "name": "assets",
+    "exitCode": 0,
+    "durationMs": 798
+  },
+  {
+    "phase": "phase5-ledger",
+    "name": "typecheck",
+    "exitCode": 2,
+    "durationMs": 15298
+  },
+  {
+    "phase": "phase5-ledger",
+    "name": "test",
+    "exitCode": 0,
+    "durationMs": 35590
+  },
+  {
+    "phase": "phase5-ledger",
+    "name": "build",
+    "exitCode": 0,
+    "durationMs": 10509
+  },
+  {
+    "phase": "phase5-ledger",
+    "name": "server-build",
+    "exitCode": 0,
+    "durationMs": 1294
+  }
+]

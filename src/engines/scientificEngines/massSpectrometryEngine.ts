@@ -1,3 +1,4 @@
+import {neutralMassFromIon} from "./ionMass";
 import {
   ChemicalFeatureEvidence,
   EvidenceProvenance,
@@ -92,19 +93,8 @@ export class ExactMassCalculator {
       | "[M+Na]+"
       | "[M+NH4]+"
   ): number {
-    switch (adductType) {
-      case "[M+H]+":
-        return Number((observedMz - 1.007276).toFixed(6));
-      case "[M-H]-":
-        return Number((observedMz + 1.007276).toFixed(6));
-      case "[M+Na]+":
-        return Number((observedMz - 22.989221).toFixed(6));
-      case "[M+NH4]+":
-        return Number((observedMz - 18.033826).toFixed(6));
-      case "neutral molecule [M]+•":
-      default:
-        return Number(observedMz.toFixed(6));
-    }
+    return neutralMassFromIon(observedMz, adductType === "neutral molecule [M]+•" ? "[M]+•" : adductType);
+
   }
 }
 
@@ -228,14 +218,12 @@ export class MassSpectrometryEngine
     const explicitAdduct = spectrum.msParams?.adductType;
     let detectedAdduct: MSPhysicsModel["adductModel"]["detectedAdduct"] =
       "neutral molecule [M]+•";
-    if (explicitAdduct === "[M+H]+" || ionization === "ESI+") {
+    if (explicitAdduct && explicitAdduct !== "Auto") {
+      detectedAdduct = explicitAdduct === "[M]+•" ? "neutral molecule [M]+•" : explicitAdduct;
+    } else if (ionization === "ESI+") {
       detectedAdduct = "[M+H]+";
-    } else if (explicitAdduct === "[M-H]-" || ionization === "ESI-") {
+    } else if (ionization === "ESI-") {
       detectedAdduct = "[M-H]-";
-    } else if (explicitAdduct === "[M+Na]+") {
-      detectedAdduct = "[M+Na]+";
-    } else if (explicitAdduct === "[M+NH4]+") {
-      detectedAdduct = "[M+NH4]+";
     }
 
     const massFeatures: MassFeature[] = spectrum.peaks
@@ -259,10 +247,10 @@ export class MassSpectrometryEngine
               detectedAdduct === "neutral molecule [M]+•"
                 ? "neutral_radical_cation_[M]+•"
                 : detectedAdduct;
-          } else if (Math.abs(diff - 1.0) <= 0.35) {
+          } else if (Math.abs(diff - 1.00335483507 / Math.abs(spectrum.msParams?.chargeState ?? 1)) <= 0.35) {
             isotopeRelation = "M+1";
             ionType = "isotope_peak";
-          } else if (Math.abs(diff - 2.0) <= 0.35) {
+          } else if (Math.abs(diff - 1.997 / Math.abs(spectrum.msParams?.chargeState ?? 1)) <= 0.35) {
             isotopeRelation = "M+2";
             ionType = "isotope_peak";
           }
@@ -271,7 +259,7 @@ export class MassSpectrometryEngine
         return {
           mz: Number(pk.x.toFixed(4)),
           intensity: Number(pk.y.toFixed(1)),
-          charge: detectedAdduct === "[M-H]-" ? -1 : 1,
+          charge: (detectedAdduct === "[M-H]-" ? -1 : 1) * Math.abs(spectrum.msParams?.chargeState ?? 1),
           ionType,
           isotopeRelation,
           confidence: isotopeRelation === "M" ? 0.88 : 0.8,

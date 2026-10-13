@@ -1,3 +1,6 @@
+import {graphFragments} from "./scientificEngines/graphFragmentation";
+import {MolecularFormulaCandidateEngine} from "./formulaEngine";
+import {isotopeEnvelope} from "./scientificEngines/isotopeEnvelope";
 import {ionMz, massError, neutralMassFromIon, type IonAdduct} from "./scientificEngines/ionMass";
 import {
   EvidenceItem,
@@ -137,6 +140,7 @@ export class MSAnalysisEngine {
 
     const parentMz = parentPeak.x;
     const charge = spectrum.msParams?.chargeState ?? 1;
+    if (!Number.isInteger(charge) || charge === 0 || Math.abs(charge)>4) return {analysis:null,structuralConstraints:{source:"MS",confidence:0,evidence:[]},statusMessage:"電荷狀態無效；須為非零整數且 |z|≤4。"};
     const adduct: IonAdduct = spectrum.msParams?.adductType && spectrum.msParams.adductType !== "Auto" ? spectrum.msParams.adductType : ionization === "ESI-" ? "[M-H]-" : ionization === "ESI+" ? "[M+H]+" : "[M]+•";
     const neutralObserved = neutralMassFromIon(parentMz, adduct, charge);
     const isEsiPlus = ionization === "ESI+";
@@ -167,52 +171,20 @@ export class MSAnalysisEngine {
       m1Ratio > 1.1 && m1Ratio < 30 ? Math.round(m1Ratio / 1.1) : null;
 
     // 候選分子式推算
-    const candidateFormulas: MolecularFormulaCandidate[] = [];
-    if (estimatedNominalMw) {
-      const knownMatches = KNOWN_STRUCTURAL_LIBRARY.filter((k) => {
-        const counts = ChemistryEngine.parseFormulaCounts(k.formula);
-        const { mw } = ChemistryEngine.calculateMasses(counts);
-        return Math.abs(Math.round(mw) - estimatedNominalMw) <= 1;
-      });
-
-      const seenFormulas = new Set<string>();
-      for (const km of knownMatches) {
-        if (seenFormulas.has(km.formula)) continue;
-        seenFormulas.add(km.formula);
-        const counts = ChemistryEngine.parseFormulaCounts(km.formula);
-        const { exactMass } = ChemistryEngine.calculateMasses(counts);
-        const theoreticalIonMz = ionMz(exactMass, adduct, charge);
-        const error = massError(parentMz, theoreticalIonMz);
-        const highResolution = spectrum.msParams?.isHighResolution ?? false;
-        const tolerance = highResolution ? theoreticalIonMz * (spectrum.msParams?.massTolerancePpm ?? 5) / 1e6 : (spectrum.msParams?.massToleranceDa ?? .5);
-        if (Math.abs(error.da) > tolerance) continue;
-        const dbe = ChemistryEngine.calculateDBE(counts);
-        const nCount = counts.N || 0;
-        const nRuleValid = estimatedNominalMw % 2 === nCount % 2;
-
-        candidateFormulas.push({
-          formula: km.formula,
-          neutralExactMass: exactMass,
-          theoreticalIonMz,
-          observedIonMz: parentMz,
-          adductLabel: `${adduct} (|z|=${Math.abs(charge)})`,
-          massErrorDa: error.da,
-          massErrorPpm: error.ppm,
-          dbe,
-          nitrogenRuleValid: nRuleValid,
-          isotopeCompatibility: "High",
-          halogenSignatureMatch: hasBromineSignature
-            ? "⁷⁹Br/⁸¹Br (1:1)"
-            : hasChlorineSignature
-              ? "³⁵Cl/³⁷Cl (3:1)"
-              : "無鹵素同位素異常",
-          score: Math.max(0, 100 * (1 - Math.abs(error.da) / tolerance)),
-          notes: `符合標稱質量 ${estimatedNominalMw} Da、氮規則 (${
-            nCount % 2 === 1 ? "奇數 N" : "偶數/0 N"
-          }) 與不飽和度 DBE = ${dbe}`,
-        });
+    const candidateFormulas = msType === "ToF-SIMS" ? [] : MolecularFormulaCandidateEngine.generateCandidates({observedIonMz:parentMz,ionization,adductPreference:adduct,chargeState:charge,isHighResolution:spectrum.msParams?.isHighResolution,massToleranceDa:spectrum.msParams?.massToleranceDa,massTolerancePpm:spectrum.msParams?.massTolerancePpm,hasBromine:hasBromineSignature,hasChlorine:hasChlorineSignature,hasSulfurOrSilicon:hasSulfurOrSiliconSignature});
+    for(const candidate of candidateFormulas) {
+      const predicted=isotopeEnvelope(ChemistryEngine.parseFormulaCounts(candidate.formula));
+      if(mPlus1 || mPlus2) {
+        const mono=predicted.find(p=>p.nominalOffset===0)?.relativeIntensity || 100;
+        const errors:number[]=[];
+        if(mPlus1) errors.push(Math.abs(m1Ratio-100*(predicted.find(p=>p.nominalOffset===1)?.relativeIntensity??0)/mono));
+        if(mPlus2) errors.push(Math.abs(m2Ratio-100*(predicted.find(p=>p.nominalOffset===2)?.relativeIntensity??0)/mono));
+        const error=errors.reduce((s,v)=>s+v,0)/errors.length;
+        candidate.isotopeCompatibility=error<8?"High":error<25?"Moderate":"Low";
+        candidate.score=.8*candidate.score+.2*Math.max(0,100-3*error);
       }
     }
+    candidateFormulas.sort((a,b)=>b.score-a.score);
 
     // 碎片與中性丟失分析
     const fragments: MSFragmentAnalysis[] = [];
@@ -326,9 +298,9 @@ export class MSAnalysisEngine {
     }
 
     const isotopeDesc = hasBromineSignature
-      ? `觀測到顯著 M/M+2 (m/z ${parentMz}/${mPlus2?.x}) 約 1:1 雙峰 (${m2Ratio.toFixed(0)}%)，明確指示含 1 個溴原子 (⁷⁹Br/⁸¹Br)。`
+      ? `觀測到顯著 M/M+2 (m/z ${parentMz}/${mPlus2?.x}) 約 1:1 雙峰 (${m2Ratio.toFixed(0)}%)，支持含溴假設；多原子、重疊或干擾需完整包絡驗證，不能確認單一溴原子 (⁷⁹Br/⁸¹Br)。`
       : hasChlorineSignature
-        ? `觀測到 M/M+2 約 3:1 同位素峰 (${m2Ratio.toFixed(0)}%)，明確指示含 1 個氯原子 (³⁵Cl/³⁷Cl)。`
+        ? `觀測到 M/M+2 約 3:1 同位素峰 (${m2Ratio.toFixed(0)}%)，支持含氯假設；多原子、重疊或干擾需完整包絡驗證，不能確認單一氯原子 (³⁵Cl/³⁷Cl)。`
         : hasSulfurOrSiliconSignature
           ? "觀測到特徵有機矽二次離子簇 (m/z 73, 147)。"
           : `標準 ¹²C/¹³C 同位素分佈${
@@ -426,98 +398,12 @@ export class MSAnalysisEngine {
     spectrum: ExperimentalSpectrumData;
     analysis: MSComprehensiveAnalysis;
   } {
-    const mw = Math.round(structure.molecularWeight || structure.exactMass || 150);
-    const smiles = (structure.smiles || "").trim();
-    const known = KNOWN_STRUCTURAL_LIBRARY.find(
-      (k) =>
-        smiles &&
-        k.smilesAliases.some((a) => a.toLowerCase() === smiles.toLowerCase())
-    );
-
-    const peaks: SpectralPeak[] = [];
-    if (known) {
-      const baseMz = known.keyMsBasePeak;
-      peaks.push({
-        id: "pred-ms-base",
-        x: baseMz,
-        y: 100,
-        isBasePeak: true,
-        isPredictedPeak: true,
-        assignment: `[經驗模型預測] 基峰 Base Peak m/z ${baseMz}`,
-      });
-      if (baseMz !== mw) {
-        peaks.push({
-          id: "pred-ms-m",
-          x: mw,
-          y: known.formula === "C9H8O4" ? 12 : 48,
-          isMolecularIonCandidate: true,
-          isPredictedPeak: true,
-          assignment: `[經驗模型預測] 分子離子 [M]⁺• (${structure.molecularFormula})`,
-        });
-      }
-      if (structure.atomCounts.Br) {
-        peaks.push({
-          id: "pred-ms-m2",
-          x: mw + 2,
-          y: 47,
-          isotopeAnnotation: "⁸¹Br [M+2]⁺•",
-          isPredictedPeak: true,
-          assignment: "[經驗模型預測] ⁸¹Br M+2 同位素峰",
-        });
-      }
-      if (known.formula === "C9H8O4") {
-        peaks.push(
-          {
-            id: "pred-ms-138",
-            x: 138,
-            y: 58,
-            isPredictedPeak: true,
-            assignment: "[經驗模型預測] [M - CH₂=C=O]⁺• (m/z 138)",
-          },
-          {
-            id: "pred-ms-92",
-            x: 92,
-            y: 30,
-            isPredictedPeak: true,
-            assignment: "[經驗模型預測] [C₆H₄O]⁺• (m/z 92)",
-          },
-          {
-            id: "pred-ms-43",
-            x: 43,
-            y: 26,
-            isPredictedPeak: true,
-            assignment: "[經驗模型預測] [CH₃CO]⁺ (m/z 43)",
-          }
-        );
-      } else if ((structure.atomCounts.C || 0) >= 6 && !structure.atomCounts.Si) {
-        peaks.push({
-          id: "pred-ms-77",
-          x: 77,
-          y: 38,
-          isPredictedPeak: true,
-          assignment: "[經驗模型預測] 芳環特徵離子 [C₆H₅]⁺ (m/z 77)",
-        });
-      }
-    } else {
-      peaks.push(
-        {
-          id: "pred-ms-gen-m",
-          x: mw,
-          y: 45,
-          isMolecularIonCandidate: true,
-          isPredictedPeak: true,
-          assignment: `[經驗模型預測] 分子離子 [M]⁺• (m/z ${mw})`,
-        },
-        {
-          id: "pred-ms-gen-bp",
-          x: Math.max(43, mw - 15),
-          y: 100,
-          isBasePeak: true,
-          isPredictedPeak: true,
-          assignment: `[經驗模型預測] α-裂解主要碎片離子`,
-        }
-      );
-    }
+    const mass=ChemistryEngine.calculateMasses(structure.atomCounts).exactMass;
+    const parentMz=ionMz(mass,"[M]+•");
+    const envelope=isotopeEnvelope(structure.atomCounts);
+    const mono=envelope[0]?.probability??1;
+    const peaks:SpectralPeak[]=envelope.filter(e=>e.probability/mono>.005).map((e,i)=>({id:`pred-isotope-${i}`,x:parentMz+e.massOffset,y:100*e.probability/mono,isMolecularIonCandidate:i===0,isPredictedPeak:true,isotopeAnnotation:`自然同位素包絡 M+${e.nominalOffset}`,assignment:`理論 EI 單價離子質量／自然同位素包絡（非離子產率預測）`}));
+    peaks.push(...graphFragments(structure.smiles,"[M]+•").map((f,i)=>({id:`pred-graph-cut-${i}`,x:f.mz,y:f.plausibility*30,isPredictedPeak:true,assignment:`可能碎片 ${f.formula}+：${f.method}；強度僅示意`})));
 
     const sortedPeaks = peaks.sort((a, b) => a.x - b.x);
     const points = SpectrumParser.synthesizeCurveFromPeaks("MS", sortedPeaks);
@@ -537,7 +423,9 @@ export class MSAnalysisEngine {
       modelType: "EMPIRICAL",
       isSimulated: true,
       xUnit: "m/z",
-      yUnit: "相對豐度 (%)",
+      yUnit: "示意權重／理論同位素比例（非碎片離子產率）",
+      sourceType: "PREDICTED_SPECTRUM",
+      predictionNotes: ["預設 EI 單價自由基陽離子；未模擬電子能量、全部重排、實際基峰或強度。", "自然同位素比採參考豐度；片段強度僅供繪圖，不是實測或可靠產率模型。"],
       points,
       peaks: sortedPeaks,
       validation,

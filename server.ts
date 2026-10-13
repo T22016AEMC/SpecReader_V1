@@ -38,9 +38,10 @@ export async function createApp(options: { serveClient?: boolean } = {}) {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     if (req.path === '/health') return next();
     const now = Date.now();
-    if (clients.size > 10000) for (const [id, state] of clients) if (state.expires <= now) clients.delete(id);
+    if (clients.size >= 10000) for (const [id, state] of clients) if (state.expires <= now) clients.delete(id);
     const id = req.ip || 'unknown';
     const state = clients.get(id);
+    if(!state && clients.size>=10000) return res.status(429).set('Retry-After','60').json({error:'服務繁忙，請稍後再試。'});
     const entry = state && state.expires > now ? state : { count: 0, expires: now + 60000 };
     entry.count++;
     clients.set(id, entry);
@@ -49,7 +50,7 @@ export async function createApp(options: { serveClient?: boolean } = {}) {
   });
   const uploadLimit = Math.max(1, Math.min(25, Number(process.env.UPLOAD_LIMIT_MB) || 12));
   app.use(express.json({ limit: `${uploadLimit}mb`, strict: true }));
-  app.get('/api/health', (_req, res) => res.json({ status: 'ok', version: '1.0.0', localScientificEngines: true }));
+  app.get('/api/health', (_req, res) => res.json({ status: 'ok', version: '1.0.0', revision:process.env.RENDER_GIT_COMMIT??null, localScientificEngines: true }));
 
   // 0. System & Model Availability Endpoint
   app.get("/api/system-status", (_req, res) => {

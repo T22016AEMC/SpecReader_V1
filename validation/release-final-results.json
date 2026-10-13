@@ -1,0 +1,32 @@
+[
+  {
+    "phase": "release-final",
+    "name": "assets",
+    "exitCode": 0,
+    "durationMs": 810
+  },
+  {
+    "phase": "release-final",
+    "name": "typecheck",
+    "exitCode": 0,
+    "durationMs": 18797
+  },
+  {
+    "phase": "release-final",
+    "name": "test",
+    "exitCode": 0,
+    "durationMs": 60343
+  },
+  {
+    "phase": "release-final",
+    "name": "build",
+    "exitCode": 0,
+    "durationMs": 15990
+  },
+  {
+    "phase": "release-final",
+    "name": "server-build",
+    "exitCode": 0,
+    "durationMs": 2391
+  }
+]

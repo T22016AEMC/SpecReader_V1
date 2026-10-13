@@ -10,17 +10,17 @@ import {
   XCircle,
 } from "lucide-react";
 import { BidirectionalValidationReport } from "../engines/scientificEngines/predictionAndValidationFramework";
-import { ExperimentalSpectrumData, SpectrumModality } from "../types/spectrum";
+import { ExperimentalSpectrumData, ExtendedSpectrumModality } from "../types/spectrum";
 import { SpectrumViewer } from "./SpectrumViewer";
 import { StructureRenderer2D } from "./StructureRenderer2D";
 
 interface StructureSpectrumValidationPageProps {
   bidirectionalReport: BidirectionalValidationReport | null;
-  experimentalSpectra: Partial<Record<SpectrumModality, ExperimentalSpectrumData>>;
+  experimentalSpectra: Partial<Record<ExtendedSpectrumModality, ExperimentalSpectrumData>>;
   customStructureInput: string;
   onChangeStructureInput: (val: string) => void;
-  selectedModalities?: SpectrumModality[];
-  onToggleModality?: (mod: SpectrumModality) => void;
+  selectedModalities?: ExtendedSpectrumModality[];
+  onToggleModality?: (mod: ExtendedSpectrumModality) => void;
   onExecutePrediction?: (overrideStructureInput?: string) => void;
   predictionError?: string | null;
   onApplyPresetSmiles?: (smiles: string, label: string) => void;
@@ -57,11 +57,13 @@ const QUICK_STRUCTURES = [
   },
 ];
 
-const ALL_PREDICTABLE_MODALITIES: { id: SpectrumModality; label: string }[] = [
+const ALL_PREDICTABLE_MODALITIES: { id: ExtendedSpectrumModality; label: string }[] = [
   { id: "IR", label: "IR 紅外光譜" },
   { id: "1H_NMR", label: "¹H NMR 氫譜" },
   { id: "13C_NMR", label: "¹³C NMR 碳譜" },
   { id: "MS", label: "MS 質譜" },
+  { id: "MS/MS", label: "MS/MS 可能碎片" },
+  { id: "ToF-SIMS", label: "ToF-SIMS 表面離子假設" },
 ];
 
 export const StructureSpectrumValidationPage: React.FC<
@@ -76,7 +78,7 @@ export const StructureSpectrumValidationPage: React.FC<
   onExecutePrediction,
   predictionError,
 }) => {
-  const [activeModality, setActiveModality] = useState<SpectrumModality>("IR");
+  const [activeModality, setActiveModality] = useState<ExtendedSpectrumModality>("IR");
   const [enableExpOverlay, setEnableExpOverlay] = useState<boolean>(false);
 
   const structure = bidirectionalReport?.structure;
@@ -296,7 +298,7 @@ export const StructureSpectrumValidationPage: React.FC<
 
       {/* 四模態切換器與狀態列 */}
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-        {(["IR", "1H_NMR", "13C_NMR", "MS"] as SpectrumModality[]).map((mod) => {
+        {(["IR", "1H_NMR", "13C_NMR", "MS", "MS/MS", "ToF-SIMS"] as ExtendedSpectrumModality[]).map((mod) => {
           const rep = modalityReports[mod];
           const isSelected = activeModality === mod;
           const isModalityChecked = selectedModalities.includes(mod);
@@ -343,7 +345,7 @@ export const StructureSpectrumValidationPage: React.FC<
                 </span>
                 {rep.consistencyScore !== null && (
                   <span className="font-bold text-cyan-300">
-                    {rep.consistencyScore}%
+                    {rep.consistencyScore}/100（相容度）
                   </span>
                 )}
               </div>
@@ -353,6 +355,7 @@ export const StructureSpectrumValidationPage: React.FC<
       </div>
 
       {/* 理論預測光譜視覺化（預設獨立顯示理論預測光譜，僅在使用者主動開啟疊圖時疊加實驗光譜） */}
+      {currentModalityReport.predictedSpectrum.predictionNotes?.map(note=><p key={note} className="text-xs text-slate-400">{note}</p>)}
       <SpectrumViewer
         spectrum={
           enableExpOverlay && expSpec
@@ -415,6 +418,7 @@ export const StructureSpectrumValidationPage: React.FC<
               {currentModalityReport.items.map((item) => (
                 <tr key={item.id} className="hover:bg-slate-800/30">
                   <td className="py-2 pr-3">
+                    {item.category === 'NOT_ASSESSED' && <span className="text-slate-400">未評估可觀測性</span>}
                     {item.category === "COMPATIBLE" && (
                       <span className="inline-flex items-center gap-1 rounded bg-emerald-950/60 px-2 py-0.5 font-mono text-[10px] font-semibold text-emerald-300 border border-emerald-500/30">
                         <CheckCircle2 className="h-3 w-3" />

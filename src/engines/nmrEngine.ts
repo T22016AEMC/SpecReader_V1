@@ -1,3 +1,4 @@
+import {findEthylPairs, findIsopropylPairs} from "./scientificEngines/nmrFragmentEvidence";
 import {
   CandidateNMRConsistencyAnalysis,
   Carbon13SummaryAnalysis,
@@ -143,7 +144,7 @@ export class NMRAnalysisEngine {
     integrationSemantics: H1NMRIntegrationSemanticsReport;
     protonSummary: {
       solvent: NMRSolvent;
-      totalIntegratedProtons: number;
+      totalIntegratedProtons: number | null;
       aromaticPatternHint: string;
       environments: ProtonEnvironment[];
       spinSystems: {
@@ -361,7 +362,7 @@ export class NMRAnalysisEngine {
 
       const integLabel =
         integ !== null
-          ? `${integ}H`
+          ? `相對積分 ${integ}`
           : isImageSpectrum
           ? `積分：未知 (圖片相對強度 ${relIntensity}%)`
           : "積分：未知";
@@ -506,7 +507,7 @@ export class NMRAnalysisEngine {
           envLabel = "甲氧基或甲酯基 (-OCH₃)";
           reasoning = `於 δ ${shift.toFixed(2)} ppm 出現 3H 單峰，為直接鍵結於氧原子之孤立甲基 (-OCH₃) 典型訊號。`;
         } else if (integ === 2 && mult === "q") {
-          envLabel = "乙氧基亞甲基 (-OCH₂-CH₃)";
+          envLabel = "連氧亞甲基的競爭假設（乙氧基需其他訊號佐證）";
           reasoning = `於 δ ${shift.toFixed(2)} ppm 呈現 2H 四重峰（${jLabel}），與鄰近甲基耦合，符合乙氧基酯或醚 (-OCH₂CH₃) 特徵。`;
         } else {
           envLabel = "氧/氮鄰近脂肪族質子 (-O-CHn- / -N-CHn-)";
@@ -529,10 +530,10 @@ export class NMRAnalysisEngine {
           envLabel = "有機矽甲基質子 (Si-CH₃)";
           reasoning = `於極高場 δ ${shift.toFixed(2)} ppm（${integLabel}，${multLabel}）受電正性矽原子強烈遮蔽，為典型矽氧烷/有機矽甲基訊號。`;
         } else if (integ === 3 && mult === "t") {
-          envLabel = "乙基末端甲基 (-CH₂-CH₃)";
+          envLabel = "飽和末端訊號；可能為與兩個鄰氫耦合的甲基";
           reasoning = `於 δ ${shift.toFixed(2)} ppm 出現 3H 三重峰（${jLabel}），與鄰近 -CH₂- 四重峰自旋耦合。`;
         } else if (integ === 6 && mult === "d") {
-          envLabel = "異丙基/異丁基等價雙甲基 (-CH(CH₃)₂)";
+          envLabel = "雙重峰的競爭假設；異丙基需 septet 及比例佐證";
           reasoning = `於 δ ${shift.toFixed(2)} ppm 呈現 6H 雙重峰（${jLabel}），代表兩個化學等價之甲基受單一鄰近次甲基 (CH) 分裂。`;
         } else {
           envLabel = `飽和烷基質子 Alkyl CHn (${integLabel})`;
@@ -693,7 +694,7 @@ export class NMRAnalysisEngine {
           ? "6H 對稱等價（異丙基/異丁基雙甲基等價）"
           : integ === 3
           ? "3H 快速旋轉甲基等價"
-          : `${integ}H 化學環境`;
+          : `相對積分 ${integ} 化學環境`;
 
       const baseConf = isImageSpectrum
         ? Math.round((pk.confidence ?? 0.72) * 100)
@@ -778,9 +779,7 @@ export class NMRAnalysisEngine {
     }
 
     const allHaveIntegration = environments.every((e) => e.integration !== null);
-    const totalIntegratedProtons = allHaveIntegration
-      ? environments.reduce((acc, e) => acc + (e.integration || 0), 0)
-      : null;
+    const totalIntegratedProtons: number | null = null; // Experimental inputs are relative, not an absolute proton calibration.
 
     const paraDoublets = environments.filter(
       (e) =>
@@ -885,6 +884,7 @@ export class NMRAnalysisEngine {
       );
 
     // Build spinSystems summary for protonSummary
+    const isopropylPairs = findIsopropylPairs(environments);
     const spinSystems: {
       patternName: string;
       chemicalShifts: number[];
@@ -911,6 +911,7 @@ export class NMRAnalysisEngine {
       if (ethylQ && ethylT) break;
     }
 
+    for (const [ch,ch3] of isopropylPairs) spinSystems.push({patternName:"可能的異丙基 (-CH(CH₃)₂)：septet／doublet 比例約 1 : 6",chemicalShifts:[ch.shiftPpm,ch3.shiftPpm],jValues:ch.jCouplingHz,protonCount:7});
     if (ethylQ && ethylT) {
       spinSystems.push({
         patternName:
@@ -982,7 +983,7 @@ export class NMRAnalysisEngine {
 
     const protonSummary = {
       solvent: activeSolvent,
-      totalIntegratedProtons: totalIntegratedProtons || 0,
+      totalIntegratedProtons,
       aromaticPatternHint: symmetrySummary,
       environments,
       spinSystems,
@@ -1324,7 +1325,7 @@ export class NMRAnalysisEngine {
         label: "甲氧基或甲酯基 (-OCH₃)",
         status: "PROBABLE",
         observedSignal: `δ ${methoxyEnv.shiftPpm} ppm (${
-          methoxyEnv.integration !== null ? `${methoxyEnv.integration}H` : "積分未知"
+          methoxyEnv.integration !== null ? `相對積分 ${methoxyEnv.integration}` : "積分未知"
         })`,
         expectedRange: "3.3–4.15 ppm",
         sourceModality: "1H_NMR",
@@ -1341,18 +1342,14 @@ export class NMRAnalysisEngine {
       });
     }
 
-    const ethoxyQ = environments.find(
-      (e) => e.shiftPpm >= 4.0 && e.shiftPpm <= 4.6 && e.multiplicity === "q"
-    );
-    const ethoxyT = environments.find(
-      (e) => e.shiftPpm >= 1.1 && e.shiftPpm <= 1.55 && e.multiplicity === "t"
-    );
+    const ethoxyPair = findEthylPairs(environments).find(([q])=>q.shiftPpm>=3.5);
+    const ethoxyQ=ethoxyPair?.[0], ethoxyT=ethoxyPair?.[1];
     if (ethoxyQ && ethoxyT) {
       requiredSubstructures.push({
         motifId: "motif-h1-oc2h5",
         motifLabel: "乙氧基酯/醚片段 (-OCH₂CH₃)",
         smilesFragmentHint: "CCOC",
-        status: "REQUIRED",
+        status: "PROBABLE",
         sourceModality: "1H_NMR",
         supportingObservation: `δ ${ethoxyQ.shiftPpm} ppm (2H, q) + δ ${ethoxyT.shiftPpm} ppm (3H, t)`,
         confidence: 88,
@@ -1361,7 +1358,7 @@ export class NMRAnalysisEngine {
         fromMotif: `-OCH₂- (δ ${ethoxyQ.shiftPpm} ppm)`,
         toMotif: `-CH₃ (δ ${ethoxyT.shiftPpm} ppm)`,
         relationship: "SPIN_COUPLED",
-        supportingObservation: `J coupling ~ ${ethoxyQ.jCouplingHz[0] || 7.1} Hz`,
+        supportingObservation: ethoxyQ.jCouplingHz.length ? `J coupling ${ethoxyQ.jCouplingHz.join(", ")} Hz` : "J 未提供；多重性與相對積分支持的局部片段假設",
         confidence: 88,
       });
     }
@@ -1370,7 +1367,7 @@ export class NMRAnalysisEngine {
       evidence.push({
         modality: "1H_NMR",
         observation: `¹H NMR = δ ${env.shiftPpm} ppm (${
-          env.integration !== null ? `${env.integration}H` : "integration unknown"
+          env.integration !== null ? `相對積分 ${env.integration}` : "integration unknown"
         }, ${env.multiplicity || "multiplicity unknown"})`,
         interpretation: env.environmentLabel,
         constraintSummary: `proton environment compatible with ${env.regionCategory}`,
@@ -1388,7 +1385,7 @@ export class NMRAnalysisEngine {
         label: "鄰近羰基之脂肪族質子 (α-CHₙ to C=O)",
         status: "PROBABLE",
         observedSignal: `δ ${alphaCarbonylEnv.shiftPpm} ppm (${
-          alphaCarbonylEnv.integration !== null ? `${alphaCarbonylEnv.integration}H` : "?H"
+          alphaCarbonylEnv.integration !== null ? `相對積分 ${alphaCarbonylEnv.integration}` : "?H"
         }, ${alphaCarbonylEnv.multiplicity || "?"})`,
         expectedRange: "2.0–2.9 ppm",
         sourceModality: "1H_NMR",
@@ -1478,7 +1475,7 @@ export class NMRAnalysisEngine {
         confidence: e.confidence,
       })),
       protonNMR: {
-        totalIntegratedProtons: totalIntegratedProtons > 0 ? totalIntegratedProtons : undefined,
+        totalIntegratedProtons: undefined,
         couplingPatterns: [
           ...(ethoxyQ && ethoxyT
             ? [
@@ -1590,7 +1587,8 @@ export class NMRAnalysisEngine {
     const peaks = analytePeaks.slice().sort((a, b) => b.x - a.x);
     const environments: CarbonEnvironment[] = peaks.map((pk, idx) => {
       const shift = pk.x;
-      const rawDept = pk.deptType || "Unknown";
+      const experiment = spectrum.c13ExperimentMode ?? spectrum.nmrExperimentType;
+      const rawDept = pk.deptType || (experiment === "DEPT_90" ? "CH" : experiment === "DEPT_135" && pk.y < 0 ? "CH2" : "Unknown");
       const dept: CarbonEnvironment["deptType"] =
         rawDept === "C_quat" ? "C" : rawDept;
 

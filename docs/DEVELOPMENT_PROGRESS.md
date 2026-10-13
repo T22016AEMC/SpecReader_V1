@@ -1,15 +1,19 @@
-# SpecReader_V1 開發紀錄
+# V1 最新進度（2026-10-13）
 
-2026-10-13：由原始 SpecReader_V0.zip 建立獨立 V1；不複製 audit_workspace 的依賴、快取與審查腳本。原 ZIP SHA-256：a9315297d71842d0e1111c9ad90f271c9f6b1bc300f9ccddd1e23cc1df5b312a。
+原 V0 ZIP SHA-256：a9315297d71842d0e1111c9ad90f271c9f6b1bc300f9ccddd1e23cc1df5b312a。V1 獨立建立，未覆蓋成果或其他服務。
 
-|Phase|狀態|驗證與待辦|
+|Phase|實際狀態|驗證與限制|
 |---|---|---|
-|0 基準與部署入口|基準完成|原有兩組22項測試保留；V0基準14通過／8失敗，建置通過。使用者已授權新公開 GitHub Repository 與 Render 免費獨立服務|
-|1 P0|第一批完成|嚴格型別、37项回歸測試、正式前後端建置通過；桌面 Chrome 基準1項通過。修¹³C執行錯誤、相對積分、Unknown溶劑、IR尺度／掃描覆蓋、離子質量及RDKit圖驗證。更深層排名與完整元素同位素驗證續於後續階段|
-|2 IR|待開始|語意、前處理、峰群與覆盖|
-|3 NMR|待開始|比例、J、環境、局部片段|
-|4 MS/MS/MS/ToF|待開始|質量、同位素、碎片圖及表面限制|
-|5 證據與排名|待開始|同源依賴、候選特異性、一次分數帳本|
-|6 Mode B|待開始|圖事實、六模態、預測來源與不確定度|
-|7 部署|初期基準準備完成|獨立Node/Express服務、PORT／0.0.0.0、health、大小與請求限制、靜態WASM、API失敗處理。尚未宣稱公開上線|
-|8 驗證|待開始|工程/API/桌面E2E、實測與合成分開|
+|0|基準完成|V0 22 項：14 通過／8 失敗；typecheck 失敗，build 成功，原紀錄保留|
+|1 P0|本輪修正完成|¹³C ReferenceError、契約型別、相對積分、Unknown 溶劑、IR 尺度、離子質量、RDKit／合法離子|
+|2 IR|基礎升級完成|AsLS／峰形／尺度／覆蓋；四份實測仍有誤報，未稱全域可靠|
+|3 NMR|基礎升級完成|比例／J／位移片段、DEPT／APT 限制；尚無 FID／強耦合或學習模型|
+|4 質譜三模態|基礎升級完成|有限質量列舉／同位素、圖碎片與中性損失、獨立表面弱證據；未完整 CE／重排／產率|
+|5 整合排名|正式流程已接入|同源去重、原始觀測／來源、分數帳本；有限候選與未校準權重|
+|6 Mode B|六模態已接入|分子圖／經驗峰／可能式，保留操作介面與預測來源|
+|7 部署|獨立免費基準 LIVE；最終驗收中|指定 GitHub main／PORT／靜態 WASM；最終状态見 public-deployment.json|
+|8 驗證|工程與有限實測完成；遠端最終驗收中|89 項與 strict／build 以 release-deploy-results.json 為準；四份 IR F1 0.6667 只是開發便利樣本，其他實測未驗證|
+
+首輪 Render pnpm build scripts、Mode B 型別／可觀測性、桌面不唯一選擇器、新 benchmark 腳本 implicit any 的失敗都保留紀錄並修正，不刪除／skip。原 SheetJS 0.18.5 的兩項 high 更新為官方固定 0.20.3，保留 Excel 並增加二進位回歸；更新後 production audit 公告 0 件，不是無漏洞保證。
+
+主要變更／文獻／限制見根目錄五份 V1 文件；逐檔差異見 validation/v0-v1-file-comparison.json。沒有手機版或 UI 重設計。

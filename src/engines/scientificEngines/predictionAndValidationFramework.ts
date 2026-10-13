@@ -1,3 +1,5 @@
+import {predictFragmentSpectrum} from "./fragmentSpectrumPrediction";
+import {irRangeCovered} from './irSignalProcessing';
 import {
   ChemicalFeatureEvidence,
   EvidenceSpectrumSource,
@@ -6,6 +8,7 @@ import {
   ParsedChemicalStructure,
   PredictedSpectrumBundle,
   SpectrumModality,
+  ExtendedSpectrumModality,
   ValidationResult,
 } from "../../types/spectrum";
 import { ChemistryEngine } from "../chemistryEngine";
@@ -19,11 +22,11 @@ export type PeakComparisonCategory =
   | "SHIFTED"
   | "MISSING_IN_EXPERIMENTAL"
   | "EXTRA_IN_EXPERIMENTAL"
-  | "SOLVENT_IGNORED";
+  | "SOLVENT_IGNORED" | "NOT_ASSESSED";
 
 export interface PeakValidationComparisonItem {
   id: string;
-  modality: SpectrumModality;
+  modality: ExtendedSpectrumModality;
   category: PeakComparisonCategory;
   predictedPosition?: number;
   experimentalPosition?: number;
@@ -34,7 +37,7 @@ export interface PeakValidationComparisonItem {
 }
 
 export interface ModalityBidirectionalValidationReport {
-  modality: SpectrumModality;
+  modality: ExtendedSpectrumModality;
   experimentalProvided: boolean;
   predictedSpectrum: ExperimentalSpectrumData;
   experimentalSpectrum?: ExperimentalSpectrumData;
@@ -53,7 +56,7 @@ export interface BidirectionalValidationReport {
   structure: ParsedChemicalStructure;
   graphValidationPassed: boolean;
   graphValidationErrors: string[];
-  modalityReports: Record<SpectrumModality, ModalityBidirectionalValidationReport>;
+  modalityReports: Record<ExtendedSpectrumModality, ModalityBidirectionalValidationReport>;
   overallConsistencyScore: number | null;
   overallVerdict: "STRONG_MATCH" | "PARTIAL_MATCH" | "CONFLICT_DETECTED" | "PREDICTION_ONLY";
 }
@@ -74,9 +77,9 @@ export class PredictionAndValidationFramework {
   static runBidirectionalValidation(
     structureInputOrParsed: string | ParsedChemicalStructure,
     experimentalSpectra: Partial<
-      Record<SpectrumModality, ExperimentalSpectrumData>
+      Record<ExtendedSpectrumModality, ExperimentalSpectrumData>
     > = {},
-    selectedModalities: SpectrumModality[] = ["IR", "1H_NMR", "13C_NMR", "MS"]
+    selectedModalities: ExtendedSpectrumModality[] = ["IR", "1H_NMR", "13C_NMR", "MS"]
   ): BidirectionalValidationReport {
     const structure =
       typeof structureInputOrParsed === "string"
@@ -94,14 +97,14 @@ export class PredictionAndValidationFramework {
         };
 
     const createSkippedReport = (
-      modality: SpectrumModality,
+      modality: ExtendedSpectrumModality,
       xUnit: string,
       yUnit: string
     ): ModalityBidirectionalValidationReport => ({
       modality,
       experimentalProvided: false,
       predictedSpectrum: {
-        modality,
+        modality: modality === "MS/MS" || modality === "ToF-SIMS" ? "MS" : modality,
         fileName: `Unselected_${modality}.sim`,
         sourceFormat: "SIMULATED",
         dataOrigin: "EMPIRICAL_SIMULATION",
@@ -185,13 +188,15 @@ export class PredictionAndValidationFramework {
       : createSkippedReport("MS", "m/z", "Relative Abundance (%)");
 
     const modalityReports: Record<
-      SpectrumModality,
+      ExtendedSpectrumModality,
       ModalityBidirectionalValidationReport
     > = {
       IR: irReport,
       "1H_NMR": h1Report,
       "13C_NMR": c13Report,
       MS: msReport,
+      "MS/MS": selectedModalities.includes("MS/MS") ? this.compareModality("MS/MS",predictFragmentSpectrum(structure,"MS/MS"),experimentalSpectra["MS/MS"],.01,.5,"m/z") : createSkippedReport("MS/MS","m/z","示意權重"),
+      "ToF-SIMS": selectedModalities.includes("ToF-SIMS") ? this.compareModality("ToF-SIMS",predictFragmentSpectrum(structure,"ToF-SIMS"),experimentalSpectra["ToF-SIMS"],.01,.5,"m/z") : createSkippedReport("ToF-SIMS","m/z","示意權重"),
     };
 
     const activeScores = Object.values(modalityReports)
@@ -233,7 +238,7 @@ export class PredictionAndValidationFramework {
   }
 
   private static compareModality(
-    modality: SpectrumModality,
+    modality: ExtendedSpectrumModality,
     predictedSpectrum: ExperimentalSpectrumData,
     experimentalSpectrum: ExperimentalSpectrumData | undefined,
     strictTolerance: number,
@@ -317,6 +322,7 @@ export class PredictionAndValidationFramework {
       let bestDiff = Infinity;
 
       for (const ePeak of activeExpPeaks) {
+        if(matchedExpIds.has(ePeak.id)) continue;
         const diff = Math.abs(ePeak.x - pPeak.x);
         if (diff < bestDiff) {
           bestDiff = diff;
@@ -353,6 +359,11 @@ export class PredictionAndValidationFramework {
           explanation: `實驗峰 (${bestExp.x.toFixed(2)} ${unit}) 存在些微溶劑/基質位移 (Δ = ${bestDiff.toFixed(2)} ${unit})，但仍屬相容範圍。`,
         });
       } else {
+        const absenceAssessable=modality==='IR' && irRangeCovered(experimentalSpectrum,pPeak.x-30,pPeak.x+30);
+        if(!absenceAssessable){
+          items.push({id:`unassessed-${modality}-${pPeak.id}`,modality,category:'NOT_ASSESSED',predictedPosition:pPeak.x,unit,featureAssignment:pPeak.assignment??'可能訊號',explanation:'未量測完整區域或模型不能保證可觀測性；不將缺峰當作反證。'});
+          continue;
+        }
         missingPeakCount++;
         items.push({
           id: `missing-${modality}-${pPeak.id}`,
@@ -402,10 +413,10 @@ export class PredictionAndValidationFramework {
     );
     const rawRatio =
       (compatibleCount * 1.0 + shiftedCount * 0.78) / totalEvaluated;
-    const extraPenalty = Math.min(25, extraPeakCount * 8);
+    const extraPenalty = 0; // 不完整經驗模型未解釋的峰，不能固定扣分。
     const consistencyScore = Math.max(
-      10,
-      Math.min(99, Math.round(rawRatio * 96 - extraPenalty))
+      0,
+      Math.min(100, Math.round(rawRatio * 100 - extraPenalty))
     );
 
     const status: ModalityBidirectionalValidationReport["status"] =
@@ -515,16 +526,7 @@ export class MSMSPredictionAdapter
   predictForStructure(
     structure: ParsedChemicalStructure
   ): ExperimentalSpectrumData {
-    const baseMs = MSAnalysisEngine.predictMSFromStructure(structure).spectrum;
-    return {
-      ...baseMs,
-      msParams: {
-        ...baseMs.msParams,
-        msType: "MS/MS",
-        ionization: "ESI+",
-        precursorMz: Number(((structure.exactMass || 0) + 1.007276).toFixed(4)),
-      },
-    };
+    return predictFragmentSpectrum(structure,"MS/MS");
   }
 }
 
@@ -541,15 +543,7 @@ export class ToFSIMSPredictionAdapter
   predictForStructure(
     structure: ParsedChemicalStructure
   ): ExperimentalSpectrumData {
-    const baseMs = MSAnalysisEngine.predictMSFromStructure(structure).spectrum;
-    return {
-      ...baseMs,
-      msParams: {
-        ...baseMs.msParams,
-        msType: "ToF-SIMS",
-        ionization: "SIMS / ToF-SIMS",
-      },
-    };
+    return predictFragmentSpectrum(structure,"ToF-SIMS");
   }
 }
 
@@ -592,6 +586,8 @@ export class PredictionEngine {
       c13Predictions: c13Pred.environments,
       c13ExpectedEnvironments: c13Pred.environments,
       ms: msPred.spectrum,
+      msms: this.msmsAdapter.predictForStructure(structure),
+      tofSims: this.tofSimsAdapter.predictForStructure(structure),
       msPredictions: msPred.analysis,
       msExpectedFragments: msPred.analysis.fragments,
       evidenceList: [],
@@ -686,4 +682,5 @@ export class PredictionEngine {
     };
   }
 }
+
 

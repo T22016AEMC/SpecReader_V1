@@ -1,3 +1,4 @@
+import {predictFragmentSpectrum} from "./scientificEngines/fragmentSpectrumPrediction";
 import {
   CandidateResult,
   CandidateStructure,
@@ -150,6 +151,8 @@ export class ReasoningEngine {
       "1H_NMR": h1Pred.spectrum,
       "13C_NMR": c13Pred.spectrum,
       MS: msPred.spectrum,
+      "MS/MS": predictFragmentSpectrum(structure,"MS/MS"),
+      "ToF-SIMS": predictFragmentSpectrum(structure,"ToF-SIMS"),
       irPredictions: irPred.predictions,
       h1Nmr: h1Pred.spectrum,
       c13Nmr: c13Pred.spectrum,

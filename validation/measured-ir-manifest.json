@@ -1,0 +1,71 @@
+[
+  {
+    "name": "ethanol",
+    "file": "ethanol_IR-SPEC.jdx",
+    "smiles": "CCO",
+    "url": "https://webbook.nist.gov/cgi/cbook.cgi?JCAMP=C64175&Index=0&Type=IR",
+    "expected": [
+      "Alcohol"
+    ],
+    "sha256": "fc9079a0d2a5d1f7d23aebb7eceb79eb1b8949a05219a1f8fa5d0c55f88898ba",
+    "conditions": [
+      "##ORIGIN=Sadtler Research Labs Under US-EPA Contract",
+      "##OWNER=NIST Standard Reference Data Program",
+      "##STATE=gas",
+      "##XUNITS=1/CM",
+      "##YUNITS=ABSORBANCE"
+    ]
+  },
+  {
+    "name": "phenol",
+    "file": "phenol_IR-SPEC.jdx",
+    "smiles": "Oc1ccccc1",
+    "url": "https://webbook.nist.gov/cgi/cbook.cgi?JCAMP=C108952&Index=0&Type=IR",
+    "expected": [
+      "Phenol",
+      "Aromatic"
+    ],
+    "sha256": "2ab53824d117b4d1c5352404f7f174f27ea63844b4a1cdd2d30fde58fb8f8684",
+    "conditions": [
+      "##ORIGIN=Sadtler Research Labs Under US-EPA Contract",
+      "##OWNER=NIST Standard Reference Data Program",
+      "##STATE=gas",
+      "##XUNITS=1/CM",
+      "##YUNITS=ABSORBANCE"
+    ]
+  },
+  {
+    "name": "acetone",
+    "file": "acetone_IR-SPEC.jdx",
+    "smiles": "CC(=O)C",
+    "url": "https://webbook.nist.gov/cgi/cbook.cgi?JCAMP=C67641&Index=0&Type=IR",
+    "expected": [
+      "Ketone"
+    ],
+    "sha256": "da6d2d9180cf90b59f8a0e32eefe15a81db81ce8c3257b208be2f8a170a493b8",
+    "conditions": [
+      "##ORIGIN=Sadtler Research Labs Under US-EPA Contract",
+      "##OWNER=NIST Standard Reference Data Program",
+      "##STATE=gas",
+      "##XUNITS=1/CM",
+      "##YUNITS=ABSORBANCE"
+    ]
+  },
+  {
+    "name": "ethyl_acetate",
+    "file": "ethyl_acetate_IR-SPEC.jdx",
+    "smiles": "CCOC(C)=O",
+    "url": "https://webbook.nist.gov/cgi/cbook.cgi?JCAMP=C141786&Index=0&Type=IR",
+    "expected": [
+      "Ester"
+    ],
+    "sha256": "6c23a32b787bbe8e190195f64ba37b628ac07c346bd47ad60a24a64e27377a69",
+    "conditions": [
+      "##ORIGIN=Sadtler Research Labs Under US-EPA Contract",
+      "##OWNER=NIST Standard Reference Data Program",
+      "##STATE=gas",
+      "##XUNITS=1/CM",
+      "##YUNITS=ABSORBANCE"
+    ]
+  }
+]

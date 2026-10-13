@@ -251,9 +251,9 @@ export class WorkbenchOrchestrator {
    */
   static runModeBPrediction(
     structureInput: string,
-    selectedModalities: SpectrumModality[] = ["IR", "1H_NMR", "13C_NMR", "MS"],
+    selectedModalities: ExtendedSpectrumModality[] = ["IR", "1H_NMR", "13C_NMR", "MS"],
     experimentalSpectraForOptionalComparison: Partial<
-      Record<SpectrumModality, ExperimentalSpectrumData>
+      Record<ExtendedSpectrumModality, ExperimentalSpectrumData>
     > = {}
   ): {
     parsedStructure: ParsedChemicalStructure | null;
@@ -298,7 +298,7 @@ export class WorkbenchOrchestrator {
       };
     }
 
-    const activeModalities: SpectrumModality[] =
+    const activeModalities: ExtendedSpectrumModality[] =
       selectedModalities.length > 0
         ? selectedModalities
         : ["IR", "1H_NMR", "13C_NMR", "MS"];
@@ -779,3 +779,4 @@ export class WorkbenchOrchestrator {
     return SpectrumParser.updateImagePlotBoundaries(spectrum, bounds);
   }
 }
+

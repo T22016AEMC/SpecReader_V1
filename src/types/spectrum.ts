@@ -775,10 +775,11 @@ export interface DigitizedSpectrumData {
 }
 
 export interface ExperimentalSpectrumData {
+  predictionNotes?: string[];
   irIntensityScale?: import('../engines/scientificEngines/irSignalProcessing').IRIntensityScale;
   irProcessingApplied?: boolean;
   irProcessingWarnings?: string[];
-  c13ExperimentMode?: "BROADBAND_DECOUPLED" | "DEPT_90" | "DEPT_135" | "APT" | "UNKNOWN";
+  c13ExperimentMode?: "BROADBAND_DECOUPLED" | "1D_PROTON_DECOUPLED" | "DEPT_90" | "DEPT_135" | "APT" | "UNKNOWN";
   sourceType?: SpectrumSourceType;
   dataQuality?: ExperimentalDataQuality;
   evidenceQuality?: EvidenceQuality;
@@ -1327,7 +1328,7 @@ export interface MolecularFormulaCandidate {
   massErrorPpm: number;
   dbe: number;
   nitrogenRuleValid: boolean;
-  isotopeCompatibility: "High" | "Moderate" | "Low";
+  isotopeCompatibility: "High" | "Moderate" | "Low" | "Not evaluated";
   halogenSignatureMatch: string;
   score: number;
   notes: string;
@@ -1579,6 +1580,8 @@ export interface CandidateConstraintSatisfaction {
 }
 
 export interface CandidateStructure {
+  scientificScoreLedger?: import('../engines/scientificEngines/evidenceLedger').CandidateScoreLedger;
+  scoreMeaning?: 'UNCALIBRATED_COMPATIBILITY';
   nmrConsistencyAnalysis?: CandidateNMRConsistencyAnalysis;
   rank: number;
   id: string;
@@ -1719,6 +1722,8 @@ export interface PredictedSpectrumBundle {
   h1Nmr: ExperimentalSpectrumData;
   c13Nmr: ExperimentalSpectrumData;
   ms: ExperimentalSpectrumData;
+  msms?: ExperimentalSpectrumData;
+  tofSims?: ExperimentalSpectrumData;
   irPredictions: IRFunctionalGroupFinding[];
   irExpectedBands?: IRFunctionalGroupFinding[];
   h1Predictions: ProtonEnvironment[];
@@ -2581,7 +2586,7 @@ export interface ProtonNMRModel {
   gyromagneticRatioMHzPerT: 42.577;
   observedEnvironments: ProtonEnvironment[];
   couplings: JCoupling[];
-  totalIntegratedProtons: number;
+  totalIntegratedProtons: number | null;
   karplusInterface: KarplusModel;
   quantumBackendStatus: "NOT_CONNECTED";
   estimationMethod: "EMPIRICAL_ESTIMATE" | "REFERENCE_BASED";
@@ -2936,7 +2941,7 @@ export interface ModeBPredictionReport {
   timestamp: string;
   structure?: ParsedChemicalStructure;
   targetStructure?: ParsedChemicalStructure;
-  predictedSpectra: Record<SpectrumModality, ExperimentalSpectrumData> & {
+  predictedSpectra: Record<ExtendedSpectrumModality, ExperimentalSpectrumData> & {
     irPredictions?: IRFunctionalGroupFinding[];
     h1Nmr?: ExperimentalSpectrumData;
     c13Nmr?: ExperimentalSpectrumData;

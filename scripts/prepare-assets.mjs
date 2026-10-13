@@ -1,7 +1,10 @@
 import {createRequire} from 'node:module';
-import {mkdir,copyFile} from 'node:fs/promises';
+import {mkdir,copyFile,readFile,writeFile} from 'node:fs/promises';
 import path from 'node:path';
 const require=createRequire(import.meta.url);
 const rdkitDir=path.dirname(require.resolve('@rdkit/rdkit'));
 await mkdir('public/rdkit',{recursive:true});
 for(const name of ['RDKit_minimal.js','RDKit_minimal.wasm']) await copyFile(path.join(rdkitDir,name),path.join('public/rdkit',name));
+await copyFile('docs/licenses/RDKit.txt','public/rdkit/LICENSE.txt');
+const notices=await Promise.all(['RDKit.txt','jcampconverter-9.6.4.txt','SheetJS-0.20.3.txt'].map(file=>readFile(`docs/licenses/${file}`,'utf8')));
+await writeFile('public/THIRD_PARTY_NOTICES.txt',notices.join('\n\n---\n\n'));

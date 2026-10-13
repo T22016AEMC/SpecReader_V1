@@ -32,4 +32,8 @@ Windows PowerShell 正式啟動：先設定 `$env:NODE_ENV='production'`，再�
 
 ## 開發狀態
 
-請參閱 `docs/DEVELOPMENT_PROGRESS.md`。目前部署基準是階段性版本；工程通過不代表六模態實測準確率已完成驗證。
+公開桌面網站：[SpecReader_V1](https://specreader-v1.onrender.com)。正式部署與驗收狀態以 `validation/public-deployment.json`／`public-smoke.json` 為準，健康檢查回傳實際部署 revision。
+
+請參閱 `V1_CHANGELOG.md`、`V1_SCIENTIFIC_REFERENCES.md`、`V1_VALIDATION_REPORT.md`、`V1_DEPLOYMENT.md`、`V1_KNOWN_LIMITATIONS.md` 與 `docs/DEVELOPMENT_PROGRESS.md`。工程通過不代表六模態實測準確率已完成驗證。
+
+四份 NIST 公開實測 IR 的有限配對結果／來源／雜湊保存在 `validation/`，原始資料不再散布。`pnpm test:measured` 可用本機資料快取重現；完整條件與原 V0 路徑見驗證報告。可公開查看原始碼不等於已授予自有程式碼的新開源 LICENSE；第三方授權见 `THIRD_PARTY_NOTICES.md`。

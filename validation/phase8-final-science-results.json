@@ -1,0 +1,32 @@
+[
+  {
+    "phase": "phase8-final-science",
+    "name": "assets",
+    "exitCode": 0,
+    "durationMs": 797
+  },
+  {
+    "phase": "phase8-final-science",
+    "name": "typecheck",
+    "exitCode": 0,
+    "durationMs": 10485
+  },
+  {
+    "phase": "phase8-final-science",
+    "name": "test",
+    "exitCode": 0,
+    "durationMs": 44486
+  },
+  {
+    "phase": "phase8-final-science",
+    "name": "build",
+    "exitCode": 0,
+    "durationMs": 6310
+  },
+  {
+    "phase": "phase8-final-science",
+    "name": "server-build",
+    "exitCode": 0,
+    "durationMs": 1540
+  }
+]

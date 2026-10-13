@@ -1,247 +1,46 @@
-import { IonizationMode, MolecularFormulaCandidate } from "../types/spectrum";
-
-const EXACT_MASS = {
-  C: 12.0,
-  H: 1.007825,
-  N: 14.003074,
-  O: 15.994915,
-  S: 31.972071,
-  Si: 27.976927,
-  Cl: 34.968853,
-  Br: 78.918338,
-};
+import type {IonizationMode,MolecularFormulaCandidate} from "../types/spectrum";
+import {ionMz,massError,neutralMassFromIon,type IonAdduct} from "./scientificEngines/ionMass";
 
 export interface FormulaSearchInput {
-  observedIonMz: number;
-  ionization: IonizationMode;
-  adductPreference?:
-    | "Auto"
-    | "[M]+•"
-    | "[M+H]+"
-    | "[M+Na]+"
-    | "[M+NH4]+"
-    | "[M-H]-";
-  massToleranceDa?: number;
-  isHighResolution?: boolean;
-  hasBromine?: boolean;
-  hasChlorine?: boolean;
-  hasSulfurOrSilicon?: boolean;
-  estimatedCarbonCount?: number | null;
+  observedIonMz:number;ionization:IonizationMode;
+  adductPreference?:"Auto"|IonAdduct;massToleranceDa?:number;massTolerancePpm?:number;
+  isHighResolution?:boolean;chargeState?:number;hasBromine?:boolean;hasChlorine?:boolean;
+  hasSulfurOrSilicon?:boolean;estimatedCarbonCount?:number|null;
 }
-
+const masses:Record<string,number>={C:12,H:1.00782503223,N:14.00307400443,O:15.99491461957,S:31.9720711744,Si:27.97692653465,Cl:34.968852682,Br:78.9183376,P:30.97376199842,F:18.99840316273,I:126.9044719};
+/** Bounded exact-mass enumeration. No structure library is required.
+ * A finite search is not exhaustive identification; isotope and elemental hints remain soft.
+ */
 export class MolecularFormulaCandidateEngine {
-  static generateCandidates(
-    input: FormulaSearchInput
-  ): MolecularFormulaCandidate[] {
-    const {
-      observedIonMz,
-      ionization,
-      adductPreference = "Auto",
-      isHighResolution = false,
-      hasBromine = false,
-      hasChlorine = false,
-      hasSulfurOrSilicon = false,
-      estimatedCarbonCount = null,
-    } = input;
-
-    if (!observedIonMz || observedIonMz <= 15) return [];
-
-    const tolDa = input.massToleranceDa ?? (isHighResolution ? 0.015 : 0.65);
-
-    const adductsToTest: { label: string; deltaMass: number }[] = [];
-    if (adductPreference !== "Auto") {
-      const map: Record<string, number> = {
-        "[M]+•": 0,
-        "[M+H]+": 1.007276,
-        "[M+Na]+": 22.98922,
-        "[M+NH4]+": 18.03383,
-        "[M-H]-": -1.007276,
+  static generateCandidates(input:FormulaSearchInput):MolecularFormulaCandidate[] {
+    if(!Number.isFinite(input.observedIonMz)||input.observedIonMz<=0) return [];
+    const z=input.chargeState??1;if(!Number.isInteger(z)||z===0||Math.abs(z)>4) return [];
+    const adducts:IonAdduct[]=input.adductPreference&&input.adductPreference!=="Auto"?[input.adductPreference]:input.ionization==="ESI-"?["[M-H]-"]:input.ionization==="ESI+"||input.ionization==="APCI"?["[M+H]+","[M+Na]+","[M+NH4]+"]:["[M]+•"];
+    const candidates:MolecularFormulaCandidate[]=[];
+    for(const adduct of adducts) {
+      if(Math.abs(z)>1&&(adduct==="[M+Na]+"||adduct==="[M+NH4]+")) continue;
+      const target=neutralMassFromIon(input.observedIonMz,adduct,z);
+      if(target<12||target>600) continue;
+      const tolerance=input.isHighResolution?input.observedIonMz*(input.massTolerancePpm??5)/1e6:(input.massToleranceDa??.5);
+      const neutralTolerance=tolerance*Math.abs(z);
+      const counts:Record<string,number>={};let nodes=0,truncated=false;
+      // Bounds are explicit applicability limits rather than asserted elemental identities.
+      const bounds:[string,number][]=[["Br",input.hasBromine?3:1],["Cl",input.hasChlorine?3:1],["Si",input.hasSulfurOrSilicon?3:1],["S",2],["P",1],["F",3],["I",1],["N",4],["O",12],["C",35]];
+      const visit=(depth:number,mass:number)=>{
+        if(++nodes>250000){truncated=true;return;}
+        if(depth<bounds.length){const [e,max]=bounds[depth];for(let n=0;n<=Math.min(max,Math.floor((target+neutralTolerance-mass)/masses[e]));n++){counts[e]=n;visit(depth+1,mass+n*masses[e]);}return;}
+        const h=Math.round((target-mass)/masses.H);if(h<0||h>100||counts.C<1) return;
+        const dbe=counts.C+counts.Si+1+(counts.N+counts.P)/2-(h+counts.F+counts.Cl+counts.Br+counts.I)/2;
+        if(dbe<0||Math.abs(dbe-Math.round(dbe))>.01) return;
+        const neutral=mass+h*masses.H,mz=ionMz(neutral,adduct,z),error=massError(input.observedIonMz,mz);
+        if(Math.abs(error.da)>tolerance) return;
+        const formula=["C","H","Br","Cl","F","I","N","O","P","S","Si"].map(e=>{const n=e==="H"?h:counts[e];return n?e+(n===1?"":n):""}).join("");
+        const isotopeHint=(input.hasBromine&&counts.Br>0)||(input.hasChlorine&&counts.Cl>0);
+        candidates.push({formula,neutralExactMass:neutral,theoreticalIonMz:mz,observedIonMz:input.observedIonMz,adductLabel:adduct,massErrorDa:error.da,massErrorPpm:error.ppm,dbe,nitrogenRuleValid:Math.round(neutral)%2===counts.N%2,isotopeCompatibility:"Not evaluated",halogenSignatureMatch:isotopeHint?"同位素提示相容，仍需完整包絡比對":"未使用同位素提示確認元素",score:Math.max(0,100*(1-Math.abs(error.da)/tolerance)),notes:"精確質量容差內的組成假設；非唯一分子式；搜尋 C≤35／N≤4／O≤12／質量≤600 Da。"});
       };
-      adductsToTest.push({
-        label: adductPreference,
-        deltaMass: map[adductPreference] ?? 0,
-      });
-    } else if (ionization === "ESI+" || ionization === "APCI") {
-      adductsToTest.push(
-        { label: "[M+H]+", deltaMass: 1.007276 },
-        { label: "[M+Na]+", deltaMass: 22.98922 },
-        { label: "[M+NH4]+", deltaMass: 18.03383 }
-      );
-    } else if (ionization === "ESI-") {
-      adductsToTest.push({ label: "[M-H]-", deltaMass: -1.007276 });
-    } else {
-      adductsToTest.push({ label: "[M]+•", deltaMass: 0 });
-      if (ionization === "Auto / Unknown") {
-        adductsToTest.push({ label: "[M+H]+", deltaMass: 1.007276 });
-      }
+      visit(0,0);
+      if(truncated) for(const c of candidates)c.notes+=" 搜尋達到節點上限，候選集合不完整。";
     }
-
-    const candidates: MolecularFormulaCandidate[] = [];
-
-    const brList = hasBromine ? [1] : [0];
-    const clList = hasChlorine ? [1] : [0];
-    const siList = hasSulfurOrSilicon ? [0, 2, 3] : [0];
-    const sList = hasSulfurOrSilicon ? [0, 1] : [0];
-
-    for (const adduct of adductsToTest) {
-      const targetNeutralMass = observedIonMz - adduct.deltaMass;
-      if (targetNeutralMass < 16 || targetNeutralMass > 600) continue;
-
-      const nominalNeutralMass = Math.round(targetNeutralMass);
-
-      for (const br of brList) {
-        for (const cl of clList) {
-          for (const si of siList) {
-            for (const s of sList) {
-              if (si > 0 && s > 0) continue;
-              const massHalSiS =
-                br * EXACT_MASS.Br +
-                cl * EXACT_MASS.Cl +
-                si * EXACT_MASS.Si +
-                s * EXACT_MASS.S;
-
-              if (massHalSiS > targetNeutralMass) continue;
-
-              const maxN = Math.min(
-                3,
-                Math.floor((targetNeutralMass - massHalSiS) / 14)
-              );
-              const maxO = Math.min(
-                5,
-                Math.floor((targetNeutralMass - massHalSiS) / 16)
-              );
-
-              for (let n = 0; n <= maxN; n++) {
-                const nParityOk = nominalNeutralMass % 2 === n % 2;
-                if (!nParityOk) continue;
-
-                for (let o = 0; o <= maxO; o++) {
-                  const massNO = n * EXACT_MASS.N + o * EXACT_MASS.O;
-                  const remForCH = targetNeutralMass - massHalSiS - massNO;
-                  if (remForCH < 12) continue;
-
-                  const minC = Math.max(1, Math.floor(remForCH / 16));
-                  const maxC = Math.min(25, Math.floor(remForCH / 12));
-
-                  for (let c = minC; c <= maxC; c++) {
-                    const remForH = remForCH - c * EXACT_MASS.C;
-                    const h = Math.round(remForH / EXACT_MASS.H);
-                    if (h < 1) continue;
-
-                    const halogens = cl + br;
-                    if (h + halogens > 2 * (c + si) + n + 2) continue;
-
-                    const rawDbe = c + si - (h + halogens) / 2 + n / 2 + 1;
-                    if (
-                      rawDbe < 0 ||
-                      Math.abs(rawDbe - Math.round(rawDbe)) > 0.01
-                    ) {
-                      continue;
-                    }
-                    const dbe = Math.round(rawDbe);
-
-                    if (si === 0 && (h / c < 0.35 || h / c > 2.6)) continue;
-
-                    const neutralExactMass =
-                      c * EXACT_MASS.C +
-                      h * EXACT_MASS.H +
-                      n * EXACT_MASS.N +
-                      o * EXACT_MASS.O +
-                      s * EXACT_MASS.S +
-                      si * EXACT_MASS.Si +
-                      cl * EXACT_MASS.Cl +
-                      br * EXACT_MASS.Br;
-
-                    const theoreticalIonMz =
-                      neutralExactMass + adduct.deltaMass;
-                    const massErrorDa = Math.abs(
-                      observedIonMz - theoreticalIonMz
-                    );
-                    if (massErrorDa > tolDa) continue;
-
-                    const massErrorPpm = Number(
-                      (
-                        (massErrorDa / Math.max(1, theoreticalIonMz)) *
-                        1e6
-                      ).toFixed(1)
-                    );
-
-                    const formulaParts = [
-                      `C${c === 1 ? "" : c}`,
-                      `H${h === 1 ? "" : h}`,
-                    ];
-                    if (br > 0) formulaParts.push(`Br${br === 1 ? "" : br}`);
-                    if (cl > 0) formulaParts.push(`Cl${cl === 1 ? "" : cl}`);
-                    if (n > 0) formulaParts.push(`N${n === 1 ? "" : n}`);
-                    if (o > 0) formulaParts.push(`O${o === 1 ? "" : o}`);
-                    if (s > 0) formulaParts.push(`S${s === 1 ? "" : s}`);
-                    if (si > 0) formulaParts.push(`Si${si === 1 ? "" : si}`);
-                    const formulaStr = formulaParts.join("");
-
-                    let score = 78;
-                    if (
-                      isHighResolution
-                        ? massErrorDa < 0.015
-                        : massErrorDa < 0.12
-                    )
-                      score += 10;
-                    if (estimatedCarbonCount !== null) {
-                      const cDiff = Math.abs(c - estimatedCarbonCount);
-                      if (cDiff === 0) score += 8;
-                      else if (cDiff === 1) score += 4;
-                      else score -= Math.min(12, cDiff * 3);
-                    }
-                    if (o >= 1 && o <= 3 && n === 0) score += 6;
-                    else if (o >= 1 && o <= 3 && n <= 1) score += 4;
-                    if (dbe >= 4 && dbe <= 7 && c >= 6) score += 4;
-                    if (adduct.label === "[M]+•" || adduct.label === "[M+H]+")
-                      score += 3;
-
-                    score = Math.min(92, Math.max(35, score));
-
-                    const halogenMatch = hasBromine
-                      ? "符合 ⁷⁹Br/⁸¹Br (1:1) M/M+2 同位素特徵"
-                      : hasChlorine
-                        ? "符合 ³⁵Cl/³⁷Cl (3:1) M/M+2 同位素特徵"
-                        : hasSulfurOrSilicon
-                          ? "符合 Si / S M+1/M+2 同位素封包"
-                          : "符合無鹵素標準 C/H/N/O 同位素分佈";
-
-                    candidates.push({
-                      formula: formulaStr,
-                      neutralExactMass: Number(neutralExactMass.toFixed(4)),
-                      theoreticalIonMz: Number(theoreticalIonMz.toFixed(4)),
-                      observedIonMz: Number(observedIonMz.toFixed(4)),
-                      adductLabel: adduct.label,
-                      massErrorDa: Number(massErrorDa.toFixed(4)),
-                      massErrorPpm,
-                      dbe,
-                      nitrogenRuleValid: true,
-                      isotopeCompatibility: score >= 80 ? "High" : "Moderate",
-                      halogenSignatureMatch: halogenMatch,
-                      score,
-                      notes: `中性單同位素質量 ${neutralExactMass.toFixed(4)} Da · 不飽和度 DBE = ${dbe} · 符合氮規則`,
-                    });
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-
-    const uniqueMap = new Map<string, MolecularFormulaCandidate>();
-    for (const cand of candidates) {
-      const key = `${cand.formula}_${cand.adductLabel}`;
-      const existing = uniqueMap.get(key);
-      if (!existing || cand.score > existing.score) {
-        uniqueMap.set(key, cand);
-      }
-    }
-
-    return Array.from(uniqueMap.values())
-      .sort((a, b) => b.score - a.score || a.massErrorDa - b.massErrorDa)
-      .slice(0, 6);
+    return candidates.sort((a,b)=>Math.abs(a.massErrorDa)-Math.abs(b.massErrorDa)).slice(0,24);
   }
 }

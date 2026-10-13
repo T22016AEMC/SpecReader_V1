@@ -98,7 +98,7 @@ export class MSMSFragmentationEngine
     const ionization = spectrum.msParams?.ionization || "ESI+";
     const precursorIon: PrecursorIon = {
       mz: precursorMz,
-      charge: ionization === "ESI-" ? -1 : 1,
+      charge: (ionization === "ESI-" ? -1 : 1) * Math.abs(spectrum.msParams?.chargeState ?? 1),
       adductType:
         spectrum.msParams?.adductType && spectrum.msParams.adductType !== "Auto"
           ? spectrum.msParams.adductType
@@ -202,7 +202,7 @@ export class MSMSFragmentationEngine
       }
 
       productIons.push({
-        mz: Number(pk.x.toFixed(4)),
+        mz: pk.x,
         intensity: Number(pk.y.toFixed(1)),
         charge: precursorIon.charge,
         possibleFormula,
@@ -221,7 +221,7 @@ export class MSMSFragmentationEngine
         });
       }
 
-      const lossDa = Number((precursorMz - pk.x).toFixed(4));
+      const lossDa = (precursorMz - pk.x) * Math.abs(precursorIon.charge);
       const lossRound = Math.round(lossDa);
       if (lossRound > 0) {
         let possibleIdentity: NeutralLoss["possibleIdentity"] | null = null;
@@ -317,6 +317,8 @@ export class MSMSFragmentationEngine
           mechanismLabel = "Charge-directed fragmentation";
         }
 
+        const exactLosses: Record<string,number[]> = {"H•":[1.00782503223],"CH3•":[15.02347509669],"H2O":[18.01056468403],"NH3":[17.02654910112],"HCN":[27.01089903666],"CO / C2H4":[27.99491461957,28.03130012892],"CHO• / C2H5•":[29.0027396518,29.03912516115],"OCH3•":[31.01838971626],"CH3OH":[32.02621474849],"C3H6 / CH2CO":[42.04695019338,42.01056468403],"CH3CO•":[43.01838971626],"CO2":[43.98982923914]};
+        if (possibleIdentity && spectrum.msParams?.isHighResolution && exactLosses[possibleIdentity] && !exactLosses[possibleIdentity].some(m=>Math.abs(m-lossDa)<=(spectrum.msParams?.massToleranceDa??.01))) possibleIdentity=null;
         if (possibleIdentity) {
           neutralLosses.push({
             precursorMz,

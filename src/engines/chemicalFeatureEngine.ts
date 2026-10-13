@@ -26,6 +26,7 @@ import {
   ToFSIMSScientificEngine,
 } from "./scientificEngines";
 import { ChemicalHardConstraintValidator } from "./scientificEngines/chemicalHardConstraintValidator";
+import {validateScientificInput} from './scientificEngines/scientificInputValidation';
 
 export interface ModalityFeatureAdapter {
   modality: SpectrumModality | ExtendedSpectrumModality | "MSMS" | "TOF_SIMS";
@@ -345,6 +346,8 @@ export interface ExtraChemicalEvidenceInput {
 }
 
 export interface IntegratedAnalysisBundle {
+  scientificSources?: Partial<Record<import('../types/spectrum').ExtendedSpectrumModality,ExperimentalSpectrumData>>;
+  scientificEvidence?: ScientificEvidence[];
   irFindings: IRFunctionalGroupFinding[];
   h1Environments: ProtonEnvironment[];
   h1SymmetrySummary: string;
@@ -409,6 +412,9 @@ export class ChemicalFeatureEngine {
     expectedStructure?: ParsedChemicalStructure | null,
     extraInput?: ExtraChemicalEvidenceInput
   ): IntegratedAnalysisBundle {
+    rawSpectra=Object.fromEntries(Object.entries(rawSpectra).map(([mod,s])=>[mod,s?{...s,peaks:uniqueObservations(s.peaks)}:s]));
+    if(extraInput) extraInput={...extraInput,...(extraInput.msmsSpectrum?{msmsSpectrum:{...extraInput.msmsSpectrum,peaks:uniqueObservations(extraInput.msmsSpectrum.peaks)}}:{}),...(extraInput.tofSimsSpectrum?{tofSimsSpectrum:{...extraInput.tofSimsSpectrum,peaks:uniqueObservations(extraInput.tofSimsSpectrum.peaks)}}:{})};
+
     return this.extractIntegratedConstraints(rawSpectra, expectedStructure, extraInput);
   }
 
@@ -423,10 +429,13 @@ export class ChemicalFeatureEngine {
     extraInput?: ExtraChemicalEvidenceInput
   ): IntegratedAnalysisBundle {
     const uncalibratedSignals: UncalibratedSignalRecord[] = [];
+    rawSpectra=Object.fromEntries(Object.entries(rawSpectra).map(([mod,s])=>[mod,s?validateScientificInput({...s,peaks:uniqueObservations(s.peaks)}):s]));
     const spectra: Partial<Record<SpectrumModality, ExperimentalSpectrumData>> = {};
 
     let rawMsmsSpec = extraInput?.msmsSpectrum || rawSpectra["MS/MS"];
     let rawTofSimsSpec = extraInput?.tofSimsSpectrum || rawSpectra["ToF-SIMS"];
+    if(rawMsmsSpec) rawMsmsSpec=validateScientificInput({...rawMsmsSpec,peaks:uniqueObservations(rawMsmsSpec.peaks)});
+    if(rawTofSimsSpec) rawTofSimsSpec=validateScientificInput({...rawTofSimsSpec,peaks:uniqueObservations(rawTofSimsSpec.peaks)});
 
     for (const mod of ["IR", "1H_NMR", "13C_NMR", "MS"] as SpectrumModality[]) {
       const sp = rawSpectra[mod];
@@ -742,7 +751,7 @@ export class ChemicalFeatureEngine {
           deptType: env.deptType,
           regionLabel: env.regionCategory,
           environmentType:
-            env.shiftPpm >= 160
+            env.shiftPpm >= 166
               ? "CARBONYL_C"
               : env.shiftPpm >= 100
                 ? "AROMATIC_C"
@@ -1087,27 +1096,10 @@ export class ChemicalFeatureEngine {
 
     // Section C: 使用者明確輸入有效分子式時，將其鎖定為唯一權威目標，不混入不符該分子式的 MS 推估分子式；
     // 若使用者輸入之分子式格式無效或不支援，則清空分子式候選並停止依賴該分子式推論。
+    // User formula is a hard composition input, never a fabricated mass measurement.
     const explicitFormulaCandidates = parsedUserFormula
-      ? [
-          {
-            formula: parsedUserFormula.cleanFormula,
-            neutralExactMass: parsedUserFormula.exactMass,
-            theoreticalIonMz: parsedUserFormula.exactMass,
-            observedIonMz: parsedUserFormula.exactMass,
-            adductLabel: "User Formula (Authoritative Hard Constraint)",
-            massErrorDa: 0,
-            massErrorPpm: 0,
-            dbe: parsedUserFormula.dbe,
-            nitrogenRuleValid: true,
-            isotopeCompatibility: "High" as const,
-            halogenSignatureMatch: "符合使用者指定之權威目標分子式",
-            score: 100,
-            notes: `使用者明確指定之權威目標分子式 ${parsedUserFormula.cleanFormula} (精確質量 ${parsedUserFormula.exactMass} Da, IHD/DBE = ${parsedUserFormula.dbe})`,
-          },
-        ]
-      : userFormulaValidation && !userFormulaValidation.isValid
-        ? []
-        : msConst?.molecularFormula?.candidates;
+      ? msConst?.molecularFormula?.candidates?.filter(c=>c.formula===parsedUserFormula.cleanFormula) ?? []
+      : userFormulaValidation && !userFormulaValidation.isValid ? [] : msConst?.molecularFormula?.candidates;
 
     const contributingSources: StructuralConstraints["contributingSources"] = [
       ...activeModalities,
@@ -1335,15 +1327,7 @@ export class ChemicalFeatureEngine {
               confidence: 0,
             }
           : msConst?.molecularFormula,
-      exactMass: parsedUserFormula
-        ? {
-            exactMass: parsedUserFormula.exactMass,
-            nominalMw: parsedUserFormula.nominalMass,
-            toleranceDa: 0.05,
-            isHighResolution: true,
-            confidence: 99,
-          }
-        : msConst?.exactMass,
+      exactMass: msConst?.exactMass,
       dbe: {
         minDbe: effectiveMinDbe,
         maxDbe: parsedUserFormula ? parsedUserFormula.dbe : effectiveMinDbe + 2,
@@ -1436,7 +1420,8 @@ export class ChemicalFeatureEngine {
       knownConstraintsSummary.push(`其他化學證據：${extraInput.chemicalNotes.trim()}`);
     }
 
-    return {
+    const bundle: IntegratedAnalysisBundle = {
+      scientificSources: {...spectra, ...(rawMsmsSpec ? {"MS/MS":rawMsmsSpec}:{}), ...(rawTofSimsSpec ? {"ToF-SIMS":rawTofSimsSpec}:{})},
       irFindings,
       h1Environments,
       h1SymmetrySummary,
@@ -1459,5 +1444,8 @@ export class ChemicalFeatureEngine {
       knownConstraintsSummary,
       activeModalities,
     };
+    bundle.scientificEvidence=buildScientificEvidence(bundle);
+    return bundle;
   }
 }
+import {buildScientificEvidence,uniqueObservations,type ScientificEvidence} from './scientificEngines/evidenceLedger';

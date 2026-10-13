@@ -1,0 +1,32 @@
+[
+  {
+    "phase": "phase2-ir",
+    "name": "assets",
+    "exitCode": 0,
+    "durationMs": 972
+  },
+  {
+    "phase": "phase2-ir",
+    "name": "typecheck",
+    "exitCode": 0,
+    "durationMs": 20188
+  },
+  {
+    "phase": "phase2-ir",
+    "name": "test",
+    "exitCode": 0,
+    "durationMs": 29814
+  },
+  {
+    "phase": "phase2-ir",
+    "name": "build",
+    "exitCode": 0,
+    "durationMs": 10524
+  },
+  {
+    "phase": "phase2-ir",
+    "name": "server-build",
+    "exitCode": 0,
+    "durationMs": 1006
+  }
+]

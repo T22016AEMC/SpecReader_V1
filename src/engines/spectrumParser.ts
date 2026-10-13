@@ -1,4 +1,5 @@
 import {processIRSeries, resolveIRScale} from "./scientificEngines/irSignalProcessing";
+import {decodeJcamp} from "./scientificEngines/jcampAdapter";
 import * as XLSX from "xlsx";
 import {
   CalibrationQualityGrade,
@@ -738,6 +739,7 @@ export class SpectrumParser {
       Number.isFinite(Number(firstRow[1]));
 
     const dataRows = firstRowIsNumeric ? nonEmptyRows : nonEmptyRows.slice(1);
+    if(dataRows.length>50000)throw new Error('桌面光譜處理目前限制 50,000 點；請先依儀器解析度合理降採樣。');
 
     const colDetection = this.detectNumericColumns(
       modality,
@@ -872,8 +874,8 @@ export class SpectrumParser {
 
       explicitPeaks.push({
         id: `${modality}-file-pk-${explicitPeaks.length}`,
-        x: Number(numX.toFixed(2)),
-        y: Number(numY.toFixed(2)),
+        x: numX,
+        y: numY,
         integration: !Number.isNaN(thirdNum) ? thirdNum : null,
         multiplicity: (fourthStr as any) || null,
         jValues: parsedJs,
@@ -907,16 +909,16 @@ export class SpectrumParser {
     if (modality === "MS") {
       peaks = this.detectPeaksFromSeries("MS", rawPoints);
       points = rawPoints.slice();
-    } else if (rawPoints.length <= 20 && (hasExplicitNmrAnnotations || rawPoints.length <= 12)) {
+    } else if (hasExplicitNmrAnnotations || rawPoints.length <= 12) {
       const maxY = Math.max(...rawPoints.map((p) => p.y), 1e-6);
       peaks = explicitPeaks.map((pk) => ({
         ...pk,
-        y: maxY <= 2.5 ? Number(((pk.y / maxY) * 100).toFixed(1)) : Number(pk.y.toFixed(1)),
+        y: pk.y,
       }));
       points = rawPoints.slice();
     } else {
       points = rawPoints.slice();
-      peaks = modality === "IR" ? processIRSeries(rawPoints, resolveIRScale(colDetection.detectedYUnit || "Unknown")).peaks : this.detectPeaksFromSeries(modality, rawPoints);
+      peaks = modality === "IR" ? processIRSeries(rawPoints, resolveIRScale(colDetection.detectedYUnit || "Unknown")).peaks.map(p=>({...p,y:rawPoints.find(r=>r.x===p.x)?.y??p.y})) : this.detectPeaksFromSeries(modality, rawPoints);
     }
 
     const signalAnnotations = this.buildSignalAnnotationsFromPeaks(
@@ -1049,6 +1051,18 @@ export class SpectrumParser {
       : "TXT";
 
     const lines = rawText.split(/\r?\n/);
+    if(!isJcamp && lines.length>50002)throw new Error('數值光譜目前限制 50,000 點。');
+
+    if(isJcamp) {
+      const decoded=decodeJcamp(rawText);
+      const parsed=this.parseNumericTable(modality,fileName,[[decoded.xUnit,decoded.yUnit],...decoded.points.map(p=>[p.x,p.y])],{sourceFormat:'JCAMP-DX',msParams,selectedColumns:{xColumnIndex:0,yColumnIndex:1}});
+      parsed.xUnit=decoded.xUnit;parsed.yUnit=decoded.yUnit;
+      if(modality==='IR') {
+        parsed.irIntensityScale=resolveIRScale(decoded.yUnit);
+        parsed.peaks=processIRSeries(decoded.points,parsed.irIntensityScale).peaks.map(p=>({...p,y:decoded.points.find(r=>r.x===p.x)?.y??p.y}));
+      }
+      return parsed;
+    }
 
     if (!isJcamp) {
       const nonCommentLines = lines
@@ -1157,8 +1171,8 @@ export class SpectrumParser {
 
         explicitPeaks.push({
           id: `${modality}-file-pk-${explicitPeaks.length}`,
-          x: Number(x.toFixed(2)),
-          y: Number(y.toFixed(1)),
+          x,
+          y,
           integration: !Number.isNaN(third) ? third : null,
           multiplicity: (fourth as any) || null,
           jValues: parsedJs,
@@ -3563,6 +3577,7 @@ export class SpectrumParser {
     msParams?: MSParameters,
     options?: { disableAutoPeakDetection?: boolean }
   ): Promise<ExperimentalSpectrumData> {
+    if(file.size>12*1024*1024)throw new Error('上傳檔案超過 12 MB，請使用較小檔案；原始檔不會被修改。');
     const ext = file.name.split(".").pop()?.toLowerCase() || "";
     const isImage =
       file.type.startsWith("image/") ||
@@ -3713,4 +3728,5 @@ export class SpectrumParser {
     return parsedNumeric;
   }
 }
+
 

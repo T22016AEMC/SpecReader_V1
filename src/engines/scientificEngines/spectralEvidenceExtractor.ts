@@ -272,7 +272,7 @@ export class SpectralEvidenceExtractor {
           uncertaintyNote: "對稱等效碳可能重疊為單一訊號",
           scoreImpact: "約束碳骨架環境數、羰基碳 (160–220 ppm) 與芳香碳對稱性",
           confidence: env.confidence === "HIGH" ? 0.9 : 0.78,
-          requiredOrOptional: shiftVal >= 160 ? "REQUIRED" : "OPTIONAL",
+          requiredOrOptional: "OPTIONAL",
           sourcePeakIds: env.peakId ? [env.peakId] : [],
           evidenceChain: {
             observedPeak: `δC ${shiftVal.toFixed(1)} ppm (${env.deptType || "C"})`,
@@ -523,3 +523,4 @@ export class SpectralEvidenceExtractor {
     };
   }
 }
+

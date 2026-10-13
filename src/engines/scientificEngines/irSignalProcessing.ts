@@ -1,4 +1,5 @@
 import type { DataPoint, ExperimentalSpectrumData, SpectralPeak } from '../../types/spectrum';
+import {asymmetricBaseline} from './whittakerBaseline';
 
 export type IRIntensityScale = 'ABSORBANCE' | 'TRANSMITTANCE' | 'PERCENT_TRANSMITTANCE' | 'NORMALIZED' | 'UNKNOWN';
 export function resolveIRScale(unit: string, explicit?: IRIntensityScale): IRIntensityScale {
@@ -27,10 +28,11 @@ export function processIRSeries(points: DataPoint[], scale: IRIntensityScale): {
   }).sort((a,b) => a.x-b.x);
   if (valid.length < 5) return {points:valid,peaks:[],invalidCount:points.length-valid.length};
   const dx = quantile(valid.slice(1).map((p,i) => p.x-valid[i].x).filter(d=>d>0), .5) || 1;
-  // A local lower quantile removes slow baseline drift. Window is in cm^-1,
-  // so changing sampling density does not change its physical scale.
-  const window = Math.min(301, Math.max(5, Math.round(180/dx)));
-  const corrected = valid.map((p,i) => ({x:p.x,y:Math.max(0,p.y-quantile(valid.slice(Math.max(0,i-window),Math.min(valid.length,i+window+1)).map(v=>v.y),.1))}));
+  // Scale the second-difference penalty with physical sampling interval.
+  // Broad-band retention still depends on lambda: report as a processing model.
+  const uniform = valid.slice(1).every((p,i)=>Math.abs((p.x-valid[i].x)-dx)<dx*.05);
+  const baseline = uniform ? asymmetricBaseline(valid.map(p=>p.y),Math.min(1e11,Math.max(1e4,(250/dx)**4))) : valid.map(()=>quantile(valid.map(p=>p.y),.05));
+  const corrected = valid.map((p,i) => ({x:p.x,y:Math.max(0,p.y-baseline[i])}));
   const smooth = corrected.map((p,i) => ({x:p.x,y:(corrected[Math.max(0,i-1)].y + 2*p.y + corrected[Math.min(corrected.length-1,i+1)].y)/4}));
   const max = Math.max(...smooth.map(p=>p.y), 0);
   if (max <= 0) return {points:smooth,peaks:[],invalidCount:points.length-valid.length};
@@ -50,21 +52,27 @@ export function processIRSeries(points: DataPoint[], scale: IRIntensityScale): {
   return {points:smooth.map(p=>({x:p.x,y:100*p.y/max})),peaks,invalidCount:points.length-valid.length};
 }
 export function irRangeCovered(s: ExperimentalSpectrumData, min: number, max: number): boolean {
+  if (s.digitizedFromImage || s.sourceType==='IMAGE_EXPERIMENTAL' || s.sourceType==='IMAGE_DIGITIZED') return false;
   // Peak lists don't prove the absence of unreported bands.
   const xs = s.rawExperimentalSnapshot?.rawX ?? s.points.map(p=>p.x);
+  const scale=resolveIRScale(s.yUnit,s.irIntensityScale);
+  const raw=s.rawExperimentalSnapshot?.rawPoints ?? s.points;
+  if (raw.some(p=>p.x>=min&&p.x<=max&&toAbsorbance(p.y,scale)===null)) return false;
   return xs.length >= 30 && Math.min(...xs)<=min && Math.max(...xs)>=max;
 }
 export function prepareIR(s: ExperimentalSpectrumData): ExperimentalSpectrumData {
   if (s.irProcessingApplied) return s;
   const scale=resolveIRScale(s.yUnit,s.irIntensityScale);
   const raw=s.rawExperimentalSnapshot?.rawPoints ?? s.points;
-  const continuous=raw.length>=30;
+  const isImage=s.digitizedFromImage||s.sourceType==='IMAGE_EXPERIMENTAL'||s.sourceType==='IMAGE_DIGITIZED';
+  const continuous=raw.length>=30&&!isImage;
   const processed=continuous ? processIRSeries(raw,scale) : null;
-  const converted=s.peaks.flatMap(p=>{
+  const converted=s.peaks.filter(p=>p.pixelX===undefined||p.isCalibrated===true).flatMap(p=>{
     const y=toAbsorbance(p.y,scale); return y!==null && Number.isFinite(p.x) ? [{...p,y}] : [];
   });
   const max=Math.max(...converted.map(p=>p.y),0);
-  const manual=s.peaks.filter(p=>p.detectionSource==='MANUAL');
+  const manual=converted.filter(p=>p.detectionSource==='MANUAL');
   const peaks=processed ? [...processed.peaks.filter(p=>!manual.some(m=>Math.abs(m.x-p.x)<Math.max(2,m.width??2))),...manual.map(p=>({...p,y:max>0?100*p.y/max:p.y}))] : converted.map(p=>({...p,y:max>0?100*p.y/max:0}));
   return {...s,peaks,irIntensityScale:scale,irProcessingApplied:true,irProcessingWarnings:[...(scale==='UNKNOWN'?['強度尺度未知；仅使用相對強度，未推定透射率。']:[]),...(processed?.invalidCount?['無效或飽和透射率已排除；該區域不能作陰性證據。']:[])], ...(processed?{points:processed.points}: {})};
 }
+

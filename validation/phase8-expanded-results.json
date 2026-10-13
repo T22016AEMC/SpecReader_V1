@@ -1,0 +1,32 @@
+[
+  {
+    "phase": "phase8-expanded",
+    "name": "assets",
+    "exitCode": 0,
+    "durationMs": 897
+  },
+  {
+    "phase": "phase8-expanded",
+    "name": "typecheck",
+    "exitCode": 2,
+    "durationMs": 22722
+  },
+  {
+    "phase": "phase8-expanded",
+    "name": "test",
+    "exitCode": 1,
+    "durationMs": 46130
+  },
+  {
+    "phase": "phase8-expanded",
+    "name": "build",
+    "exitCode": 0,
+    "durationMs": 12387
+  },
+  {
+    "phase": "phase8-expanded",
+    "name": "server-build",
+    "exitCode": 0,
+    "durationMs": 1187
+  }
+]

@@ -1,3 +1,4 @@
+import type {ExtendedSpectrumModality} from './types/spectrum';
 import React, { useMemo, useState } from "react";
 import {
   AlertTriangle,
@@ -200,7 +201,7 @@ export default function App() {
   // ============================================================================
   const [modeBStructureInput, setModeBStructureInput] = useState<string>("");
   const [modeBSelectedModalities, setModeBSelectedModalities] = useState<
-    SpectrumModality[]
+    ExtendedSpectrumModality[]
   >(["IR", "1H_NMR", "13C_NMR", "MS"]);
   const [modeBExecutionState, setModeBExecutionState] = useState<{
     bidirectionalReport: WorkbenchOrchestrationState["bidirectionalReport"];
@@ -508,7 +509,7 @@ export default function App() {
     );
   }, [rankedCandidates, selectedCandidateId]);
 
-  const handleToggleModeBModality = (mod: SpectrumModality) => {
+  const handleToggleModeBModality = (mod: ExtendedSpectrumModality) => {
     setModeBSelectedModalities((prev) => {
       const exists = prev.includes(mod);
       if (exists && prev.length === 1) return prev;
@@ -3435,7 +3436,7 @@ export default function App() {
                                   Rank #{cand.rank}
                                 </span>
                                 <span className="font-mono text-lg font-extrabold text-cyan-300">
-                                  可信度吻合分：{cand.scoreBreakdown.totalScore}%
+                                  模型相容度：{cand.scoreBreakdown.totalScore}/100（非機率）
                                 </span>
                               </div>
 
@@ -4044,3 +4045,5 @@ export default function App() {
     </div>
   );
 }
+
+

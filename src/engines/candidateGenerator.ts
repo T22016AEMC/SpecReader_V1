@@ -200,41 +200,26 @@ export function rankCandidates(
     const spectrumConsistencyScore =
       modalityEvaluation.spectrumConsistencyScore;
 
-    // 計算單一權威最終分數 (Soft Score Layer)
-    let finalScore = Math.round(
-      spectrumConsistencyScore * 0.65 + crossSpectrumScore * 0.35
-    );
-    if (
-      contradictingReasons.length === 0 &&
-      supportedModalityCount >= 2 &&
-      modalityEvaluation.supportingReasons.length >= 2
-    ) {
-      finalScore = Math.max(
-        finalScore,
-        Math.min(99, spectrumConsistencyScore + 2)
-      );
-    }
-    if (contradictingReasons.length > 0) {
-      finalScore = Math.min(
-        finalScore,
-        Math.max(5, spectrumConsistencyScore)
-      );
-    }
-    finalScore = Math.max(5, Math.min(99, finalScore));
-
+    const scientificScoreLedger=crossEval.scientificScoreLedger;
+    if(!scientificScoreLedger.formulaHardCompatible) continue;
+    const finalScore=Math.round(scientificScoreLedger.totalScore);
+    const ledgerScores=scientificScoreLedger.modalityScores;
+    const ledgerNote="評分是未校準的相容度，非結構正確機率；同一原始觀測僅計一次。";
+    const scoreNotes=Object.entries(ledgerScores).filter(([,v])=>v!=null).map(([mod,v])=>`${mod}：${scientificScoreLedger.entries.filter(e=>e.sourceModality===mod&&e.weight>0).length} 個獨立觀測，模型相容分 ${v!.toFixed(1)}/100；方法與原始觀測 ID 可由 scientificScoreLedger 追溯。`);
+    supportingReasons.unshift(ledgerNote,...scoreNotes);
     const scoreBreakdown: CandidateScoreBreakdown = {
-      irMatchScore: modalityEvaluation.irScore ?? 0,
-      nmr1HMatchScore: modalityEvaluation.h1NmrScore ?? 0,
-      nmr13CMatchScore: modalityEvaluation.c13NmrScore ?? 0,
-      msMatchScore: modalityEvaluation.msScore ?? 0,
+      irMatchScore: ledgerScores.IR ?? 0,
+      nmr1HMatchScore: ledgerScores["1H_NMR"] ?? 0,
+      nmr13CMatchScore: ledgerScores["13C_NMR"] ?? 0,
+      msMatchScore: ledgerScores.MS ?? 0,
       formulaScore: v5Evaluated?.scoreBreakdown?.formulaScore ?? 90,
       functionalGroupScore:
         v5Evaluated?.scoreBreakdown?.functionalGroupScore ??
         (modalityEvaluation.irScore || 80),
-      crossSpectrumBonus: modalityEvaluation.multiModalityBonus,
-      consistencyBonus: modalityEvaluation.multiModalityBonus,
-      conflictPenalty: contradictionPenalty,
-      contradictionPenalty,
+      crossSpectrumBonus: 0,
+      consistencyBonus: 0,
+      conflictPenalty: 0,
+      contradictionPenalty: 0,
       totalScore: finalScore,
       modalityDetails: {
         IR: modalityEvaluation.irEval,
@@ -250,6 +235,7 @@ export function rankCandidates(
 
     results.push({
       id: graph.id,
+      scientificScoreLedger, scoreMeaning:"UNCALIBRATED_COMPATIBILITY",
       rank: 1,
       name: graph.name,
       iupacName: graph.iupacName,
@@ -299,10 +285,10 @@ export function rankCandidates(
       constraintSatisfaction,
       hardConstraintPassed: true,
       evidenceSupport: supportingReasons,
-      irScore: modalityEvaluation.irScore,
-      h1NmrScore: modalityEvaluation.h1NmrScore,
-      c13NmrScore: modalityEvaluation.c13NmrScore,
-      msScore: modalityEvaluation.msScore,
+      irScore: ledgerScores.IR ?? null,
+      h1NmrScore: ledgerScores["1H_NMR"] ?? null,
+      c13NmrScore: ledgerScores["13C_NMR"] ?? null,
+      msScore: ledgerScores.MS ?? null,
       spectrumConsistencyScore,
       contradictionPenalty,
       crossSpectrumScore,
@@ -313,7 +299,7 @@ export function rankCandidates(
       violatedConstraints,
       validationReport: v5Evaluated?.validationReport,
       tieredConfidence: v5Evaluated?.tieredConfidence,
-      modalityScores: v5Evaluated?.modalityScores,
+      modalityScores: {ir:ledgerScores.IR??"Not Available",h1Nmr:ledgerScores["1H_NMR"]??"Not Available",c13Nmr:ledgerScores["13C_NMR"]??"Not Available",ms:ledgerScores.MS??"Not Available",msms:ledgerScores["MS/MS"]??"Not Available",tofSims:ledgerScores["ToF-SIMS"]??"Not Available"},
       scoreBreakdown,
       supportingEvidence:
         matchedEvs.length > 0 ? matchedEvs : evidencePool.slice(0, 5),
@@ -442,3 +428,4 @@ export const CandidateStructureGenerator = {
     ),
   rankCandidates,
 };
+import {scoreScientificEvidence} from './scientificEngines/evidenceLedger';

@@ -1,0 +1,15 @@
+{
+  "checkedOn": "2026-10-13",
+  "sourceFiles": 131,
+  "forbiddenPaths": [],
+  "recognizedCredentials": [],
+  "excluded": [
+    ".env",
+    "node_modules",
+    "dist",
+    "NIST raw spectra",
+    "audit_workspace",
+    "temporary caches"
+  ],
+  "limitations": "格式與檔案檢查，非完整人工法律／安全審查"
+}

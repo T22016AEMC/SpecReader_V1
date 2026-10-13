@@ -15,7 +15,7 @@ export class DefaultQuantumChemistryAdapter implements QuantumChemistryAdapter {
   readonly isAvailable = false;
 
   getUnavailableReason(): string {
-    return "目前執行環境未掛載外部量子化學計算叢集（DFT / Hessian 簡正模態分析 / GIAO 磁遮蔽張量計算不可用）。系統已自動切換至內建驗證之經驗式模型（Internal Empirical Model）與參考光譜模擬，絕不偽造量子化學計算數據。";
+    return "目前執行環境未掛載外部量子化學計算叢集（DFT / Hessian 簡正模態分析 / GIAO 磁遮蔽張量計算不可用）。系統已自動切換至內建經驗式模型（尚需實測校準）（Internal Empirical Model）與參考光譜模擬，絕不偽造量子化學計算數據。";
   }
 }
 

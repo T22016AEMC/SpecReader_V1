@@ -14,3 +14,6 @@ playwright-report/
 validation/desktop-*.json
 validation/desktop-*.png
 bun.lock
+
+data-cache/
+public/THIRD_PARTY_NOTICES.txt

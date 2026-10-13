@@ -1,0 +1,343 @@
+{
+  "originalZipSha256": "a9315297d71842d0e1111c9ad90f271c9f6b1bc300f9ccddd1e23cc1df5b312a",
+  "originalFiles": 56,
+  "files": [
+    {
+      "path": "metadata.json",
+      "v0sha256": "c7181f916632f5fd635b40f4df127f0b4e70d53d1bfdfced4c41beee6de20db9",
+      "v1sha256": "c7181f916632f5fd635b40f4df127f0b4e70d53d1bfdfced4c41beee6de20db9",
+      "status": "UNCHANGED"
+    },
+    {
+      "path": "index.html",
+      "v0sha256": "7d2f3595706ac882e1fb55a9684d57433e73c71c1c0d585aaa680b0064ba3276",
+      "v1sha256": "7d2f3595706ac882e1fb55a9684d57433e73c71c1c0d585aaa680b0064ba3276",
+      "status": "UNCHANGED"
+    },
+    {
+      "path": ".env.example",
+      "v0sha256": "b6d12c728de0aac8b0bc6239e53aa8088c1431bcb4f9a3d61e5e8a2df1c7c400",
+      "v1sha256": "7333990928a5cf8d07f6a03d6fec296326d90277e508d31b5b27252986d47e8f",
+      "status": "MODIFIED"
+    },
+    {
+      "path": "src/App.tsx",
+      "v0sha256": "42cad4688a7be8ea2e02eddbc52d0419f683dbb0dfb98f7b9b41ce0b794a1642",
+      "v1sha256": "8e27528dc17386dd761f20a96a56d69516751bbac18354ee33fe04c29812b3aa",
+      "status": "MODIFIED"
+    },
+    {
+      "path": "server.ts",
+      "v0sha256": "5a2a890ce421a3cacb71ce1a979daa5b0700ecbc1315de420bd88dd78267a603",
+      "v1sha256": "bdd0514186ed4ea90dd0681e799a50b307ff7fdd01a92eb06d83564077a4b797",
+      "status": "MODIFIED"
+    },
+    {
+      "path": ".gitignore",
+      "v0sha256": "db691f14fcf678985362a42c6aedb581e42cd6bb99962ce1b44aea460fb2a4df",
+      "v1sha256": "424f8ebdc98d133a802e811d6c6ba08fe3a43f1aceb9bc37e89d3c14e7c58f09",
+      "status": "MODIFIED"
+    },
+    {
+      "path": "bun.lock",
+      "v0sha256": "001bbcfb70a294075c8a9a8b5af76470a6fb2c4291eefd43d3263a7f63fd382f",
+      "v1sha256": "001bbcfb70a294075c8a9a8b5af76470a6fb2c4291eefd43d3263a7f63fd382f",
+      "status": "UNCHANGED"
+    },
+    {
+      "path": "src/components/ReportExportModal.tsx",
+      "v0sha256": "e9ca31462324b9b9a2f40167c038ee971da45ef210485a2875310e905a10e74d",
+      "v1sha256": "e9ca31462324b9b9a2f40167c038ee971da45ef210485a2875310e905a10e74d",
+      "status": "UNCHANGED"
+    },
+    {
+      "path": "package.json",
+      "v0sha256": "a6b748638c0dfb199b09cc76faed0fd917dc58e3395ab0c1d1d0c8731b93ddf0",
+      "v1sha256": "43dfa8bbbfc2b18e590a758ab6f5efc9a4c373c9923228ea6efdb191d1d80605",
+      "status": "MODIFIED"
+    },
+    {
+      "path": "src/components/SpectrumViewer.tsx",
+      "v0sha256": "43607194489665e0ec01b08325386ec6b058d01df5541d4d4002c5a584f237c7",
+      "v1sha256": "43607194489665e0ec01b08325386ec6b058d01df5541d4d4002c5a584f237c7",
+      "status": "UNCHANGED"
+    },
+    {
+      "path": "src/data/referencePresets.ts",
+      "v0sha256": "8b9cd12d76312f8062ba1850f07fc36c550f694434dc9ac2d33212624af244df",
+      "v1sha256": "db191ca3cf19dacd371601d4e2d1b5195ae1fd94a459af91a0352204007f20f5",
+      "status": "MODIFIED"
+    },
+    {
+      "path": "src/components/StructureRenderer2D.tsx",
+      "v0sha256": "fc23d9dbcc97cf13f0ca998096e391d4e13928696ad0b25c65d9cb88b41cac7f",
+      "v1sha256": "fc23d9dbcc97cf13f0ca998096e391d4e13928696ad0b25c65d9cb88b41cac7f",
+      "status": "UNCHANGED"
+    },
+    {
+      "path": "src/components/StructureSpectrumValidationPage.tsx",
+      "v0sha256": "573a1160de86d97fc2b5b3988a4f824f9f2f0495484872833a5da17cf7cacadf",
+      "v1sha256": "829c54709a5f12089533da9169b7489fa05bb0adc6ccb653d964f0fd82686024",
+      "status": "MODIFIED"
+    },
+    {
+      "path": "src/engines/candidateGeneration/constraintValidator.ts",
+      "v0sha256": "f0614fca287483fef3d9baaec3540f0ce96dc31ffb28591ac36e57667d5c57a9",
+      "v1sha256": "7f86ce5b41ec96471230b9e4e58e8427cb7ad129f1fcfe4068a170efa391fe2b",
+      "status": "MODIFIED"
+    },
+    {
+      "path": "src/engines/candidateGeneration/formulaGenerator.ts",
+      "v0sha256": "9d65d3604165689dd9eb4d1ef4e43abfe9896cc4dd3bbc22df131b9068b4c7bc",
+      "v1sha256": "ec6439e3b3366a6fa374d0873ed5d64a24a9402b1141e9a78c1fbb55deec9b6b",
+      "status": "MODIFIED"
+    },
+    {
+      "path": "src/engines/__tests__/phase2NmrScientificUpgrade.test.ts",
+      "v0sha256": "e0f2721f4e93f7bddfe5990eb8241d20f2a15756904d3032d3e34e9da49f7c99",
+      "v1sha256": "f57c549c3fc0fb4265425d99adbf154b5a77825c28a3f38f71b83aa2ee722510",
+      "status": "MODIFIED"
+    },
+    {
+      "path": "src/engines/candidateGeneration/fragmentLibrary.ts",
+      "v0sha256": "7f00b9279ecb3867a4350324e4e714f7b7b024cb9b28eb40638f2281999c44d6",
+      "v1sha256": "ec0a89451db8bcbeb95cbe37a8c986f69e72b78d70ca6c1db74c2abb872a87c5",
+      "status": "MODIFIED"
+    },
+    {
+      "path": "src/engines/candidateGeneration/graphAssemblyEngine.ts",
+      "v0sha256": "a1204ddcb686470cdab3c2d27ab377d4f15bb841c820b28860b3ecdf2758e1b5",
+      "v1sha256": "82a2dfc4e1d686acb4900b9d7e6941b7b92f6bf8b01eca8d9e9bef06a2cdee92",
+      "status": "MODIFIED"
+    },
+    {
+      "path": "src/engines/candidateGeneration/combinatorialAssembler.ts",
+      "v0sha256": "170afa7248db61463f2d5f0fb21f6be043e0962e05bfcc5e1e1fb39a1504816a",
+      "v1sha256": "bea792560cf5d5a9db93beaabccc0bfd22a544ada085daff8e8c4bde08c0b3a8",
+      "status": "MODIFIED"
+    },
+    {
+      "path": "src/engines/candidateGeneration/spectrumConsistencyEvaluator.ts",
+      "v0sha256": "079e45ba46a704ed43759c434d8ab948d82674d1b0c1d23ccda1bc01b00622e7",
+      "v1sha256": "704f2835f91041b19ebd84bfbf474ae3b88fe74a90fe337062b58425b29d614e",
+      "status": "MODIFIED"
+    },
+    {
+      "path": "src/engines/__tests__/phase3IrNmrOhAntiBias.test.ts",
+      "v0sha256": "98fd1651f1d57621c516cab6f8c84658f89dbe15e688f2bb0237edbfc75dbd0a",
+      "v1sha256": "e66f236728ad00eba70c7942a89b868ba991b6469046b22d2e4045366a1cfbd5",
+      "status": "MODIFIED"
+    },
+    {
+      "path": "src/engines/candidateGeneration/graphValidator.ts",
+      "v0sha256": "8c98dcbe4eb9633ac9507b9929d640e01d3da3e2a4885b458fa10c6c727cc9e3",
+      "v1sha256": "5782bb31d61ef2324882892af09b8c939d5b4833f117dc3c7c00e0df6d016618",
+      "status": "MODIFIED"
+    },
+    {
+      "path": "src/engines/candidateGenerator.ts",
+      "v0sha256": "ee2d5a01d487dfca166b90f74ffe1e786d01b2d7bb34a0da49e3642ebc550a08",
+      "v1sha256": "178cbf230e427c99a64f1bce3fe57e8eecf83dcd89af4ceb32c1cc3d60026ed0",
+      "status": "MODIFIED"
+    },
+    {
+      "path": "src/engines/chemistryEngine.ts",
+      "v0sha256": "6a5870f18a9c3adc06ef7a27a440f13cca7b04c41c5dc1e5013058769d249c61",
+      "v1sha256": "00f830f8c239064f6563738e655ed07fdd2cf3c6872748c3e077e7b5dad87e2a",
+      "status": "MODIFIED"
+    },
+    {
+      "path": "src/engines/formulaEngine.ts",
+      "v0sha256": "30c96c66e5da42a88a7a61e0f0950203103f9eff681f7169503576725941627f",
+      "v1sha256": "b5a1ee141ff6d813b6d14883d5d47844fb0fddd2b0b2e8481a24adc37f04bcca",
+      "status": "MODIFIED"
+    },
+    {
+      "path": "src/engines/dataValidator.ts",
+      "v0sha256": "70af8436fe44f73333266ad4425283ad0d29bd239b22c9a382f00755f13bffc0",
+      "v1sha256": "aa9b4005afc2d4e751c67220d06db713c070ffd366a225e83cbcb030d7bd4ac5",
+      "status": "MODIFIED"
+    },
+    {
+      "path": "src/engines/irEngine.ts",
+      "v0sha256": "a45200de779a2993306b7137d66ee0b9981bdfaaf94464634e03672448c51aa1",
+      "v1sha256": "b297734bf8ad84c4c86fb087874bb6a04035ef518b1116bb10b00fd6e2377d33",
+      "status": "MODIFIED"
+    },
+    {
+      "path": "src/engines/chemicalFeatureEngine.ts",
+      "v0sha256": "6c15f533678137ee12bea97d4db3d3cc87397d76b4729bc850b1247fc867e9de",
+      "v1sha256": "af01510553dd43a6b5011a4b342a7465a82e814f4d12e24186ce07f1ad4ebc41",
+      "status": "MODIFIED"
+    },
+    {
+      "path": "src/engines/msEngine.ts",
+      "v0sha256": "b246e81f8b096062abfef24aefb196ac6a6d868463a244f73b949c6d635b0689",
+      "v1sha256": "353230c7213206f5b03ffa10ddff13f8013a70272968bc90708d65ffc71ebd12",
+      "status": "MODIFIED"
+    },
+    {
+      "path": "src/engines/scientificEngines/deterministicStructureGenerator.ts",
+      "v0sha256": "54d042aa94772a2fd66a4a54583dea330b834cc1f0c182a6e76f18cebd26c9d4",
+      "v1sha256": "0536cf6c702694ecb15e8301dce96653efbacb1658b7ce6dd4fdfa85bb6eaf8a",
+      "status": "MODIFIED"
+    },
+    {
+      "path": "src/engines/reasoningEngine.ts",
+      "v0sha256": "2d8c8679e4f3594e3a9639aeea6365ef3806f78d3a38e447e4572bcebbdc3e32",
+      "v1sha256": "12948a2c914c1d2ea2956184322ecdadb32325f23e1f3b4c9d9189af3c47c32b",
+      "status": "MODIFIED"
+    },
+    {
+      "path": "src/engines/scientificEngines/chemicalHardConstraintValidator.ts",
+      "v0sha256": "d25c31b55fee375f5f0b564198c60884b2ae69e7957719f4aa2f18736d32018d",
+      "v1sha256": "a49ad31ef8ef017a7dbc31d72d02c4c370495bd849c8815a42a706250e481b49",
+      "status": "MODIFIED"
+    },
+    {
+      "path": "src/engines/scientificEngines/crossSpectrumValidator.ts",
+      "v0sha256": "5072588c39ce02183363f93221756078f453348296a5c1903a5eec5cde663c7c",
+      "v1sha256": "33d5f9c87797eba6e3f767b1f09051e7b1f2341271432d88168291c5c586b3f5",
+      "status": "MODIFIED"
+    },
+    {
+      "path": "src/engines/nmrEngine.ts",
+      "v0sha256": "1c3b8f20c3e78606e04ed075b3963924f87b452e381d705bd32d94838f4b670e",
+      "v1sha256": "d2d85bba5ecd4e7d4531558beb420810e5df56744a9309bc65901a4c2f25d0cd",
+      "status": "MODIFIED"
+    },
+    {
+      "path": "src/engines/scientificEngines/fragmentConstraintSolver.ts",
+      "v0sha256": "6f53c818fff4534054ec5f296da954c0b5d6e9b145821640a7795e80b84c57c4",
+      "v1sha256": "b4afd5fb4af9d248b6225bef5ad93a267b1b7ec744c3947f9c4fc67cb1671b5a",
+      "status": "MODIFIED"
+    },
+    {
+      "path": "src/engines/scientificEngines/irScientificEngine.ts",
+      "v0sha256": "01ece048372dadb7ac41af54e1a674546d2b56861973a7e7022fb944551c9f2a",
+      "v1sha256": "0fdd5276f59a3ba39e7f9eca7726e256ca3c9ea0e31f640c78bfb242601b15ae",
+      "status": "MODIFIED"
+    },
+    {
+      "path": "src/engines/scientificEngines/molecularGraphValidator.ts",
+      "v0sha256": "3030a8607fe1d6c081d9be8b4c502bc2d26bf719df2b71178732fe5750c3b7f9",
+      "v1sha256": "a44e0e64282966b9de758b99265d47a229ed90fb3ede2a1ead04874be3996321",
+      "status": "MODIFIED"
+    },
+    {
+      "path": "src/engines/scientificEngines/index.ts",
+      "v0sha256": "e8142d05bae633281bc42467a807eccc651f2cf8a3ec0834787c77923acea69f",
+      "v1sha256": "5e354f4c277179523a336a0f764d01a1fc8179636e18a9fe600f23f5b25a0598",
+      "status": "MODIFIED"
+    },
+    {
+      "path": "src/engines/scientificEngines/massSpectrometryEngine.ts",
+      "v0sha256": "9a772680944be9083d2be173ad9ebe47042e9b3431e30a0fa138c563c3bb8345",
+      "v1sha256": "ec9d8b8c03f3a15933f7133591e66ba9518f17ac826724ed71b9a5f12d8261e6",
+      "status": "MODIFIED"
+    },
+    {
+      "path": "src/engines/scientificEngines/nmrScientificEngine.ts",
+      "v0sha256": "c5a6e84a94fb1fb06b3e7701d620b920a8ef47a39d03d4cdedbadd9f781e5845",
+      "v1sha256": "475010c4de2bb690dde265db282b79379bd9e89420d77b2782f431e38207a7b5",
+      "status": "MODIFIED"
+    },
+    {
+      "path": "src/engines/scientificEngines/nmrReferenceDatabase.ts",
+      "v0sha256": "dc0d5a8a8dacde8d1c1642758e50500203e4d8c7603da5753ee0095b6536da4a",
+      "v1sha256": "5d96aa0844601ebba757b84f5c4d9b5a0117de98c2fbd4a58059a7fa1589f10e",
+      "status": "MODIFIED"
+    },
+    {
+      "path": "src/engines/scientificEngines/msmsFragmentationEngine.ts",
+      "v0sha256": "9181c0d128f106b9ad2d44c0f792e543e72ba80f74d4a26d521c0eded184606e",
+      "v1sha256": "fa5206d6e58c1a1d58f7cc393322bebce70f804ab834f8d99263e84be57a088f",
+      "status": "MODIFIED"
+    },
+    {
+      "path": "src/engines/scientificEngines/spectralEvidenceExtractor.ts",
+      "v0sha256": "283afc1cf202b4b2f19d0ffdbf3886fe0c7dda3bfeef3a359f803783b64e498d",
+      "v1sha256": "5e264951ff97e5279f4e8a4ad97cf440272c349398ef63d45ccd1ce2f673f044",
+      "status": "MODIFIED"
+    },
+    {
+      "path": "src/engines/signalCharacterizationEngine.ts",
+      "v0sha256": "732c73ff601fd9be107f63aae0938eb3f4446c1d758680c442cb9b08806c59fc",
+      "v1sha256": "d869348b108f7030dc3527015b9590c82a77ba7d547e5edd8c9cfdbee9348c2f",
+      "status": "MODIFIED"
+    },
+    {
+      "path": "src/engines/scientificEngines/tofSimsScientificEngine.ts",
+      "v0sha256": "114c5889ef1a305b8179999ac72b8ca42450774e017f9cc4c98caef8eee0dbc3",
+      "v1sha256": "d622427a1ec932c3ed53bd2f93b82022af263165bf08d6fcb969f07e846cc8e2",
+      "status": "MODIFIED"
+    },
+    {
+      "path": "src/index.css",
+      "v0sha256": "ab3a2814dbff0c3b3a0aebc884a006a902b63faa66493aa09cc30a6f561c8d38",
+      "v1sha256": "ab3a2814dbff0c3b3a0aebc884a006a902b63faa66493aa09cc30a6f561c8d38",
+      "status": "UNCHANGED"
+    },
+    {
+      "path": "src/engines/scientificEngines/predictionAndValidationFramework.ts",
+      "v0sha256": "60cb3eed45ac1b22ff5ccf8a60e490ffa1d7a58149b10124905efb55f554b162",
+      "v1sha256": "cb43c0b1825f9fb85ae41c1b3c7019832bc99858335e58f9be1ba9e6c15614a1",
+      "status": "MODIFIED"
+    },
+    {
+      "path": "src/engines/workbenchOrchestrator.ts",
+      "v0sha256": "def728c192945259f905329a26bbf75a126d209d50fbace19a0fd1a2ac6f02eb",
+      "v1sha256": "1400355bd6e2e9c7004a04381ae29bd382e18198b8ae1c4e49045b3512146f40",
+      "status": "MODIFIED"
+    },
+    {
+      "path": "src/tests/scientificEngineTestSuite.ts",
+      "v0sha256": "fc96c8f0d3a1f910ae7954090a06567e75cc3f59d0f7be105a8c7a32c849f1b7",
+      "v1sha256": "0cc78c9bb6b211bffdc78c57a66294f66582f2cbb5c6e257f482fcd17dd02678",
+      "status": "MODIFIED"
+    },
+    {
+      "path": "src/main.tsx",
+      "v0sha256": "30d02ee59cb6576973dea4368093b2dcae692a40668f288fdbc66a114873fcd3",
+      "v1sha256": "55b97cfee0a5c87a8614394fe23e3240320fe819fb327dda357c54637efd9992",
+      "status": "MODIFIED"
+    },
+    {
+      "path": "src/types/spectrum.ts",
+      "v0sha256": "fe9b117869331e417def34b55916244bba81fcb51bbdda19076dd80f40750d26",
+      "v1sha256": "5ada58ab6d232fbc380776bf3aa13eb344cf853b75168792e0b6e8cd83f3e8f4",
+      "status": "MODIFIED"
+    },
+    {
+      "path": "src/models/theoreticalModelRegistry.ts",
+      "v0sha256": "092a8bdb4001ae996efe5ea62a5f6725680398a7358ce10a0cd13420318a0117",
+      "v1sha256": "6ef680f42917bdfd437dfc48e4a656a12fffee805a99de8536a57d6affc7a8ef",
+      "status": "MODIFIED"
+    },
+    {
+      "path": "src/engines/spectrumParser.ts",
+      "v0sha256": "5624fafd4580957b47cd0adc87aad28f7db1c7ea1889f0ebdc232988ec06f759",
+      "v1sha256": "07d813af1f94cc3c686d0ec74f770ca6cd49ac55658e79adc5056d03bfdc1f41",
+      "status": "MODIFIED"
+    },
+    {
+      "path": "vite.config.ts",
+      "v0sha256": "a7aa711292e5ad7eb10f7a17f5f34fbbf75c7b7c24d59cb0212c60bc493c3208",
+      "v1sha256": "6165b5725a9929b84f9fc22a57e05d68b7b0fb6a2221c62a031a700e2a435e9b",
+      "status": "MODIFIED"
+    },
+    {
+      "path": "tsconfig.json",
+      "v0sha256": "6624845b5855cb0c547da44d56785371aaf4f77920440f93b685484456952468",
+      "v1sha256": "1bb1c922240f1e65fe4b22146cbeb967ac64494acf775d184fe8222ec37d35c2",
+      "status": "MODIFIED"
+    },
+    {
+      "path": "README.md",
+      "v0sha256": "097c548744e3c4dcaae2572735812f18092fdf6f8a3fe320f5f91f7f9ca8a99b",
+      "v1sha256": "57698729bdb8d140d46358a27e5952a8027b20634af5f7dd975e40133d615087",
+      "status": "MODIFIED"
+    }
+  ],
+  "missingSourceFiles": []
+}

@@ -19,11 +19,11 @@ const ATOMIC_WEIGHTS: Record<string, number> = {
 };
 
 const MONOISOTOPIC_MASSES: Record<string, number> = {
-  H: 1.007825,
+  H: 1.00782503223,
   B: 11.009305,
   C: 12.0,
-  N: 14.003074,
-  O: 15.994915,
+  N: 14.00307400443,
+  O: 15.99491461957,
   F: 18.998403,
   Na: 22.989769,
   Si: 27.976927,
@@ -49,7 +49,7 @@ export class ComputationalBackend {
   static getStatus(): ComputationalBackendStatus {
     return {
       engineName: "SpecReader 可插拔模型架構介面 (TheoreticalModelRegistry v2.0)",
-      rdkitConnected: false,
+      rdkitConnected: rdkitStatus().available,
       quantumDftConnected: TheoreticalModelRegistry.quantumAdapter.isAvailable,
       pubchemApiConnected: true,
       nistSdbsConnected: false,
@@ -1000,7 +1000,7 @@ export class ChemistryEngine {
     }
     return {
       mw: Number(mw.toFixed(2)),
-      exactMass: Number(exactMass.toFixed(4)),
+      exactMass,
     };
   }
 

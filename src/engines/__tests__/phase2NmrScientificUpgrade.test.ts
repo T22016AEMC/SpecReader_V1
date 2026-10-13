@@ -336,7 +336,8 @@ describe("SpecReader Phase 2 — ¹H NMR / ¹³C NMR Scientific Engine Comprehen
     const analyzed = NMRAnalysisEngine.analyzeExperimental1HNMR(dmsoSpec);
     // Water (3.33 ppm) and DMSO-d5 (2.50 ppm) must be excluded from sample proton environments!
     expect(analyzed.environments.length).toBe(5);
-    expect(analyzed.protonSummary.totalIntegratedProtons).toBe(9);
+    expect(analyzed.protonSummary.totalIntegratedProtons).toBeNull();
+    expect(analyzed.integrationSemantics.rawIntegralSum).toBe(9);
     const waterPeak = analyzed.annotatedPeaks.find((p) => p.id === "water");
     const dmsoPeak = analyzed.annotatedPeaks.find((p) => p.id === "dmso");
     expect(waterPeak?.signalRole).toBe("WATER");

@@ -122,7 +122,11 @@ export class ToFSIMSScientificEngine
           "Collision cascade bond scission at top 1–2 nm surface monolayer";
         let surfaceRelevance: ToFSIMSFeature["surfaceRelevance"] =
           "General Secondary Ion Fragment";
-        let confidence = 0.68;
+        let confidence = 0.35;
+        if(surfaceConditions.polarity === "negative" && [16,17,35,37,45].includes(mzRound)) {
+          ionAssignment=mzRound===16?"O− 元素陰離子":mzRound===17?"OH− 表面羥基或吸附水假設":mzRound===45?"CHO2− 羧酸／含氧表面碎片假設":"Cl− 氯陰離子（需 35/37 同位素比例佐證）";
+          ionClass="oxygenated_secondary_ion";confidence=.55;
+        }
 
         if (
           [28, 59, 73, 147, 207, 221].includes(mzRound) &&
@@ -169,7 +173,7 @@ export class ToFSIMSScientificEngine
           else
             ionAssignment =
               "[(CH3)3SiO-Si(CH3)O2]- disiloxane secondary anion";
-        } else if ([77, 91, 105, 115, 128].includes(mzRound)) {
+        } else if ([77, 91, 105, 115, 128].includes(mzRound) && surfaceConditions.polarity === "positive") {
           ionClass = "aromatic_hydrocarbon_secondary_ion";
           fragmentClass =
             "Aromatic phenyl / tropylium / polycyclic secondary ion series";
@@ -181,7 +185,7 @@ export class ToFSIMSScientificEngine
           else if (mzRound === 91)
             ionAssignment = "C7H7+ tropylium / benzyl secondary cation";
           else ionAssignment = `m/z ${mzRound} aromatic secondary ion`;
-        } else if ([27, 29, 41, 55, 57].includes(mzRound)) {
+        } else if ([27, 29, 41, 55, 57].includes(mzRound) && surfaceConditions.polarity === "positive") {
           ionClass = "aliphatic_hydrocarbon_secondary_ion";
           fragmentClass =
             "Aliphatic CnH(2n+1)+ / CnH(2n-1)+ hydrocarbon series";
@@ -190,7 +194,7 @@ export class ToFSIMSScientificEngine
             "Direct C-C / C-H bond scission along alkyl chain in collision cascade";
           confidence = 0.74;
           ionAssignment = `m/z ${mzRound} aliphatic alkyl/alkenyl secondary cation`;
-        } else if ([31, 43, 45, 59].includes(mzRound)) {
+        } else if ([31, 43, 45, 59].includes(mzRound) && surfaceConditions.polarity === "positive") {
           ionClass = "oxygenated_secondary_ion";
           fragmentClass = "Oxygenated C_xH_yO+ secondary ion series";
           surfaceRelevance = "Polar Functional Surface Group";
@@ -204,7 +208,7 @@ export class ToFSIMSScientificEngine
           else if (mzRound === 45)
             ionAssignment = "C2H5O+ / CHO2+ oxygenated secondary ion";
           else ionAssignment = "C3H7O+ oxygenated secondary ion";
-        } else if ([30, 44, 58, 72, 79, 80].includes(mzRound)) {
+        } else if ([30, 44, 58, 72, 79, 80].includes(mzRound) && surfaceConditions.polarity === "positive") {
           ionClass = "nitrogenated_secondary_ion";
           fragmentClass =
             "Immonium / amine / pyridinium secondary ion series";

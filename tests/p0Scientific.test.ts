@@ -4,10 +4,7 @@ import {ionMz,massError,neutralMassFromIon,PROTON_MASS,ELECTRON_MASS,type IonAdd
 import {ChemicalGraphValidator} from '../src/engines/candidateGeneration/graphValidator';
 import {ChemicalHardConstraintValidator} from '../src/engines/scientificEngines/chemicalHardConstraintValidator';
 import {NMRAnalysisEngine} from '../src/engines/nmrEngine';
-import type {ExperimentalSpectrumData,SpectralPeak} from '../src/types/spectrum';
-export function spectrum(modality:ExperimentalSpectrumData['modality'],peaks:SpectralPeak[],unit='Intensity'):ExperimentalSpectrumData {
-  return {modality,fileName:'synthetic-fixture.csv',sourceFormat:'CSV',isSimulated:false,sourceType:'NUMERIC_EXPERIMENTAL',xUnit:modality==='IR'?'cm⁻¹':modality==='MS'?'m/z':'ppm',yUnit:unit,points:peaks.map(p=>({x:p.x,y:p.y})),peaks,validation:{isValid:true,qualityScore:95,issues:[]}};
-}
+import {spectrum} from './fixtures';
 describe('P0 科學不變量（合成資料，非實測準確率）',()=>{
   it('透射率與 %T 依 Beer–Lambert 轉為吸光度',()=>{
     expect(toAbsorbance(.1,'TRANSMITTANCE')).toBeCloseTo(1,12);

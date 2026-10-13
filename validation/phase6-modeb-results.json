@@ -1,0 +1,32 @@
+[
+  {
+    "phase": "phase6-modeb",
+    "name": "assets",
+    "exitCode": 0,
+    "durationMs": 841
+  },
+  {
+    "phase": "phase6-modeb",
+    "name": "typecheck",
+    "exitCode": 2,
+    "durationMs": 14199
+  },
+  {
+    "phase": "phase6-modeb",
+    "name": "test",
+    "exitCode": 0,
+    "durationMs": 35194
+  },
+  {
+    "phase": "phase6-modeb",
+    "name": "build",
+    "exitCode": 0,
+    "durationMs": 6428
+  },
+  {
+    "phase": "phase6-modeb",
+    "name": "server-build",
+    "exitCode": 0,
+    "durationMs": 1325
+  }
+]

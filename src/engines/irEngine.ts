@@ -1,3 +1,5 @@
+import {graphChemicalFeatures} from "./scientificEngines/graphChemicalFeatures";
+import {matchesSMARTS} from "./scientificEngines/rdkitAdapter";
 import {prepareIR, irRangeCovered} from "./scientificEngines/irSignalProcessing";
 import {
   CompetingHypothesisRecord,
@@ -1091,6 +1093,7 @@ export class IRAnalysisEngine {
     const predictions: IRFunctionalGroupFinding[] = [];
     const groups = structure.detectedFunctionalGroups.join(" ").toLowerCase();
     const smiles = structure.smiles || "";
+    const graphFeatures = graphChemicalFeatures(smiles);
     const parsedGraph = smiles ? StructureParserAdapter.parseSmilesGraph(smiles).graph : null;
 
     const addBand = (
@@ -1152,31 +1155,17 @@ export class IRAnalysisEngine {
 
     const integrity = structure.structureIntegrity;
     if (!structure.isFormulaOnly && smiles && integrity?.hasVerifiableConnectivity !== false) {
-      const hasAromatic = groups.includes("芳香") || /c1|n1/.test(smiles);
-      const isPyridineLike = /n1|c1ccncc1|c1cnccc1|c1ccccn1/.test(smiles);
-      const topo = parsedGraph?.ringSubstitutionTopology || integrity?.ringSubstitutionTopology || "";
-      const isPara = topo === "PARA_DISUBSTITUTED" || topo === "1,4-para" || groups.includes("對位");
-      const isOrtho = topo === "1,2-ortho" || groups.includes("鄰位") || /c1ccccc1/.test(smiles) && !smiles.endsWith("c1ccccc1") && !isPara;
-      const isMeta = topo === "1,3-meta" || groups.includes("間位");
-      const isMono = topo === "MONO_SUBSTITUTED" || topo === "monosubstituted" || groups.includes("單取代");
-
-      // Detect specific functional environments from SMILES + detectedFunctionalGroups
-      const hasCarboxylicAcid =
-        groups.includes("羧酸") ||
-        /C\(=O\)O($|[^C,c,1-9])/.test(smiles) ||
-        /OC\(=O\)/.test(smiles) && !/COC\(=O\)|CCOC\(=O\)|CC\(=O\)O[c,C]/.test(smiles);
-      const hasPhenolicOH =
-        groups.includes("酚") ||
-        /c1[a-z0-9()=]*O($|[^C,c])/.test(smiles) ||
-        /^Oc1/.test(smiles);
-      const hasAliphaticOH =
-        (groups.includes("醇") || groups.includes("羥基")) &&
-        !hasPhenolicOH &&
-        !hasCarboxylicAcid;
-      const hasIntramolecularChelatedOH =
-        hasPhenolicOH &&
-        isOrtho &&
-        (/C\(=O\)/.test(smiles) || /O=C/.test(smiles));
+      const hasAromatic=graphFeatures.aromatic;
+      const isPyridineLike=graphFeatures.heteroaromatic;
+      const topo=parsedGraph?.ringSubstitutionTopology||integrity?.ringSubstitutionTopology||"";
+      const isPara=topo==="PARA_DISUBSTITUTED"||topo==="1,4-para";
+      const isOrtho=topo==="1,2-ortho";
+      const isMeta=topo==="1,3-meta";
+      const isMono=topo==="MONO_SUBSTITUTED"||topo==="monosubstituted";
+      const hasCarboxylicAcid=graphFeatures.acid;
+      const hasPhenolicOH=graphFeatures.phenol;
+      const hasAliphaticOH=graphFeatures.alcohol;
+      const hasIntramolecularChelatedOH=hasPhenolicOH&&isOrtho&&graphFeatures.carbonylCount>0;
 
       if (hasAromatic) {
         addBand(
@@ -1317,8 +1306,8 @@ export class IRAnalysisEngine {
           79
         );
       } else if (hasAliphaticOH) {
-        const isTertiaryOH = /C\(C\)\(C\)O/.test(smiles);
-        const isSecondaryOH = !isTertiaryOH && /C\(C\)O|C\(O\)C/.test(smiles);
+        const isTertiaryOH = graphFeatures.tertiaryAlcohol;
+        const isSecondaryOH = graphFeatures.secondaryAlcohol;
         const coFreq = isTertiaryOH ? 1158 : isSecondaryOH ? 1105 : 1055;
         const coLabel = isTertiaryOH
           ? "三級醇 C-O 伸縮 (1130–1200 cm⁻¹)"
@@ -1351,8 +1340,8 @@ export class IRAnalysisEngine {
         );
       }
 
-      if (groups.includes("醛基") || (/O=CC|CC=O|c1[a-z0-9()=]*C=O/.test(smiles) && !/C\(=O\)[O,N,C]/.test(smiles))) {
-        const isConj = hasAromatic || /C=CC=O/.test(smiles);
+      if (graphFeatures.aldehyde) {
+        const isConj = graphFeatures.conjugatedCarbonyl;
         addBand(
           isConj ? 1698 : 1726,
           98,
@@ -1369,9 +1358,9 @@ export class IRAnalysisEngine {
         addBand(2732, 30, 22, "sharp", "醛基 C-H Fermi 共振帶 II", "Aldehyde", "2700–2760 cm⁻¹", "醛基 ν(C-H) 與 2δ(CHO) Fermi 共振雙峰 II", 82);
       }
 
-      if (groups.includes("酯基") || /C\(=O\)O[C,c]|OC\(=O\)[C,c]/.test(smiles)) {
-        const isPhenolicOrVinylEster = /C\(=O\)Oc1|c1[a-z0-9()=]*OC\(=O\)/.test(smiles);
-        const isArylConjugatedEster = !isPhenolicOrVinylEster && (/c1[a-z0-9()=]*C\(=O\)O|O=C\(O[C,c]+\)c1/.test(smiles));
+      if (graphFeatures.ester) {
+        const isPhenolicOrVinylEster = graphFeatures.aromaticEsterO;
+        const isArylConjugatedEster = !isPhenolicOrVinylEster && graphFeatures.conjugatedCarbonyl;
         const esterCoWave = hasIntramolecularChelatedOH
           ? 1682
           : isPhenolicOrVinylEster
@@ -1406,9 +1395,9 @@ export class IRAnalysisEngine {
         addBand(1108, 64, 26, "medium", "酯基 O-C-C 對稱伸縮", "Ester", "1030–1150 cm⁻¹", "烷氧基 O-C 伸縮振動", 81);
       }
 
-      if (groups.includes("酮基")) {
-        const isConj = hasAromatic || /C=CC\(=O\)/.test(smiles);
-        const isFiveMemberedCyclicKetone = /C1CC\(=O\)CC1/.test(smiles);
+      if (graphFeatures.ketone) {
+        const isConj = graphFeatures.conjugatedCarbonyl;
+        const isFiveMemberedCyclicKetone = matchesSMARTS(smiles,"[CX3;r5](=O)") === true;
         const ketoneWave = hasIntramolecularChelatedOH
           ? 1645
           : isFiveMemberedCyclicKetone
@@ -1468,9 +1457,9 @@ export class IRAnalysisEngine {
       }
 
       // Amides (Primary, Secondary, Tertiary)
-      if (groups.includes("醯胺") || /NC\(=O\)|C\(=O\)N/.test(smiles)) {
-        const isTertiaryAmide = /N\([C,c]+\)\([C,c]+\)C\(=O\)|C\(=O\)N\([C,c]+\)[C,c]+/.test(smiles);
-        const isPrimaryAmide = /C\(=O\)N($|[^C,c])|NC\(=O\)$/.test(smiles);
+      if (graphFeatures.amide) {
+        const isTertiaryAmide = graphFeatures.tertiaryAmide;
+        const isPrimaryAmide = graphFeatures.primaryAmide;
         if (!isTertiaryAmide) {
           if (isPrimaryAmide) {
             addBand(3368, 58, 28, "medium", "一級醯胺非對稱 N-H 伸縮", "Amide", "3330–3420 cm⁻¹", "一級醯胺 ν_as(NH₂) 伸縮振動", 84);
@@ -1494,9 +1483,9 @@ export class IRAnalysisEngine {
             ? "三級醯胺具強 Amide I C=O 帶 (~1648 cm⁻¹)，但無 N-H 伸縮與無 Amide II 帶"
             : "氮孤對 +M 共振效應使醯胺 C=O 顯著紅移至 ~1664 cm⁻¹"
         );
-      } else if (groups.includes("胺基") || (/N/.test(smiles) && !/\[N\+\]|C#N|n1/.test(smiles))) {
-        const isPrimaryAmine = /N($|[^C,c,=,#])|^N[C,c]/.test(smiles) && !/C\(N[C,c]\)|[C,c]N[C,c]/.test(smiles);
-        const isSecondaryAmine = !isPrimaryAmine && /[C,c]N[C,c]/.test(smiles) && !/[C,c]N\([C,c]\)[C,c]/.test(smiles);
+      } else if (graphFeatures.amine) {
+        const isPrimaryAmine = graphFeatures.primaryAmine;
+        const isSecondaryAmine = graphFeatures.secondaryAmine;
         if (isPrimaryAmine) {
           addBand(3422, 48, 26, "sharp", "一級胺非對稱 N-H 伸縮", "Amine", "3400–3500 cm⁻¹", "一級胺 ν_as(NH₂) 伸縮振動", 83);
           addBand(3342, 46, 26, "sharp", "一級胺對稱 N-H 伸縮", "Amine", "3300–3400 cm⁻¹", "一級胺 ν_s(NH₂) 伸縮振動", 83);
@@ -1517,8 +1506,8 @@ export class IRAnalysisEngine {
         );
       }
 
-      if (groups.includes("腈") || /C#N|N#C/.test(smiles)) {
-        const isConjNitrile = hasAromatic || /C=CC#N/.test(smiles);
+      if (graphFeatures.nitrile) {
+        const isConjNitrile = hasAromatic;
         addBand(
           isConjNitrile ? 2228 : 2252,
           72,
@@ -1533,7 +1522,7 @@ export class IRAnalysisEngine {
         );
       }
 
-      if (groups.includes("硝基") || /\[N\+\]\(=O\)\[O-\]|N\(=O\)=O/.test(smiles)) {
+      if (graphFeatures.nitro) {
         addBand(1524, 92, 22, "sharp", "硝基非對稱伸縮 ν_as(NO₂)", "Nitro", "1510–1560 cm⁻¹", "硝基非對稱強伸縮振動", 89);
         addBand(1348, 88, 22, "sharp", "硝基對稱伸縮 ν_s(NO₂)", "Nitro", "1330–1375 cm⁻¹", "硝基對稱強伸縮振動", 89);
       }
@@ -1550,14 +1539,14 @@ export class IRAnalysisEngine {
         addBand(802, 82, 24, "sharp", "Si-C 伸縮與 CH₃ 搖擺", "Siloxane", "785–815 cm⁻¹", "Si-(CH₃)₂ 搖擺伸縮", 86);
       }
 
-      if (groups.includes("溴") || /Br/.test(smiles)) {
+      if ((structure.atomCounts.Br ?? 0)>0) {
         addBand(592, 54, 22, "sharp", "C-Br 伸縮振動", "C-Br", "500–680 cm⁻¹", "碳-溴鍵指紋區振動", 78);
       }
-      if (groups.includes("氯") || (/Cl/.test(smiles) && !/C\(=O\)Cl/.test(smiles))) {
+      if ((structure.atomCounts.Cl ?? 0)>0) {
         addBand(735, 56, 22, "sharp", "C-Cl 伸縮振動", "C-Cl", "650–800 cm⁻¹", "碳-氯鍵指紋區振動", 78);
       }
 
-      if (!groups.includes("矽氧烷") && ((structure.atomCounts.H || 0) > 4 || /C[C,H,O,N]/.test(smiles))) {
+      if (!groups.includes("矽氧烷") && (structure.atomCounts.H || 0) > 4) {
         addBand(2935, 42, 28, "medium", "脂肪族 sp³ C-H 伸縮", "C-H", "2850–2970 cm⁻¹", "烷基 C-H 非對稱/對稱伸縮振動", 80);
         addBand(1456, 38, 22, "sharp", "脂肪族 CH₂/CH₃ 彎曲", "C-H", "1370–1470 cm⁻¹", "烷基 CH₂ 剪式 / CH₃ 傘狀變形振動", 78);
       }

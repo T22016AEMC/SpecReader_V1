@@ -678,13 +678,11 @@ export class ChemicalHardConstraintValidator {
 
     if (graph.totalFormalCharge !== 0) {
       chemicalSpeciesType = "CHARGED_SPECIES";
-      validationErrors.push(
-        `候選結構帶有淨形式電荷 (${graph.totalFormalCharge > 0 ? `+${graph.totalFormalCharge}` : graph.totalFormalCharge})，非電中性有機分子`
-      );
+      validationWarnings.push('合法帶電物種；需指定離子／加合條件，不能按中性分子預設解讀質譜。');
     }
 
     // 5. 計算並檢驗 DBE
-    const rawDbe = this.computeRawOrganicDBE(atomCounts);
+    const rawDbe = this.computeRawOrganicDBE(atomCounts) + graph.totalFormalCharge / 2;
     let dbe: number | null = null;
     if (Math.abs(rawDbe - Math.round(rawDbe)) > 0.01) {
       chemicalSpeciesType = "RADICAL_OR_IONIC";
@@ -703,7 +701,7 @@ export class ChemicalHardConstraintValidator {
     if (declaredFormula && declaredFormula.trim()) {
       const parsedDeclared = this.parseAndValidateFormula(declaredFormula);
       if (
-        !parsedDeclared.isValid ||
+        (!parsedDeclared.isValid && graph.totalFormalCharge===0) ||
         parsedDeclared.computedFormula !== computedFormula ||
         !this.areAtomCountsEqual(parsedDeclared.atomCounts, atomCounts)
       ) {
@@ -721,7 +719,7 @@ export class ChemicalHardConstraintValidator {
     if (targetFormula && targetFormula.trim()) {
       const parsedTarget = this.parseAndValidateFormula(targetFormula);
       normalizedTarget = parsedTarget.computedFormula || targetFormula.trim();
-      if (!parsedTarget.isValid || !parsedTarget.isSupported) {
+      if ((!parsedTarget.isValid && graph.totalFormalCharge===0) || !parsedTarget.isSupported) {
         formulaMatch = false;
         validationErrors.push(
           `目標分子式 (${targetFormula.trim()}) 本身格式無效或不支援驗證：${parsedTarget.validationErrors.join("；")}`
@@ -748,7 +746,7 @@ export class ChemicalHardConstraintValidator {
 
     const isSupported =
       chemicalSpeciesType === "NEUTRAL_ORGANIC" ||
-      chemicalSpeciesType === "ZWITTERIONIC_NEUTRAL";
+      chemicalSpeciesType === "ZWITTERIONIC_NEUTRAL" || chemicalSpeciesType === "CHARGED_SPECIES";
     let isValid =
       isSupported &&
       validationErrors.length === 0 &&

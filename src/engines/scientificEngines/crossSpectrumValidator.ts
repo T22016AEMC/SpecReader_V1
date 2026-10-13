@@ -1,3 +1,4 @@
+import {scoreScientificEvidence,type CandidateScoreLedger} from "./evidenceLedger";
 import {
   CandidateStructure,
   ExtendedSpectrumModality,
@@ -27,6 +28,7 @@ export interface CrossSpectrumValidationMatrixRow {
 }
 
 export interface CrossSpectrumCandidateEvaluation {
+  scientificScoreLedger: CandidateScoreLedger;
   validatedGraph: ValidatedCandidateGraph;
   modalityEvaluation: CandidateModalityConsistencyEvaluation;
   modalityStatus: Record<
@@ -91,46 +93,15 @@ export class CrossSpectrumValidator {
       const hasMsms = Boolean(bundle.msmsAnalysis);
       const hasTofSims = Boolean(bundle.tofSimsAnalysis);
 
-      let msmsScore: number | null = null;
-      let msmsStatus:
-        | "SUPPORTED"
-        | "COMPATIBLE"
-        | "CONTRADICTED"
-        | "NOT_PROVIDED" = "NOT_PROVIDED";
-      if (hasMsms && bundle.msmsAnalysis) {
-        const fgText = [
-          ...validatedGraph.candidate.assembledFragments,
-          ...validatedGraph.candidate.keyStructuralFeatures,
-        ].join(" ");
-        let hits = 0;
-        for (const nl of bundle.msmsAnalysis.physicsModel.neutralLosses) {
-          const lossRound = Math.round(nl.lossDa);
-          if (
-            (lossRound === 42 && /乙醯|酯|Acetyl|Ester/i.test(fgText)) ||
-            (lossRound === 18 && /羥|羧酸|酚|醇|OH|Carboxylic/i.test(fgText)) ||
-            (lossRound === 44 && /羧酸|酯|CO2|Carboxylic/i.test(fgText)) ||
-            lossRound > 0
-          ) {
-            hits++;
-          }
-        }
-        msmsScore = hits > 0 ? 86 : 72;
-        msmsStatus = msmsScore >= 85 ? "SUPPORTED" : "COMPATIBLE";
+      const scientificScoreLedger=scoreScientificEvidence(validatedGraph.candidate.smiles,bundle);
+      const msmsScore=scientificScoreLedger.modalityScores["MS/MS"]??null;
+      const tofSimsScore=scientificScoreLedger.modalityScores["ToF-SIMS"]??null;
+      const msmsStatus=msmsScore===null?"NOT_PROVIDED":msmsScore>=85?"SUPPORTED":msmsScore<25?"CONTRADICTED":"COMPATIBLE";
+      const tofSimsStatus=tofSimsScore===null?"NOT_PROVIDED":tofSimsScore>=85?"SUPPORTED":tofSimsScore<25?"CONTRADICTED":"COMPATIBLE";
+      for(const [mod,detail] of [["IR",modalityEvaluation.irEval],["1H_NMR",modalityEvaluation.h1Eval],["13C_NMR",modalityEvaluation.c13Eval],["MS",modalityEvaluation.msEval]] as const) {
+        const score=scientificScoreLedger.modalityScores[mod];
+        if(score!=null){detail.score=score;detail.status=score>=85?"SUPPORTED":score<25?"CONTRADICTED":"COMPATIBLE";}
       }
-
-      let tofSimsScore: number | null = null;
-      let tofSimsStatus:
-        | "SUPPORTED"
-        | "COMPATIBLE"
-        | "CONTRADICTED"
-        | "NOT_PROVIDED" = "NOT_PROVIDED";
-      if (hasTofSims && bundle.tofSimsAnalysis) {
-        const feats =
-          bundle.tofSimsAnalysis.physicsModel.secondaryIonFeatures || [];
-        tofSimsScore = feats.length > 0 ? 84 : 70;
-        tofSimsStatus = tofSimsScore >= 85 ? "SUPPORTED" : "COMPATIBLE";
-      }
-
       const modalityStatus: Record<
         ExtendedSpectrumModality,
         "SUPPORTED" | "COMPATIBLE" | "CONTRADICTED" | "NOT_PROVIDED"
@@ -144,10 +115,10 @@ export class CrossSpectrumValidator {
       };
 
       const modalityScores: Record<ExtendedSpectrumModality, number | null> = {
-        IR: modalityEvaluation.irScore,
-        "1H_NMR": modalityEvaluation.h1NmrScore,
-        "13C_NMR": modalityEvaluation.c13NmrScore,
-        MS: modalityEvaluation.msScore,
+        IR: scientificScoreLedger.modalityScores.IR??null,
+        "1H_NMR": scientificScoreLedger.modalityScores["1H_NMR"]??null,
+        "13C_NMR": scientificScoreLedger.modalityScores["13C_NMR"]??null,
+        MS: scientificScoreLedger.modalityScores.MS??null,
         "MS/MS": msmsScore,
         "ToF-SIMS": tofSimsScore,
       };
@@ -167,23 +138,11 @@ export class CrossSpectrumValidator {
         compatibleModalityCount +
         contradictedModalityCount;
 
-      let crossSpectrumScore = modalityEvaluation.spectrumConsistencyScore;
-      if (providedCount > 0) {
-        if (contradictedModalityCount === 0 && supportedModalityCount >= 2) {
-          crossSpectrumScore = Math.min(
-            99,
-            crossSpectrumScore + supportedModalityCount * 2
-          );
-        } else if (contradictedModalityCount > 0) {
-          crossSpectrumScore = Math.max(
-            10,
-            crossSpectrumScore - contradictedModalityCount * 8
-          );
-        }
-      }
+      const crossSpectrumScore=scientificScoreLedger.totalScore;
 
       return {
         validatedGraph,
+        scientificScoreLedger,
         modalityEvaluation,
         modalityStatus,
         modalityScores,
@@ -233,12 +192,12 @@ export class CrossSpectrumValidator {
       const msmsScoreVal = hasMsms
         ? typeof cand.modalityScores?.msms === "number"
           ? cand.modalityScores.msms
-          : 82
+          : null
         : null;
       const tofSimsScoreVal = hasTofSims
         ? typeof cand.modalityScores?.tofSims === "number"
           ? cand.modalityScores.tofSims
-          : 80
+          : null
         : null;
 
       return {

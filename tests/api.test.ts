@@ -13,4 +13,12 @@ describe('公開 API 基準',()=>{
     const invalid=await request(app).post('/api/analyze').set('Content-Type','application/json').send('{broken');
     expect(invalid.status).toBe(400);expect(JSON.stringify(invalid.body)).not.toContain('server.ts');
   });
+  it('API 頻率限制與過大上傳可控，健康檢查仍可用',async()=>{
+    const app=await createApp({serveClient:false});
+    for(let i=0;i<30;i++)await request(app).get('/api/system-status');
+    expect((await request(app).get('/api/system-status')).status).toBe(429);
+    expect((await request(app).get('/api/health')).status).toBe(200);
+    const app2=await createApp({serveClient:false});
+    expect((await request(app2).post('/api/analyze').send({data:'x'.repeat(13*1024*1024)})).status).toBe(413);
+  });
 });

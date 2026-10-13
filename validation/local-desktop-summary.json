@@ -1,0 +1,12 @@
+{
+  "date": "2026-10-13T11:30:49.989Z",
+  "base": "http://127.0.0.1:3011",
+  "browser": "Windows Chrome",
+  "viewport": "1440x1000",
+  "startTime": "2026-10-13T11:30:49.989Z",
+  "duration": 65067.276000000005,
+  "expected": 8,
+  "skipped": 0,
+  "unexpected": 0,
+  "flaky": 0
+}

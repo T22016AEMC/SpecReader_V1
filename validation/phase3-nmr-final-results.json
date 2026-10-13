@@ -1,0 +1,32 @@
+[
+  {
+    "phase": "phase3-nmr-final",
+    "name": "assets",
+    "exitCode": 0,
+    "durationMs": 762
+  },
+  {
+    "phase": "phase3-nmr-final",
+    "name": "typecheck",
+    "exitCode": 0,
+    "durationMs": 10221
+  },
+  {
+    "phase": "phase3-nmr-final",
+    "name": "test",
+    "exitCode": 0,
+    "durationMs": 24583
+  },
+  {
+    "phase": "phase3-nmr-final",
+    "name": "build",
+    "exitCode": 0,
+    "durationMs": 6119
+  },
+  {
+    "phase": "phase3-nmr-final",
+    "name": "server-build",
+    "exitCode": 0,
+    "durationMs": 1219
+  }
+]
