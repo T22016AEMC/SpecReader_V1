@@ -1,0 +1,32 @@
+[
+  {
+    "phase": "phase1-deployment-baseline",
+    "name": "assets",
+    "exitCode": 0,
+    "durationMs": 990
+  },
+  {
+    "phase": "phase1-deployment-baseline",
+    "name": "typecheck",
+    "exitCode": 0,
+    "durationMs": 24108
+  },
+  {
+    "phase": "phase1-deployment-baseline",
+    "name": "test",
+    "exitCode": 0,
+    "durationMs": 30925
+  },
+  {
+    "phase": "phase1-deployment-baseline",
+    "name": "build",
+    "exitCode": 0,
+    "durationMs": 23365
+  },
+  {
+    "phase": "phase1-deployment-baseline",
+    "name": "server-build",
+    "exitCode": 0,
+    "durationMs": 1536
+  }
+]

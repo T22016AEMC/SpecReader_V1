@@ -1,0 +1,16 @@
+node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
+public/rdkit/
+test-results/
+playwright-report/
+*.tmp
+*.zip
+validation/desktop-*.json
+validation/desktop-*.png
+bun.lock

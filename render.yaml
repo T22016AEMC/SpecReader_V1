@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: specreader-v1
+    runtime: node
+    plan: free
+    buildCommand: npm install -g pnpm@11.25.0 && pnpm install --frozen-lockfile && pnpm run build
+    startCommand: node dist/server.mjs
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: 24.19.0
+      - key: EXTERNAL_API_TIMEOUT_MS
+        value: 20000

@@ -1,0 +1,32 @@
+[
+  {
+    "phase": "phase1-rdkit",
+    "name": "assets",
+    "exitCode": 0,
+    "durationMs": 891
+  },
+  {
+    "phase": "phase1-rdkit",
+    "name": "typecheck",
+    "exitCode": 0,
+    "durationMs": 23507
+  },
+  {
+    "phase": "phase1-rdkit",
+    "name": "test",
+    "exitCode": 0,
+    "durationMs": 25672
+  },
+  {
+    "phase": "phase1-rdkit",
+    "name": "build",
+    "exitCode": 0,
+    "durationMs": 7403
+  },
+  {
+    "phase": "phase1-rdkit",
+    "name": "server-build",
+    "exitCode": 0,
+    "durationMs": 1324
+  }
+]

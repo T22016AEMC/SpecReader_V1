@@ -1,0 +1,26 @@
+[
+  {
+    "phase": "phase1-engineering",
+    "name": "typecheck",
+    "exitCode": 0,
+    "durationMs": 34738
+  },
+  {
+    "phase": "phase1-engineering",
+    "name": "test",
+    "exitCode": 0,
+    "durationMs": 20922
+  },
+  {
+    "phase": "phase1-engineering",
+    "name": "build",
+    "exitCode": 0,
+    "durationMs": 11784
+  },
+  {
+    "phase": "phase1-engineering",
+    "name": "server-build",
+    "exitCode": 0,
+    "durationMs": 1242
+  }
+]

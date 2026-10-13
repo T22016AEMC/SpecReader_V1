@@ -1,0 +1,6 @@
+{
+  "name": "SpecReader",
+  "description": "SpecReader – Rule- and Evidence-Based Multi-Spectrum Structure Elucidation, Cross-Validation & Spectral Prediction Workbench (IR, 1H NMR, 13C NMR, MS, MS/MS, ToF-SIMS).",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

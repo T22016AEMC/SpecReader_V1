@@ -1,0 +1,2 @@
+import {defineConfig} from '@playwright/test';
+export default defineConfig({testDir:'tests/e2e',timeout:60000,workers:1,webServer:process.env.E2E_BASE_URL?undefined:{command:`"${process.execPath}" dist/server.mjs`,url:'http://127.0.0.1:3011/api/health',env:{NODE_ENV:'production',PORT:'3011'},timeout:60000,reuseExistingServer:false},use:{baseURL:process.env.E2E_BASE_URL || 'http://127.0.0.1:3011',browserName:'chromium',channel:'chrome',viewport:{width:1440,height:1000},trace:'retain-on-failure'},reporter:[['list'],['json',{outputFile:'validation/desktop-e2e.json'}]]});

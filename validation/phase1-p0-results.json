@@ -1,0 +1,26 @@
+[
+  {
+    "phase": "phase1-p0",
+    "name": "typecheck",
+    "exitCode": 0,
+    "durationMs": 24299
+  },
+  {
+    "phase": "phase1-p0",
+    "name": "test",
+    "exitCode": 0,
+    "durationMs": 15982
+  },
+  {
+    "phase": "phase1-p0",
+    "name": "build",
+    "exitCode": 0,
+    "durationMs": 5780
+  },
+  {
+    "phase": "phase1-p0",
+    "name": "server-build",
+    "exitCode": 0,
+    "durationMs": 995
+  }
+]
