@@ -1,5 +1,9 @@
 # SpecReader_V1
 
+目前版本 **V1.1**，公開桌面網站：[SpecReader](https://specreader-v1.onrender.com)。原始像素 IR、幾何鏡像、五點基線、通用 NMR 全域匹配及有界分子圖生成已接入；科學準確度尚待實測驗收。
+
+本輪交付：[變更](V1_1_CHANGELOG.md)、[架構](V1_1_SCIENTIFIC_ARCHITECTURE.md)、[IR／基線](V1_1_IR_IMAGE_AND_BASELINE.md)、[開源來源](V1_1_OPEN_SOURCE_REFERENCES.md)、[部署／工程檢查](V1_1_DEPLOYMENT.md)、[已知限制](V1_1_KNOWN_LIMITATIONS.md)。後文 V1 紀錄保留為原版本基準。
+
 以 V0 為基礎逐階段升級的桌面光譜工作台，保留 React／TypeScript／Vite／Express、Mode A／Mode B、六模態獨立輸入與選填分子式。科學評分屬可解釋的相容性分數，尚未實測校準為結構正確機率。
 
 ## 執行

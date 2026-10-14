@@ -1,0 +1,31 @@
+{
+  "version": "1.1.0",
+  "date": "2026-10-14",
+  "codeCommit": "ccef958511b089930e450a93581857ff565874ba",
+  "deployment": {
+    "serviceId": "srv-db6udpgu01pc73bl1tog",
+    "deployId": "dep-db7nqd0473hc73e1lqu0",
+    "status": "live",
+    "finishedAt": "2026-10-14T13:02:24.898979Z",
+    "url": "https://specreader-v1.onrender.com",
+    "plan": "free",
+    "httpHealthStatus": 200,
+    "httpHealthVersion": "1.1.0",
+    "httpHealthRevision": "ccef958511b089930e450a93581857ff565874ba",
+    "platformHealthCheckPath": ""
+  },
+  "engineering": {
+    "typecheck": "passed",
+    "frontendBuild": "passed",
+    "backendBuild": "passed",
+    "initialFullRegression": {"passed": 97, "note": "Earlier engineering iteration; not a claim that all final sources were re-run together"},
+    "finalTargetedGraphIrRdkitLedgerTests": {"passed": 16},
+    "finalIntensityScaleLedgerTests": {"passed": 4},
+    "publicChrome": {"passed": 9, "codeCommit": "718ded8180b5a069921ffa253835f196e39b73af"},
+    "publicEdgeTargeted": {"passed": 3, "codeCommit": "ccef958511b089930e450a93581857ff565874ba"},
+    "distributionScan": {"sourceFiles": 158, "result": "no forbidden paths or recognized credentials"}
+  },
+  "scientificAccuracy": "NOT_VALIDATED; user measured-spectrum acceptance pending",
+  "testData": "Small engineering fixtures and retained regression tests; no new accuracy benchmark",
+  "v0": "Not modified; original ZIP was not found during final workspace inspection, so historical hash was not re-verified"
+}
