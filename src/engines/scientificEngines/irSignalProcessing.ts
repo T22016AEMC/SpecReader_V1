@@ -76,8 +76,10 @@ export function prepareIR(s: ExperimentalSpectrumData): ExperimentalSpectrumData
   const raw=isImage?s.points:s.rawExperimentalSnapshot?.rawPoints ?? s.points;
   const continuous=raw.length>=30&&(!isImage||['USER_CALIBRATED','USER_CORRECTED','USER_3PT_CALIBRATED'].includes(s.imageCalibration?.source??''));
   const processed=continuous ? processIRSeries(raw,scale,s.irManualSettings) : null;
+  const down=s.irManualSettings?.direction==='DOWN'||(s.irManualSettings?.direction!=='UP'&&(scale==='TRANSMITTANCE'||scale==='PERCENT_TRANSMITTANCE'));
+  const reference=scale==='TRANSMITTANCE'?1:scale==='PERCENT_TRANSMITTANCE'?100:Math.max(0,...raw.map(p=>p.y).filter(Number.isFinite));
   const converted=s.peaks.filter(p=>p.pixelX===undefined||p.isCalibrated===true).flatMap(p=>{
-    const y=Number.isFinite(p.y)?p.y:null; return y!==null && Number.isFinite(p.x) ? [{...p,y}] : [];
+    const y=Number.isFinite(p.y)?down?reference-p.y:p.y:null; return y!==null && Number.isFinite(p.x) ? [{...p,y}] : [];
   });
   const max=Math.max(...converted.map(p=>p.y),0);
   const manual=converted.filter(p=>p.detectionSource==='MANUAL'||p.detectionSource==='USER_MARKED'||p.manualPeak||p.manualEdited||p.userModified);

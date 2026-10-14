@@ -86,7 +86,7 @@ export function scoreScientificEvidence(smiles:string,bundle:IntegratedAnalysisB
         // Only relative geometry is compared. No absorbance amplitudes inferred.
         if(observed?.isBroad&&p.shape!=='broad')value*=.6;
         if(observed?.asymmetry&&observed.asymmetry>3)value*=.8;
-        if(observed)value*=.8+.2*gaussian(observed.y/100-p.y/100,.35);
+        if(observed&&irProcessed?.irIntensityScale==='ABSORBANCE')value*=.8+.2*gaussian(observed.y/100-p.y/100,.35);
         return value;
       })):0;
       weight=Math.min(1,(observed?.signalToNoise??10)/10)*(irProcessed?.irDataQuality??.6)*(.5+.5*Math.sqrt(Math.max(0,observed?.relativeArea??1)))*(.7+.3*Math.min(1,(observed?.prominence??100)/100));

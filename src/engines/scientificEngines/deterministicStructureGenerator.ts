@@ -1,4 +1,5 @@
 import {searchMolecularGraphs} from './deNovoGraphSearch';
+import {canonicalizeMolecule} from './rdkitAdapter';
 import {
   CandidateHardValidationResult,
   ParsedChemicalStructure,
@@ -187,6 +188,8 @@ export class DeterministicStructureGenerator {
     const seenSmiles = new Set<string>();
 
     const getCanonicalKey = (smiles: string): string => {
+      const canonical=canonicalizeMolecule(smiles);
+      if(canonical.available&&canonical.valid)return `RDKIT:${canonical.canonical}`;
       const check = ChemicalGraphValidator.validateCandidateSmiles(smiles);
       if (check.valid && check.canonicalSignature) {
         return check.canonicalSignature;
@@ -252,7 +255,7 @@ export class DeterministicStructureGenerator {
     for (const raw of orderedCombinatorialEntries) {
       if (mergedCandidates.length >= 96) break;
       const cleanSmiles = raw.smiles.trim();
-      const canonicalKey = raw.canonicalSignature || getCanonicalKey(cleanSmiles);
+      const canonicalKey = getCanonicalKey(cleanSmiles);
       if (
         seenSmiles.has(cleanSmiles) ||
         seenCanonicalSignatures.has(canonicalKey)

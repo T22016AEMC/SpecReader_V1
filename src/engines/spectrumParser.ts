@@ -2384,7 +2384,7 @@ export class SpectrumParser {
       confidence:
         detectedBounds.plotBoundaryStatus === "DETECTED" ? 0.78 : 0.44,
       source:
-        detectedBounds.plotBoundaryStatus === "DETECTED"
+        modality==='IR' ? 'DEFAULT_FALLBACK' : detectedBounds.plotBoundaryStatus === "DETECTED"
           ? "AI_DETECTED"
           : "PLOT_BOUNDARY_UNCERTAIN",
     });
