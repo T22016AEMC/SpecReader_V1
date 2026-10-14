@@ -295,7 +295,7 @@ export class GraphAssemblyEngine {
       constraints.userSuppliedFormula?.isValid &&
       constraints.userSuppliedFormula.normalizedFormula
         ? constraints.userSuppliedFormula.normalizedFormula
-        : constraints.molecularFormula?.lockedFormula || null;
+        : null;
 
     // 若使用者明確指定了目標分子式，模板庫必須嚴格通過實際 SMILES 分子式比對，絕不可因名目質量相近 (±2 Da) 或官能基相似而繞過分子式硬限制！
     if (lockedTargetFormula) {

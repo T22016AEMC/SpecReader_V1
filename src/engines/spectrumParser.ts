@@ -1,3 +1,4 @@
+import {traceIRPixels} from './scientificEngines/irImageTrace';
 import {processIRSeries, resolveIRScale} from "./scientificEngines/irSignalProcessing";
 import {decodeJcamp} from "./scientificEngines/jcampAdapter";
 import * as XLSX from "xlsx";
@@ -1938,6 +1939,11 @@ export class SpectrumParser {
       };
     });
 
+    const tracedPoints=spectrum.irPixelCurve?.map(p=>({x:this.pixelToPhysicalX(p.x,newCalibration),y:100*(newCalibration.plotBottomPx-p.y)/(newCalibration.plotBottomPx-newCalibration.plotTopPx)}))??[];
+    if(tracedPoints.length>=30&&this.isImageCalibrationValid(newCalibration)){
+      const traced=processIRSeries(tracedPoints,'UNKNOWN',spectrum.irManualSettings);
+      updatedPeaks.push(...traced.peaks.filter(p=>!updatedPeaks.some(q=>Math.abs(p.x-q.x)<3)).map(p=>({...p,isCalibrated:true})));
+    }
     // 原始圖片是唯一的圖片視覺來源，絕不將圖片訊號合成為 400/450 點假曲線
     const digitizedApproximation: DigitizedSpectrumData = {
       derivedFromFileName: spectrum.fileName,
@@ -1952,7 +1958,7 @@ export class SpectrumParser {
     const validation = DataValidator.validateSpectrum(
       spectrum.modality,
       spectrum.sourceFormat,
-      [],
+      tracedPoints,
       updatedPeaks,
       true,
       dims,
@@ -1968,6 +1974,7 @@ export class SpectrumParser {
         spectrum.sourceId ||
         `${this.resolveExtendedModality(spectrum)}-img-${spectrum.fileName}`,
       dataVersion: nextVersion,
+      ...(spectrum.irPixelCurve?{irProcessingApplied:false,points:spectrum.irPixelCurve.map(p=>({x:this.pixelToPhysicalX(p.x,newCalibration),y:100*(newCalibration.plotBottomPx-p.y)/(newCalibration.plotBottomPx-newCalibration.plotTopPx)}))}:{}),
       sourceType: "IMAGE_EXPERIMENTAL",
       dataQuality: isCalValid ? "HIGH" : "LOW",
       evidenceQuality: isCalValid ? "CALIBRATED_IMAGE" : "APPROXIMATE_IMAGE",
@@ -1987,7 +1994,7 @@ export class SpectrumParser {
             calibratedPeaks: updatedPeaks.map((pk) => ({ ...pk })),
           }
         : spectrum.calibratedDataSnapshot,
-      points: [],
+      points: tracedPoints,
       digitizedApproximation,
       digitizedMetadata: spectrum.digitizedMetadata
         ? {
@@ -2382,6 +2389,11 @@ export class SpectrumParser {
           : "PLOT_BOUNDARY_UNCERTAIN",
     });
 
+    if(modality==='IR'&&imgData){
+      const trace=traceIRPixels(imgData,width,height,baseCal);
+      const result=this.createImageSpectrum({modality,fileName:file.name,originalImageUrl:dataUrl,imageDimensions,calibration:baseCal,detectedSignals:[],digitizationMethod:'Canvas',isBlurryOrLowConfidence:true,msParams});
+      return {...result,irPixelCurve:trace.pixels,irDataQuality:trace.quality*.5,irIntensityScale:'UNKNOWN',yUnit:'相對影像尺度（非吸光度）',points:trace.pixels.map(p=>({x:this.pixelToPhysicalX(p.x,baseCal),y:100*(baseCal.plotBottomPx-p.y)/(baseCal.plotBottomPx-baseCal.plotTopPx)})),digitizationFailed:trace.pixels.length<30,irProcessingWarnings:['原始像素曲線；請確認繪圖區與波數校正，文字及格線仍可能造成擷取誤差。']};
+    }
     try {
       const response = await fetch("/api/digitize-spectrum", {
         method: "POST",

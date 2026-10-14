@@ -70,7 +70,7 @@ export function rankCandidates(
     constraints.userSuppliedFormula?.isValid &&
     constraints.userSuppliedFormula.normalizedFormula
       ? constraints.userSuppliedFormula.normalizedFormula
-      : constraints.molecularFormula?.lockedFormula || null;
+      : null;
 
   const results: CandidateResult[] = [];
   const seenSmiles = new Set<string>();

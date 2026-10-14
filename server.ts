@@ -50,7 +50,7 @@ export async function createApp(options: { serveClient?: boolean } = {}) {
   });
   const uploadLimit = Math.max(1, Math.min(25, Number(process.env.UPLOAD_LIMIT_MB) || 12));
   app.use(express.json({ limit: `${uploadLimit}mb`, strict: true }));
-  app.get('/api/health', (_req, res) => res.json({ status: 'ok', version: '1.0.0', revision:process.env.RENDER_GIT_COMMIT??null, localScientificEngines: true }));
+  app.get('/api/health', (_req, res) => res.json({ status: 'ok', version: '1.1.0', revision:process.env.RENDER_GIT_COMMIT??null, localScientificEngines: true }));
 
   // 0. System & Model Availability Endpoint
   app.get("/api/system-status", (_req, res) => {
@@ -239,6 +239,7 @@ export async function createApp(options: { serveClient?: boolean } = {}) {
   app.post("/api/digitize-spectrum", async (req, res) => {
     try {
       const { imageBase64, mimeType, spectrumType } = req.body;
+      if(spectrumType==='IR')return res.status(422).json({aiAvailable:false,digitizedSuccess:false,error:'IR 請使用瀏覽器原始像素擷取與手動座標校正；不接受生成式 AI 峰值替代實測。'});
       if (!imageBase64) {
         return res.status(400).json({
           aiAvailable: false,
@@ -456,7 +457,7 @@ export async function createApp(options: { serveClient?: boolean } = {}) {
 async function startServer() {
   if (!Number.isInteger(PORT) || PORT < 0 || PORT > 65535) throw new Error('Invalid PORT');
   const app = await createApp();
-  const server = app.listen(PORT, '0.0.0.0', () => console.log(JSON.stringify({ event: 'server_started', version: '1.0.0', port: PORT })));
+  const server = app.listen(PORT, '0.0.0.0', () => console.log(JSON.stringify({ event: 'server_started', version: '1.1.0', port: PORT })));
   server.requestTimeout = 65000;
   process.on('SIGTERM', () => server.close(() => process.exit(0)));
 }

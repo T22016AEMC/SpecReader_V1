@@ -1,3 +1,4 @@
+import {searchMolecularGraphs} from './deNovoGraphSearch';
 import {
   CandidateHardValidationResult,
   ParsedChemicalStructure,
@@ -83,7 +84,7 @@ export class DeterministicStructureGenerator {
       constraints.userSuppliedFormula?.isValid &&
       constraints.userSuppliedFormula.normalizedFormula
         ? constraints.userSuppliedFormula.normalizedFormula
-        : constraints.molecularFormula?.lockedFormula || null;
+        : null;
 
     // 1. 取得結構模板與同分異構物對照
     const templateGraphs = GraphAssemblyEngine.assembleCandidates(
@@ -122,6 +123,33 @@ export class DeterministicStructureGenerator {
       }
     }
 
+    // Database retrieval above and graph enumeration below run on every request.
+    // Without composition, enumerate explicitly labelled small representative families;
+    // their atom counts are search bounds, never a measured molecular formula.
+    if(!targetFormulas.length||(!authoritativeTargetFormula&&!constraints.estimatedMolecularWeight&&targetFormulas.every(tf=>Object.entries(ChemistryEngine.parseFormulaCounts(tf.formula)).reduce((sum,[e,n])=>sum+(e==='H'?0:n),0)>9))){
+      const clues=JSON.stringify([...solvedSpace.requiredFragments,...(constraints.functionalGroups??[]).filter(f=>f.status==='REQUIRED'||f.status==='SUPPORTED')]).toLowerCase();
+      const oxygen=/oh|oxygen|carbonyl|ester|醇|羧|羰|氧/.test(clues)?1:0;
+      const nitrogen=/amine|nitr|氮|胺/.test(clues)?1:0;
+      for(let c=2;c<=5;c++)for(let dbe=0;dbe<=2;dbe++){
+        const h=2*c+2+nitrogen-2*dbe;
+        targetFormulas.push({formula:ChemistryEngine.formatFormula({C:c,H:h,...(oxygen?{O:oxygen}:{}),...(nitrogen?{N:nitrogen}:{})}),dbe});
+      }
+    }
+    const graphSearchNotes:string[]=[];
+    const deNovoGraphs:AssembledCandidateGraph[]=[];
+    const graphDeadline=performance.now()+450;
+    for(const tf of targetFormulas.slice(0,12)){
+      if(performance.now()>graphDeadline||deNovoGraphs.length>=36)break;
+      const generated=searchMolecularGraphs(tf.formula,{maxResults:Math.min(6,36-deNovoGraphs.length),maxStates:2500,timeMs:Math.min(80,Math.max(1,graphDeadline-performance.now()))});
+      graphSearchNotes.push(generated.note);
+      for(const smiles of generated.smiles){
+        const p=ChemistryEngine.parseStructureInput(smiles);
+        deNovoGraphs.push({id:`de-novo-${deNovoGraphs.length}`,name:'De novo 分子圖候選',iupacName:'Generated molecular graph',molecularFormula:p.molecularFormula,smiles,unsaturationIndex:p.dbe??0,nominalMass:Math.round(p.exactMass),exactMass:p.exactMass,assembledFragments:p.detectedFunctionalGroups,structuralClass:authoritativeTargetFormula?'分子式相容圖候選':'代表性結構族群（組成未確認）',keyStructuralFeatures:p.detectedFunctionalGroups,assemblyNotes:generated.note});
+      }
+    }
+    solvedSpace.solverLog.push(...graphSearchNotes.map(n=>`De novo: ${n}`));
+    if(!deNovoGraphs.length)solvedSpace.solverLog.push('De novo 搜尋未產生有效完整圖：可能超過中性小分子組成或時間界限；資料庫與局部片段路徑仍保留。');
+    templateGraphs.unshift(...deNovoGraphs);
     const combinatorialRawMap = new Map<string, AssembledRawCandidate>();
     const combinatorialByCanonicalSig = new Map<string, AssembledRawCandidate>();
 
@@ -178,19 +206,16 @@ export class DeterministicStructureGenerator {
       seenSmiles.add(cleanSmiles);
       seenCanonicalSignatures.add(canonicalKey);
 
-      const matchedRaw =
-        combinatorialRawMap.get(cleanSmiles) ||
-        combinatorialByCanonicalSig.get(canonicalKey);
-      const rawCombinatorial: AssembledRawCandidate = matchedRaw || {
+      const rawCombinatorial: AssembledRawCandidate = {
         id: tg.id,
         name: tg.name,
         iupacName: tg.iupacName,
         smiles: cleanSmiles,
         canonicalSignature: canonicalKey,
         molecularFormula: tg.molecularFormula,
-        origin: "[Generated Candidate]",
-        generationMethodLabel: "V5+V7 結構片段與異構物拓撲組裝引擎",
-        sourceProvenance: "FragmentAssembly + IsomerContrast",
+        origin: tg.id.startsWith('de-novo-') ? "[Generated Candidate]" : "[Known Library Candidate]",
+        generationMethodLabel: tg.id.startsWith('de-novo-')?'De novo bounded atom/bond graph enumeration':'Database reference retrieval',
+        sourceProvenance: tg.id.startsWith('de-novo-')?'De novo / RDKit sanitized graph':'Database / reference scaffold',
         assemblyNotes: tg.assemblyNotes,
         scaffoldType: tg.structuralClass,
       };

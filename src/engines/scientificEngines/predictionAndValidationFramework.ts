@@ -1,3 +1,4 @@
+import {globalPeakAssignment} from './globalPeakAssignment';
 import {predictFragmentSpectrum} from "./fragmentSpectrumPrediction";
 import {irRangeCovered} from './irSignalProcessing';
 import {
@@ -317,18 +318,13 @@ export class PredictionAndValidationFramework {
         ? predictedSpectrum.peaks.filter((p) => p.y >= 10)
         : predictedSpectrum.peaks;
 
-    for (const pPeak of majorPredPeaks) {
-      let bestExp = activeExpPeaks[0];
-      let bestDiff = Infinity;
-
-      for (const ePeak of activeExpPeaks) {
-        if(matchedExpIds.has(ePeak.id)) continue;
-        const diff = Math.abs(ePeak.x - pPeak.x);
-        if (diff < bestDiff) {
-          bestDiff = diff;
-          bestExp = ePeak;
-        }
-      }
+    const assignment=globalPeakAssignment(majorPredPeaks.map(p=>activeExpPeaks.map(e=>{
+      const d=Math.abs(e.x-p.x);return d<=looseTolerance?Math.exp(-.5*(d/Math.max(strictTolerance,1e-6))**2):0;
+    })));
+    for (const [predIndex,pPeak] of majorPredPeaks.entries()) {
+      const expIndex=assignment.get(predIndex);
+      const bestExp=expIndex===undefined?undefined:activeExpPeaks[expIndex];
+      const bestDiff=bestExp?Math.abs(bestExp.x-pPeak.x):Infinity;
 
       if (bestExp && bestDiff <= strictTolerance) {
         compatibleCount++;

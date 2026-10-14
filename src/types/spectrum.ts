@@ -343,6 +343,8 @@ export interface Signal {
 }
 
 export interface SpectralPeak {
+  asymmetry?: number;
+  relativeArea?: number;
   jCouplingHz?: number;
   roleReason?: string;
   id: string;
@@ -777,6 +779,11 @@ export interface DigitizedSpectrumData {
 export interface ExperimentalSpectrumData {
   predictionNotes?: string[];
   irIntensityScale?: import('../engines/scientificEngines/irSignalProcessing').IRIntensityScale;
+  irManualSettings?: import('../engines/scientificEngines/irManualBaseline').IRManualSettings;
+  irPixelCurve?: DataPoint[];
+  irMirroredPoints?: DataPoint[];
+  irCorrectedPoints?: DataPoint[];
+  irDataQuality?: number;
   irProcessingApplied?: boolean;
   irProcessingWarnings?: string[];
   c13ExperimentMode?: "BROADBAND_DECOUPLED" | "1D_PROTON_DECOUPLED" | "DEPT_90" | "DEPT_135" | "APT" | "UNKNOWN";

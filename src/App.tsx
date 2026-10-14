@@ -1738,6 +1738,7 @@ export default function App() {
 
                       <SpectrumViewer
                         spectrum={currentSpectrum}
+                        onIRSettingsChange={settings=>{setSpectra(prev=>({...prev,[focusedModality]:{...currentSpectrum,irManualSettings:settings,irProcessingApplied:false}}));}}
                         selectedPeakId={selectedPeakId}
                         onSelectPeak={(pk) => setSelectedPeakId(pk.id)}
                         imageInteractionMode="MARK_PEAK"
@@ -3394,6 +3395,7 @@ export default function App() {
                     </span>
                   </div>
 
+                  <details className="text-xs text-slate-400"><summary>De novo 搜尋狀態與界限</summary>{solvedConstraintSpace.solverLog.filter(s=>s.startsWith('De novo')).map((s,i)=><p key={i}>{s}</p>)}</details>
                   {rankedCandidates.length === 0 ? (
                     <div className="rounded-xl border border-dashed border-slate-800 bg-slate-950/60 p-8 text-center">
                       <FlaskConical className="mx-auto h-8 w-8 text-cyan-400" />
@@ -3443,6 +3445,8 @@ export default function App() {
                               <h3 className="mt-2 text-sm font-bold text-slate-100">
                                 {cand.name}
                               </h3>
+                              <p className="text-xs text-amber-200">來源：{cand.sourceProvenance || cand.candidateOrigin} · 有界搜尋／未校準相容度，資訊不足不能確認完整結構。</p>
+                              {cand.scientificScoreLedger&&<details className="text-xs text-slate-400"><summary>實測支持與矛盾證據</summary>{cand.scientificScoreLedger.entries.filter(e=>e.compatibility!==null).slice(0,24).map(e=><p key={e.evidenceId}>{e.sourceModality} · {e.evidenceId} · {(e.compatibility??0)>=.6?'支持':(e.compatibility??0)<.3?'矛盾／模型無法解釋':'弱相容'} · {e.method}</p>)}</details>}
                               <div className="font-mono text-xs text-slate-400">
                                 IUPAC: {cand.iupacName} |{" "}
                                 <strong className="text-cyan-300">

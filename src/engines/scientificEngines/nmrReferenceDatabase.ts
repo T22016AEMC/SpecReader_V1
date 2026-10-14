@@ -2563,13 +2563,6 @@ export class NMRGraphPredictor {
       groupedMap.set(pred.symClass, list);
     }
 
-    // Check if structure matches a known reference entry for exact experimental anchoring while keeping full corrections & coupling network
-    const knownRef = KNOWN_STRUCTURAL_LIBRARY.find(
-      (k) =>
-        smiles &&
-        k.smilesAliases.some((a) => a.toLowerCase() === smiles.toLowerCase())
-    );
-
     const environments: ProtonEnvironment[] = [];
     const peaks: SpectralPeak[] = [];
 
@@ -2775,29 +2768,6 @@ export class NMRGraphPredictor {
       let finalShift = rep.deltaPpm;
       let finalMult = multipletInfo.code;
       let finalJValues = rawCouplings.map((rc) => Number(rc.jHz.toFixed(1)));
-
-      // If structure is in KNOWN_STRUCTURAL_LIBRARY and solvent is CDCl3/Unknown, anchor shift closely while keeping solvent shifts for DMSO-d6/D2O/etc.
-      if (knownRef && !rep.isDeuteriumExchangedOut) {
-        const matchKnown = knownRef.keyH1Shifts.find(
-          (ks) =>
-            ks.integ === totalProtonsInGroup &&
-            Math.abs(ks.ppm - rep.deltaPpm) <= (rep.isExchangeable ? 1.8 : 0.45)
-        );
-        if (matchKnown) {
-          const solvDelta = rep.isExchangeable
-            ? rep.corrections
-                .filter((c) => c.termName.includes("Solvent"))
-                .reduce((s, c) => s + c.deltaPpm, 0)
-            : solventProfile.polarCHShiftDelta;
-          finalShift = Number((matchKnown.ppm + solvDelta).toFixed(2));
-          if (!rep.isExchangeable) {
-            finalMult = (matchKnown.mult as any) || finalMult;
-            if (matchKnown.j && finalJValues.length === 0) {
-              finalJValues = [matchKnown.j];
-            }
-          }
-        }
-      }
 
       const simulatedLines = SpinCouplingCalculator.simulateFirstOrderMultiplet(
         finalShift,
@@ -3577,17 +3547,10 @@ export class NMRGraphPredictor {
       groupedCarbons.set(cp.symClass, list);
     }
 
-    const knownRef = KNOWN_STRUCTURAL_LIBRARY.find(
-      (k) =>
-        smiles &&
-        k.smilesAliases.some((a) => a.toLowerCase() === smiles.toLowerCase())
-    );
-
     const sortedGroups = Array.from(groupedCarbons.values()).sort(
       (a, b) => b[0].deltaPpm - a[0].deltaPpm
     );
 
-    const usedKnownIdx = new Set<number>();
     const environments: CarbonEnvironment[] = [];
     const peaks: SpectralPeak[] = [];
 
@@ -3598,14 +3561,6 @@ export class NMRGraphPredictor {
       const eqCount = group.length;
 
       let finalShift = rep.deltaPpm;
-      if (knownRef && knownRef.keyC13Shifts.length === sortedGroups.length) {
-        const sortedKnown = knownRef.keyC13Shifts.slice().sort((a, b) => b - a);
-        if (Math.abs(sortedKnown[gIdx] - rep.deltaPpm) <= 8.5) {
-          finalShift = Number(sortedKnown[gIdx].toFixed(1));
-          usedKnownIdx.add(gIdx);
-        }
-      }
-
       const expectedRange: [number, number] = [
         Number((finalShift - rep.uncertaintyPpm).toFixed(1)),
         Number((finalShift + rep.uncertaintyPpm).toFixed(1)),
