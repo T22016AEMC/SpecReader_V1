@@ -4,7 +4,7 @@
 
 | BUG／完成度 | 確認的根因、檔案與主要函式 | 實際修改與測試結果 | 仍有限制 |
 |---|---|---|---|
-| **002 已修復基本約束** | `evidenceLedger.ts::scoreScientificEvidence` 原將部分積分除以候選全部氫；`chemicalHardConstraintValidator.ts::checkCandidateProtonConsistency` 原有相對比單元／部分積分總和對總H作通過或扣分。 | 改已配對局部積分比例＋位移／multiplicity／J全域匹配；未獨立校準則總H判定INCONCLUSIVE。`deNovoGraphSearch.ts::graphSearchHints` 使用芳香／羰基局部環境及q/t+約2:3+共同J；不把相對值轉總H。等比例縮放、錯比／錯J降相容、部分積分200不否定6H圖、普通13C積分不計碳數：通過。 | 一階、局部環境近似；不完整解重疊、強耦合／構象。 |
+| **002 已修復基本約束** | `evidenceLedger.ts::scoreScientificEvidence` 原將部分積分除以候選全部氫；`chemicalHardConstraintValidator.ts::evaluateCandidateProtonConsistency` 原有相對比單元／部分積分總和對總H作通過或扣分。 | 改已配對局部積分比例＋位移／multiplicity／J全域匹配；未獨立校準則總H判定INCONCLUSIVE。`deNovoGraphSearch.ts::graphSearchHints` 使用芳香／羰基局部環境及q/t+約2:3+共同J；不把相對值轉總H。等比例縮放、錯比／錯J降相容、部分積分200不否定6H圖、普通13C積分不計碳數：通過。 | 一階、局部環境近似；不完整解重疊、強耦合／構象。 |
 | **003 已修復架構** | `fragmentConstraintSolver.ts::solveConstraintSpace` 曾先執行FormulaGenerator；`deterministicStructureGenerator.ts::generateValidatedStructuresWithRejections` 曾只取前幾個猜測式並加入固定C2–C4清單。 | 正式路徑不呼叫分子式枚舉／已知完整骨架組裝；直接圖增長，使用者分子式唯一組成硬限制。偽造低信心locked C2H2不限制芳香NMR圖，生成不同組成候選；每候選圖重算式，皆通過。`App.tsx`頂部只顯示使用者指定式，各卡顯示自身式。 | 無總組成時僅代表性圖／局部假設，非已確認完整分子。 |
 | **004 已核對並修正正式路徑** | 舊路徑雖有真圖枚舉，仍混用前置分子式／片段完整骨架組裝。 | `deNovoGraphSearch.ts::searchMolecularGraphs` 實際原子接合、鍵級增長、閉環、六碳芳環通用片段；價態／元素剪枝、WL類別縮減、RDKit淨化去重。候選方法標記De novo，無庫命中加分。非固定列表的組成測試及正式路徑來源／無枚舉spy通過。 | 有界圖文法，不是通用完整De novo；未支援帶電共振、稠環等完整空間。 |
 | **006 已核對並補修基本比較** | 帳本本已核對六模態、使用同一權威總分，硬式閘門已存在；部分NMR積分分母仍有誤。 | 保留逐原始峰去重、模態獨立、支持／矛盾／未知及硬限制；修正局部比例。帳本重建、同峰重複不加分、候選特定碎片差異、異構物獨立候選池NMR區分、未測模態無分，通過。 | 結構特定IR/NMR為經驗預測；MS/MS無完整重排／CE模型，ToF為弱表面相容。 |
@@ -26,3 +26,5 @@
 - TEST SPEC四圖僅作SHA256完整性核對，沒有更動或拿來設定答案。
 
 部署與最後專項結果記錄在 V1_1_DEPLOYMENT.md。本文件不宣稱盲測、Top-1或實測科學準確率。
+
+公開驗收補記：上述科學／UI程式已在 `ca3c9ff` 的公開Render站執行完整Chrome **14/14通過**，包含實際滑鼠拖曳與新寬窄／MS操作；健康及10個HTTP／靜態資源路由檢查通過。詳見部署文件。後續本報告只更正函式名稱為 `evaluateCandidateProtonConsistency`，不變更程式或測試結果。
