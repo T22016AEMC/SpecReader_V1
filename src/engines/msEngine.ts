@@ -367,7 +367,8 @@ export class MSAnalysisEngine {
           : undefined,
       exactMass: {
         nominalMw: estimatedNominalMw,
-        exactMass: candidateFormulas[0]?.neutralExactMass || estimatedNominalMw,
+        exactMass: ionKnown&&msType!=="ToF-SIMS"?neutralObserved:null,
+        toleranceDa:spectrum.msParams?.isHighResolution?parentMz*(spectrum.msParams.massTolerancePpm??5)/1e6*Math.abs(charge):(spectrum.msParams?.massToleranceDa??.5)*Math.abs(charge),
         observedIonMz: parentMz,
         adductLabel: ionKnown?`${adduct} (|z|=${Math.abs(charge)})`:"離子／電荷／加合歸屬未確認；m/z 不是中性分子量",
         isHighResolution: Boolean(spectrum.msParams?.isHighResolution),

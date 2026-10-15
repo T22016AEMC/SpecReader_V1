@@ -1,19 +1,27 @@
 import type {StructuralConstraints} from '../../types/spectrum';
+import type {DeNovoSearchResult} from '../scientificEngines/deNovoGraphSearch';
 import {ChemistryEngine} from '../chemistryEngine';
-export type GenerationCode='CANDIDATES_FOUND'|'FORMULA_NOT_PROVIDED'|'INVALID_FORMULA_FORMAT'|'CHEMICALLY_INVALID_FORMULA'|'SEARCH_LIMIT'|'NO_MATCH_WITHIN_SEARCH'|'EXECUTION_ERROR';
-export interface GenerationStatus {code:GenerationCode;message:string;userFormula:string|null;inferredFormulas:string[];heavyAtoms:number|null;dbe:number|null;limits:string;}
-export function generationStatus(c:StructuralConstraints,count:number,logs:string[],error?:string):GenerationStatus {
+export type GenerationCode='INPUT_MISSING'|'CANDIDATES_FOUND'|'PARTIAL_CANDIDATES'|'FORMULA_NOT_PROVIDED'|'INVALID_FORMULA_FORMAT'|'CHEMICALLY_INVALID_FORMULA'|'SEARCH_LIMIT'|'TIME_BUDGET'|'STATE_BUDGET'|'SEARCH_INCOMPLETE'|'HARD_CONSTRAINT_CONFLICT'|'NO_MATCH_WITHIN_SEARCH'|'EXECUTION_ERROR'|'LOCAL_HYPOTHESES_ONLY';
+export interface GenerationStatus {code:GenerationCode;message:string;userFormula:string|null;inferredFormulas:string[];heavyAtoms:number|null;dbe:number|null;limits:string;termination?:string;partialHypotheses?:string[];}
+export function generationStatus(c:StructuralConstraints,count:number,logs:string[],error?:string,search?:DeNovoSearchResult):GenerationStatus {
  const raw=c.userSuppliedFormula?.rawInput??c.userSuppliedFormulaValidation?.targetFormula??null;
  const counts=raw?ChemistryEngine.parseFormulaCounts(raw):{},heavy=raw?Object.entries(counts).reduce((s,[e,n])=>s+(e==='H'?0:n),0):null;
- const limits='分子圖枚舉：中性 C/N/O/F/Cl/Br、最多九重原子、450ms／36輸出；另有非完整片段組裝。';
- const base={userFormula:raw,inferredFormulas:(c.molecularFormula?.candidates??[]).map(f=>f.formula),heavyAtoms:heavy,dbe:raw?ChemistryEngine.calculateDBE(counts):null,limits};
- if(error)return {...base,code:'EXECUTION_ERROR',message:'資料處理或執行失敗：'+error};
+ const limits='中性 C/N/O/F/Cl/Br 的有界圖擴展（非稠合芳環／鏈／有限閉環）；時間 900ms、12000 已展開狀態、beam 每尺寸 48／最多四尺寸、24 輸出；沒有產品級重原子數拒絕條件，非完整異構物搜尋。';
+ const base={userFormula:raw,inferredFormulas:[],heavyAtoms:heavy,dbe:raw?ChemistryEngine.calculateDBE(counts):null,limits,termination:search?.termination,partialHypotheses:search?.partialHypotheses??[]};
+ if(error||search?.termination==='EXECUTION_ERROR')return {...base,code:'EXECUTION_ERROR',message:'資料處理或執行失敗：'+(error??search?.error??search?.note)};
+ if(!raw&&c.contributingSources?.length===0&&!search)return {...base,code:'INPUT_MISSING',message:'尚無可分析的實測觀測或使用者組成；不執行任意結構搜尋。'};
  const v=c.userSuppliedFormulaValidation;
  if(raw&&!v?.isValid&&!/^(?:[A-Z][a-z]?\d*)+$/.test(raw))return {...base,code:'INVALID_FORMULA_FORMAT',message:'分子式格式錯誤；原始輸入已保留，請修正格式。'};
- if(v&&!v.isSupported)return {...base,code:'SEARCH_LIMIT',message:'分子式或化學物種超出目前模型支援範圍，不等於化學上不可能。'+v.validationErrors.join('；')};
- if(v&&!v.isValid)return {...base,code:'CHEMICALLY_INVALID_FORMULA',message:'分子式違反目前採用的化學限制：'+v.validationErrors.join('；')};
- if(count)return {...base,code:'CANDIDATES_FOUND',message:`產生 ${count} 個化學有效候選；分子式只是組成限制，不確認連接方式。`};
- if((heavy??0)>9||logs.some(s=>/已達資源界限|RDKit 未載入|UNSUPPORTED|最多九|至多九/.test(s)))return {...base,code:'SEARCH_LIMIT',message:`${raw??'目前資料'}：未在支援的搜尋範圍／資源內取得候選。${raw?'已收到分子式，':'分子式為選填；'}不代表該組成不合法。`};
- if(!raw)return {...base,code:'FORMULA_NOT_PROVIDED',message:'未提供分子式；仍可分析已提供光譜。目前搜尋未取得完整候選，可保留局部環境或選填組成。'};
- return {...base,code:'NO_MATCH_WITHIN_SEARCH',message:'已完成指定有界搜尋，未找到同時滿足已確認條件的候選；不是所有化學結構已被排除。請檢查證據相容性及搜尋限制。'};
+ if(v&&!v.isSupported||search?.termination==='UNSUPPORTED_CHEMISTRY'||search?.termination==='UNAVAILABLE')return {...base,code:'SEARCH_LIMIT',message:'組成／化學物種或計算工具超出目前支援範圍，不等於化學上不可能。'+(v?.validationErrors.join('；')??search?.note)};
+ if(v&&!v.isValid||search?.termination==='INVALID_COMPOSITION')return {...base,code:'CHEMICALLY_INVALID_FORMULA',message:'分子式違反目前中性閉殼層價態／DBE 限制：'+(v?.validationErrors.join('；')??'DBE／價態不相容')};
+ if(count)return {...base,code:search&&!search.complete?'PARTIAL_CANDIDATES':'CANDIDATES_FOUND',message:`${raw?'使用者分子式 '+raw+'：':''}取得 ${count} 個有效圖候選；${search&&!search.complete?'搜尋未完整完成，':''}${raw?'符合使用者組成，仍非唯一連接方式。':'由局部證據引導的代表性結構，總組成尚未確認。'}`};
+ if(search?.smiles.length&&!count&&search.rejectedByComposition)return {...base,code:'HARD_CONSTRAINT_CONFLICT',message:'搜尋已有圖，但未通過指定組成或圖合法性硬限制；未以其他加分掩蓋衝突。'};
+ if(search?.termination==='TIME_BUDGET')return {...base,code:'TIME_BUDGET',message:'搜尋達到時間預算，尚未完成；保留局部證據，不代表組成不合法。'};
+ if(search?.termination==='STATE_BUDGET')return {...base,code:'STATE_BUDGET',message:'搜尋達到狀態預算，尚未完成；保留局部證據。'};
+ if(search?.termination==='BEAM_PRUNED'||search?.termination==='OUTPUT_BUDGET')return {...base,code:'SEARCH_INCOMPLETE',message:'有界圖搜尋曾剪枝或達輸出上限，尚未完整搜尋；未取得可報告的完整候選。'};
+ if(search?.rejectedByComposition)return {...base,code:'HARD_CONSTRAINT_CONFLICT',message:'已生成的圖與指定組成或可靠質量約束衝突；保留輸入及局部證據，不忽略硬限制。'};
+ if(search?.termination==='INSUFFICIENT_CONSTRAINTS')return {...base,code:'LOCAL_HYPOTHESES_ONLY',message:'目前只支持局部環境／片段；未確認完整組成，不強迫猜測小分子式或完整結構。'};
+ if(logs.some(s=>/已達資源界限/.test(s)))return {...base,code:'SEARCH_LIMIT',message:'搜尋達資源界限，尚未完成。'};
+ if(!raw&&!search)return {...base,code:'FORMULA_NOT_PROVIDED',message:'分子式為選填；目前保留已提供的局部證據，沒有足夠資訊形成完整候選。'};
+ return {...base,code:'NO_MATCH_WITHIN_SEARCH',message:'指定圖文法的有限搜尋未取得符合條件的候選；不是全部化學結構已被排除。'};
 }

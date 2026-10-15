@@ -1316,6 +1316,7 @@ export class ChemicalFeatureEngine {
             }
           : msConst?.molecularFormula,
       exactMass: msConst?.exactMass,
+      molecularMassConstraint: confirmedPrecursorMass!==null?{exactMass:confirmedPrecursorMass,isHighResolution:Boolean(rawMsmsSpec?.msParams?.isHighResolution),toleranceDa:rawMsmsSpec?.msParams?.isHighResolution?confirmedPrecursorMass*(rawMsmsSpec.msParams.massTolerancePpm??5)/1e6:(rawMsmsSpec?.msParams?.massToleranceDa??.5)*Math.abs(rawMsmsSpec?.msParams?.chargeState??1),confidence:80}:msConst?.exactMass,
       dbe: {
         minDbe: effectiveMinDbe,
         maxDbe: parsedUserFormula ? parsedUserFormula.dbe : effectiveMinDbe + 2,

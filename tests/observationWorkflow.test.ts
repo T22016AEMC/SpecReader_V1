@@ -44,7 +44,7 @@ it('BUG003 使用者組成硬限制與候選實際圖分子式一致',()=>{
 });
 it('BUG011 C15H16O2 DBE=8、質量正確，超出圖枚舉不等於化學無效',()=>{
  const v=ChemicalHardConstraintValidator.parseAndValidateFormula('C15H16O2');expect(v.isValid).toBe(true);expect(v.dbe).toBe(8);expect(v.exactMass).toBeCloseTo(228.11503,4);
- const result=searchMolecularGraphs('C15H16O2');expect(result.status).toBe('UNSUPPORTED');const c:StructuralConstraints={source:'MULTI_MODAL',confidence:0,userSuppliedFormulaValidation:v};const status=generationStatus(c,0,[result.note]);expect(status.code).toBe('SEARCH_LIMIT');expect(status.userFormula).toBe('C15H16O2');
+ const result=searchMolecularGraphs('C15H16O2');expect(result.status).toBe('BOUNDED');const c:StructuralConstraints={source:'MULTI_MODAL',confidence:0,userSuppliedFormulaValidation:v};const status=generationStatus(c,result.smiles.length,[result.note],undefined,result);expect(['PARTIAL_CANDIDATES','TIME_BUDGET','STATE_BUDGET','SEARCH_INCOMPLETE']).toContain(status.code);expect(status.userFormula).toBe('C15H16O2');
 });
 it('BUG013 區分缺少、格式、化學限制、搜尋界限、無匹配與執行錯誤',()=>{
  const base:StructuralConstraints={source:'MULTI_MODAL',confidence:0};expect(generationStatus(base,0,[]).code).toBe('FORMULA_NOT_PROVIDED');
@@ -55,10 +55,10 @@ it('BUG013 區分缺少、格式、化學限制、搜尋界限、無匹配與執
 it('BUG014／018 一個或三個 IR 人工觀測可分析，不代表完整未標記區',()=>{
  for(const xs of [[1715],[1715,3300,1050]]){const s=spectrum('IR',xs.map((x,i)=>({id:String(i),x,y:80,manualPeak:true})), 'Relative intensity');s.sourceFormat='MANUAL';s.points=[];const r=IRAnalysisEngine.analyzeExperimentalIR(s);expect(r.findings.length).toBeGreaterThan(0);expect(r.structuralConstraints.excludedFunctionalGroups).toEqual([]);expect(irRangeCovered(s,1600,1850)).toBe(false);}
 });
-it('BUG008 寬峰區間與備註在後續欄位更新後仍保存',()=>{
+it('BUG008 寬峰人工覆寫與備註保存，不捏造寬度',()=>{
  let s=spectrum('IR',[]);s=WorkbenchOrchestrator.addManualPeak(s,{x:3300,y:80});const id=s.peaks[0].id;
- s=WorkbenchOrchestrator.updatePeak(s,id,{shape:'broad',observedRange:[3100,3550],width:450});s=WorkbenchOrchestrator.updatePeak(s,id,{note:'寬廣吸收'});
- expect(s.peaks[0].observedRange).toEqual([3100,3550]);expect(s.peaks[0].shape).toBe('broad');expect(s.peaks[0].note).toBe('寬廣吸收');
+ s=WorkbenchOrchestrator.updatePeak(s,id,{shape:'broad',userOverride:true});s=WorkbenchOrchestrator.updatePeak(s,id,{note:'寬廣吸收'});
+ expect(s.peaks[0].fwhm).toBeUndefined();expect(s.peaks[0].shape).toBe('broad');expect(s.peaks[0].note).toBe('寬廣吸收');
 });
 it('BUG017 手動記錄接近氘代溶劑仍保留作競爭觀測',()=>{
  for(const modality of ['1H_NMR','13C_NMR'] as const){const s=spectrum(modality,[{id:'observed',x:modality==='1H_NMR'?7.26:77.16,y:80,manualPeak:true}]);s.nmrSolvent='CDCl3';const result=modality==='1H_NMR'?NMRAnalysisEngine.analyzeExperimental1HNMR(s).environments:NMRAnalysisEngine.analyzeExperimental13CNMR(s).summary.environments;expect(result.length).toBe(1);}

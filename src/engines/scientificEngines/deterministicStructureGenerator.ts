@@ -1,4 +1,4 @@
-import {searchMolecularGraphs} from './deNovoGraphSearch';
+import {searchMolecularGraphs,graphSearchHints} from './deNovoGraphSearch';
 import {canonicalizeMolecule} from './rdkitAdapter';
 import {
   CandidateHardValidationResult,
@@ -7,12 +7,9 @@ import {
 } from "../../types/spectrum";
 import {
   AssembledRawCandidate,
-  CombinatorialCandidateAssembler,
-  FormulaConstraintEngine,
 } from "../candidateGeneration/combinatorialAssembler";
 import {
   AssembledCandidateGraph,
-  GraphAssemblyEngine,
 } from "../candidateGeneration/graphAssemblyEngine";
 import { ChemicalGraphValidator } from "../candidateGeneration/graphValidator";
 import { ChemistryEngine } from "../chemistryEngine";
@@ -51,19 +48,9 @@ export interface StructureGenerationOutcome {
 }
 
 export class DeterministicStructureGenerator {
-  /**
-   * 統一候選結構生成與分子圖硬約束過濾器 (Unified V5 Combinatorial + V7 Graph Validation + Phase 1 Hard Filter Gate):
-   * 1. 若使用者輸入之分子式驗證失敗或不支援，立即停止依賴該分子式生成候選，回傳空候選清單。
-   * 2. 若使用者明確輸入合法分子式，強制鎖定為唯一權威目標分子式 (Authoritative Target Formula)。
-   * 3. 結合 V5 CombinatorialCandidateAssembler 與 GraphAssemblyEngine 組裝候選結構（包含 ortho / meta / para 位置異構物與官能基異構物），並以 3-Round Weisfeiler-Lehman Canonical Graph Signature 去重（合併相同結構之不同 SMILES 寫法，但完整保留所有不同異構物）。
-   * 4. 強制通過第一層 Hard Constraints (ChemicalHardConstraintValidator + MolecularGraphValidator + ChemicalGraphValidator)：
-   *    - 單一連通圖 (Single connected component)
-   *    - 化合價合法 (C=4, O=2, N=3/5, X=1)
-   *    - 環閉合括號平衡
-   *    - 由實際 SMILES 計算之分子式與宣告分子式、權威目標分子式完全一致
-   *    - 總氫原子數與目標分子式完全一致
-   *    - 非負整數不飽和度 (DBE)
-   * 5. 任何違反 Hard Constraints 的非法結構直接 reject 並記錄具體原因，絕不混入軟性評分或進入最終候選清單。
+  /** Evidence-guided bounded graph growth, followed by the existing independent
+   * valence, connectivity and authoritative user-composition hard gates.
+   * No guessed formula or whole-compound catalogue enters the candidate frontier.
    */
   static generateValidatedStructuresWithRejections(
     constraints: StructuralConstraints,
@@ -91,97 +78,16 @@ export class DeterministicStructureGenerator {
       solvedSpace.solverLog.push('缺少可支持組成的實測約束；保留局部觀測，不生成任意完整分子。');
       return {validatedGraphs:[],rejectedCandidates:[]};
     }
-    // 1. 取得結構模板與同分異構物對照
-    const templateGraphs = GraphAssemblyEngine.assembleCandidates(
-      constraints,
-      solvedSpace.plausibleFormulas,
-      solvedSpace.requiredFragments
-    );
+    const generated=searchMolecularGraphs(authoritativeTargetFormula??undefined,{hints:graphSearchHints(constraints),timeMs:900,maxStates:12000,maxResults:24});
+    solvedSpace.searchResult=generated;
+    solvedSpace.solverLog.push(generated.note,...generated.partialHypotheses);
+    const templateGraphs:AssembledCandidateGraph[]=generated.smiles.map((smiles,index)=>{
+      const p=ChemistryEngine.parseStructureInput(smiles);
+      return {id:`de-novo-${index}`,name:'圖擴展候選（非唯一結構）',iupacName:'Generated graph hypothesis',molecularFormula:p.molecularFormula,smiles,unsaturationIndex:p.dbe??0,nominalMass:Math.round(p.exactMass),exactMass:p.exactMass,assembledFragments:p.detectedFunctionalGroups,structuralClass:authoritativeTargetFormula?'使用者組成相容的圖候選':'局部證據引導的代表性圖；組成未確認',keyStructuralFeatures:p.detectedFunctionalGroups,assemblyNotes:generated.note};
+    });
+    // No whole-compound catalogue or formula-first combinatorial route is used here.
 
-    // 2. 決定枚舉用目標分子式清單：若有權威目標分子式則唯一鎖定，絕不混入其他分子式
-    const targetFormulas: Array<{ formula: string; dbe: number }> = [];
-    if (authoritativeTargetFormula) {
-      const authDbe =
-        constraints.userSuppliedFormula?.ihd ??
-        solvedSpace.plausibleFormulas[0]?.unsaturationIndex ??
-        0;
-      targetFormulas.push({
-        formula: authoritativeTargetFormula,
-        dbe: authDbe,
-      });
-    } else {
-      for (const pf of solvedSpace.plausibleFormulas.slice(0, 3)) {
-        if (!targetFormulas.some((f) => f.formula === pf.formula)) {
-          targetFormulas.push({
-            formula: pf.formula,
-            dbe: pf.unsaturationIndex,
-          });
-        }
-      }
-      for (const mf of (constraints.molecularFormula?.candidates || []).slice(0, 2)) {
-        if (!targetFormulas.some((f) => f.formula === mf.formula)) {
-          targetFormulas.push({
-            formula: mf.formula,
-            dbe: mf.dbe,
-          });
-        }
-      }
-    }
-
-    // Database retrieval above and graph enumeration below run on every request.
-    // Without composition, enumerate explicitly labelled small representative families;
-    // their atom counts are search bounds, never a measured molecular formula.
-    if(!authoritativeTargetFormula&&!constraints.estimatedMolecularWeight){
-      const representative:Array<{formula:string;dbe:number}>=[];
-      for(let c=2;c<=4;c++)for(let n=0;n<=1;n++)for(let o=0;o<=1;o++)for(let dbe=0;dbe<=1;dbe++){
-        const h=2*c+2+n-2*dbe;
-        representative.push({formula:ChemistryEngine.formatFormula({C:c,H:h,...(n?{N:n}:{}),...(o?{O:o}:{})}),dbe});
-      }
-      targetFormulas.unshift(...representative);
-    }
-    const graphSearchNotes:string[]=[];
-    const deNovoGraphs:AssembledCandidateGraph[]=[];
-    const graphDeadline=performance.now()+450;
-    for(const tf of targetFormulas.slice(0,24)){
-      if(performance.now()>graphDeadline||deNovoGraphs.length>=36)break;
-      const generated=searchMolecularGraphs(tf.formula,{maxResults:Math.min(2,36-deNovoGraphs.length),maxStates:2500,timeMs:Math.min(80,Math.max(1,graphDeadline-performance.now()))});
-      graphSearchNotes.push(generated.note);
-      for(const smiles of generated.smiles){
-        const p=ChemistryEngine.parseStructureInput(smiles);
-        deNovoGraphs.push({id:`de-novo-${deNovoGraphs.length}`,name:'De novo 分子圖候選',iupacName:'Generated molecular graph',molecularFormula:p.molecularFormula,smiles,unsaturationIndex:p.dbe??0,nominalMass:Math.round(p.exactMass),exactMass:p.exactMass,assembledFragments:p.detectedFunctionalGroups,structuralClass:authoritativeTargetFormula?'分子式相容圖候選':'代表性結構族群（組成未確認）',keyStructuralFeatures:p.detectedFunctionalGroups,assemblyNotes:generated.note});
-      }
-    }
-    solvedSpace.solverLog.push(...graphSearchNotes.map(n=>`De novo: ${n}`));
-    if(!deNovoGraphs.length)solvedSpace.solverLog.push('De novo 搜尋未產生有效完整圖：可能超過中性小分子組成或時間界限；資料庫與局部片段路徑仍保留。');
-    templateGraphs.unshift(...deNovoGraphs);
-    const combinatorialRawMap = new Map<string, AssembledRawCandidate>();
-    const combinatorialByCanonicalSig = new Map<string, AssembledRawCandidate>();
-
-    for (const tf of targetFormulas) {
-      const evalForm = FormulaConstraintEngine.evaluateFormula(
-        tf.formula,
-        constraints
-      );
-      if (!evalForm.nitrogenRuleValid && tf.dbe < 0) continue;
-
-      const rawList =
-        CombinatorialCandidateAssembler.assembleCandidatesForFormula(
-          tf.formula,
-          tf.dbe,
-          constraints
-        );
-      for (const raw of rawList) {
-        const clean = raw.smiles.trim();
-        if (!combinatorialRawMap.has(clean)) {
-          combinatorialRawMap.set(clean, raw);
-        }
-        if (raw.canonicalSignature && !combinatorialByCanonicalSig.has(raw.canonicalSignature)) {
-          combinatorialByCanonicalSig.set(raw.canonicalSignature, raw);
-        }
-      }
-    }
-
-    // 3. 以 Canonical Graph Signature 與 SMILES 進行單一權威去重合併（保留所有位置異構物 ortho/meta/para 與官能基異構物，但消除相同結構的不同 SMILES 表示）
+    // 3. 以 Canonical Graph Signature 與 SMILES 進行單一權威去重合併（消除已搜尋到的相同結構表示，不保證搜尋所有位置異構物）
     const mergedCandidates: Array<{
       graph: AssembledCandidateGraph;
       rawCombinatorial: AssembledRawCandidate;
@@ -219,9 +125,9 @@ export class DeterministicStructureGenerator {
         smiles: cleanSmiles,
         canonicalSignature: canonicalKey,
         molecularFormula: tg.molecularFormula,
-        origin: tg.id.startsWith('de-novo-') ? "[Generated Candidate]" : "[Known Library Candidate]",
-        generationMethodLabel: tg.id.startsWith('de-novo-')?'De novo bounded atom/bond graph enumeration':'Database reference retrieval',
-        sourceProvenance: tg.id.startsWith('de-novo-')?'De novo / RDKit sanitized graph':'Database / reference scaffold',
+        origin: "[Generated Candidate]",
+        generationMethodLabel: 'De novo evidence-guided graph growth',
+        sourceProvenance: 'De novo / RDKit sanitized graph',
         assemblyNotes: tg.assemblyNotes,
         scaffoldType: tg.structuralClass,
       };
@@ -229,73 +135,6 @@ export class DeterministicStructureGenerator {
       mergedCandidates.push({
         graph: { ...tg },
         rawCombinatorial,
-        canonicalSignature: canonicalKey,
-      });
-    }
-
-    // 將 V5 CombinatorialCandidateAssembler 組裝出的所有異構物（含鄰/間/對位異構物、官能基異構物）納入同一個候選池
-    const orderedCombinatorialEntries = Array.from(
-      combinatorialRawMap.values()
-    ).sort((a, b) => {
-      const aIsHet = Boolean(
-        a.scaffoldType &&
-          (a.scaffoldType.includes("Pyridine") ||
-            a.scaffoldType.includes("pyrrole") ||
-            a.scaffoldType.includes("furan"))
-      );
-      const bIsHet = Boolean(
-        b.scaffoldType &&
-          (b.scaffoldType.includes("Pyridine") ||
-            b.scaffoldType.includes("pyrrole") ||
-            b.scaffoldType.includes("furan"))
-      );
-      if (constraints.heteroaromatic?.status !== "PRESENT" && aIsHet !== bIsHet) {
-        return aIsHet ? 1 : -1;
-      }
-      return 0;
-    });
-
-    for (const raw of orderedCombinatorialEntries) {
-      if (mergedCandidates.length >= 96) break;
-      const cleanSmiles = raw.smiles.trim();
-      const canonicalKey = getCanonicalKey(cleanSmiles);
-      if (
-        seenSmiles.has(cleanSmiles) ||
-        seenCanonicalSignatures.has(canonicalKey)
-      ) {
-        continue;
-      }
-      seenSmiles.add(cleanSmiles);
-      seenCanonicalSignatures.add(canonicalKey);
-
-      const parsed = ChemistryEngine.parseStructureInput(cleanSmiles);
-      const assembledGraph: AssembledCandidateGraph = {
-        id: raw.id,
-        name: raw.name,
-        iupacName: raw.iupacName,
-        molecularFormula: parsed.molecularFormula || raw.molecularFormula,
-        smiles: cleanSmiles,
-        unsaturationIndex: parsed.unsaturationIndex ?? parsed.dbe ?? 0,
-        nominalMass:
-          Object.entries(parsed.atomCounts).reduce((sum,[element,count]) => sum + Math.round(ChemistryEngine.calculateMasses({[element]:1}).exactMass) * count, 0),
-        exactMass: Number(parsed.exactMass.toFixed(4)),
-        assembledFragments:
-          parsed.detectedFunctionalGroups.length > 0
-            ? parsed.detectedFunctionalGroups
-            : [raw.scaffoldType || "組合分子骨架"],
-        structuralClass: raw.scaffoldType || raw.generationMethodLabel,
-        keyStructuralFeatures: [
-          raw.assemblyNotes,
-          ...(parsed.detectedFunctionalGroups.length > 0
-            ? [`檢出官能基：${parsed.detectedFunctionalGroups.join("、")}`]
-            : []),
-        ],
-        assemblyNotes: raw.assemblyNotes,
-      };
-
-      mergedCandidates.push({
-        graph: assembledGraph,
-        rawCombinatorial: raw,
         canonicalSignature: canonicalKey,
       });
     }

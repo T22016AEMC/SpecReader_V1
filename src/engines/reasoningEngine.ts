@@ -73,11 +73,10 @@ export class ReasoningEngine {
       noValidCandidateReason = `分子式輸入驗證失敗 (${formulaValidation.targetFormula || bundle.constraints.userSuppliedFormula?.rawInput || "未知"})：${formulaValidation.validationErrors.join("；")}。系統已停止依賴該分子式進行結構推論，不回傳不符限制之結構。`;
     } else if (rankedCandidates.length === 0) {
       const targetForm =
-        bundle.constraints.userSuppliedFormula?.normalizedFormula ||
-        bundle.constraints.molecularFormula?.lockedFormula;
+        bundle.constraints.userSuppliedFormula?.normalizedFormula;
       noValidCandidateReason = targetForm
-        ? `無任何候選結構同時通過目標分子式 (${targetForm}) 與化學結構合法性硬限制驗證。系統拒絕以錯誤分子式或最接近分子式的結構充數。`
-        : "目前實驗光譜證據不足或無任何候選結構通過化學硬限制驗證，無法產生合法候選結構。";
+        ? `目前搜尋未取得同時通過目標分子式 (${targetForm}) 與化學結構合法性硬限制驗證。系統拒絕以錯誤分子式或最接近分子式的結構充數。`
+        : "目前未形成完整候選；請參閱搜尋狀態與局部化學環境。這不代表組成不合法。";
     }
 
     return {

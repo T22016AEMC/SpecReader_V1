@@ -1,3 +1,4 @@
+import {measureIRBandMorphology} from './scientificEngines/irSignalProcessing';
 import {generationStatus,type GenerationStatus} from './candidateGeneration/generationStatus';
 import {observationSpectrum} from './scientificEngines/observationSemantics';
 import {
@@ -239,7 +240,7 @@ export class WorkbenchOrchestrator {
     );
 
     return {
-      generationStatus:generationStatus(bundle.constraints,rankedCandidates.length,solvedConstraintSpace.solverLog),
+      generationStatus:generationStatus(bundle.constraints,rankedCandidates.length,solvedConstraintSpace.solverLog,undefined,solvedConstraintSpace.searchResult?{...solvedConstraintSpace.searchResult,rejectedByComposition:solvedConstraintSpace.searchResult.rejectedByComposition+rejectedCandidates.length}:undefined),
       bundle,
       modeAReport,
       spectrumEvidenceList,
@@ -483,7 +484,7 @@ export class WorkbenchOrchestrator {
 
     return {
       ...updated,
-      peaks: sortedPeaks,
+      peaks: spectrum.modality==='IR'?sortedPeaks.map(p=>{const m=measureIRBandMorphology(spectrum,p);return {...p,shape:m.shape,isBroad:m.shape==='broad',irShapeSource:p.irShapeSource==='USER'?'USER':m.shape==='UNRESOLVED'?'UNKNOWN':'AUTO',fwhm:m.fwhm};}):sortedPeaks,
     };
   }
 

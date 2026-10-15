@@ -1,22 +1,23 @@
-# V1.1 整合修正版部署（1.1.2）
+# V1.1.3 建置與部署
 
-Repository：[T22016AEMC/SpecReader_V1](https://github.com/T22016AEMC/SpecReader_V1)，Public授權不變。修復分支 `fix/v11-explicit-analysis-observation-inputs`，基準74e5158；保留V1／既有V1.1歷史。
+Repository：https://github.com/T22016AEMC/SpecReader_V1 （使用者已授權Public）。基準3a90a41；修復分支fix/v11-evidence-guided-search，驗證後快轉main；不重置或清除既有成果。
 
-既有獨立免費Node服務：[SpecReader](https://specreader-v1.onrender.com)，srv-db6udpgu01pc73bl1tog，工作區tea-db6qffon74is738k4q30。未更動V0／EluSim，無新增付費服務。
+沿用免費獨立Render Web Service `srv-db6udpgu01pc73bl1tog`，Workspace `tea-db6qffon74is738k4q30`，https://specreader-v1.onrender.com 。不建立付費資源、不改其他服務。發佈前實查部署仍為3a90a41；本輪是否更新完成，應以健康端點revision與GitHub main實際對照，不能只看推送或Live。
 
-Build：`npm install -g pnpm@11.25.0 && pnpm install --frozen-lockfile && pnpm run build`；Start：`node dist/server.mjs`；Node24.19.0，NODE_ENV=production，PORT平台注入並綁0.0.0.0。API Key只放伺服器環境；本地科學不依賴Gemini。
+Build：`npm install -g pnpm@11.25.0 && pnpm install --frozen-lockfile && pnpm run build`
 
-工程檢查（2026-10-15）：
+Start：`node dist/server.mjs`；process.env.PORT、0.0.0.0、production靜態檔及SPA回退保留。健康檢查 `/api/health` 回version1.1.3及RENDER_GIT_COMMIT；平台healthCheckPath目前為空/TCP，HTTP另外驗證，不假稱YAML已更新平台設定。
 
-- TypeScript檢查通過；前端Vite（包含獨立modeA.worker資源）與後端esbuild正式建置成功。保留bundle體積提示。
-- 保留的15個單元／整合檔，共115項通過；包含新增13項觀測／組成／分析控制案例。
-- 桌面整體12項流程曾全數通過；最終相關變更再跑明確分析、觀測列編輯、原圖基線三項。包含Worker RDKit可用、編輯不啟動Worker、兩次明確開始才兩個任務、結果過時提示、寬峰／J／空白積分及真實原圖拖曳。
-- 所有數據是少量工程／可驗算案例，不是科學準確率驗收。未新增大型Benchmark。
-- TEST SPEC四圖SHA256與修改前一致，不上傳公開Repo。舊測試物移出正式App、legacy檔保留；進一步實體刪除遭自動核准拒絕。
+工程命令：
 
-公開站以 `/api/health` 的version=1.1.2及revision核對GitHub main；另查 `/api/system-status`、WASM、Worker資源與公開互動。發佈結果以實際健康回應及交付回覆為準，不硬編碼自身commit雜湊。平台既有healthCheckPath先前為空／TCP，HTTP端點另行驗證，不能以YAML推定已修改平台。
+- `node node_modules/typescript/bin/tsc --noEmit`
+- `node node_modules/vitest/vitest.mjs run --maxWorkers=1`
+- `pnpm run build`
+- `node node_modules/@playwright/test/cli.js test`
+- `node scripts/verify-distribution.mjs`
 
-發佈前執行 `node scripts/verify-distribution.mjs`，排除.env（只留範例）、密鑰、node_modules、dist、快取及使用者原始圖譜。無新增套件／GPU／Python或模型權重；既有授權notice仍隨建置產生。
+本輪最終整體單元／整合回歸125/125通過（16個檔案）；TypeScript、Vite、esbuild均通過。Chrome14個案例已逐項取得通過（首次12/14，其後更新過時驗收條件重跑11/11）；原圖五點實際滑鼠拖曳、縮放、套用與跨頁保存有操作驗證。正式公開版再執行同一批針對性操作，結果以交付回覆及本機validation紀錄為準。
 
+公開煙霧檢查：`EXPECTED_REVISION=<main SHA> node scripts/public-smoke.mjs https://specreader-v1.onrender.com`（Windows以環境變數設定）；另用E2E_BASE_URL執行explicit-analysis、ir-original-baseline、evidence-guided-ui及observation-editing。應確認health/version/revision、首頁／刷新路由、API、RDKit/WASM及真正Worker。GitHub API更新分支若不觸發webhook，使用既有服務清除建置快取的部署操作，避免舊Worker資源。
 
-公開驗收：核心修正Commit `1927ee32f8a01e5c88388a2c9b84d38b6f4f003f`，Render部署 `dep-db861rivcj2c738bq7ag` 於2026-10-15 05:14:29 UTC為Live；健康200、version1.1.2／revision一致。公開Chrome三項（明確分析／原圖拖曳／觀測欄位）3/3通過。後續僅同步狀態API的 `internalReferencePresets=false`，避免回報已移出正式App的舊測試入口。科學程式與該三項已驗證版本相同；最新部署revision以健康回應對照main。
+無新增依賴、GPU或Python後端。API Key仍僅伺服器環境變數；不發佈.env、node_modules、dist、原始使用者圖譜／TEST SPEC或測試快取。RDKit.js/BSD-3-Clause等既有notice仍由prebuild產生。圖及訊號準確度待使用者實測，不以工程通過冒稱科學驗證。

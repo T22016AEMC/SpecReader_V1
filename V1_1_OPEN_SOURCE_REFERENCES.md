@@ -1,3 +1,12 @@
+# V1.1.3 本輪來源增補
+
+沒有新增第三方依賴或複製開源原始碼。實際執行既有 RDKit.js 2026.9.1（BSD-3-Clause，https://github.com/rdkit/rdkit-js）作分子圖淨化、canonical與SMARTS；新原子／芳環增量beam圖搜尋是本專案自有程式，並非整合某個通用生成器。
+
+IR常見OH氫鍵寬峰、NH與羰基伴隨區間，參考MSU教學資料：https://www2.chemistry.msu.edu/faculty/reusch/VirtTxtJml/Spectrpy/InfraRed/infrared.htm 。使用化學原理與區間知識，沒有複製圖片或測試物實測數據，沒有虛構DOI／準確率。
+
+nmrglue、matchms、pyOpenMS、pyteomics、SIRIUS、CFM-ID仍未作本版執行依賴；不得稱已整合。既有工具／授權紀錄如下，歷史搜尋架構說明以V1.1.3文件為準。
+
+---
 # 實際整合與參考
 
 既有查證細節保留 `V1_SCIENTIFIC_REFERENCES.md`（2026-10-13）；本輪新增方法查證 2026-10-14。沒有引入模型權重、Python、GPU 或未授權資料。

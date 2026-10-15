@@ -376,6 +376,7 @@ export interface SpectralPeak {
   structuralEvidence?: string[];
   userOverride?: boolean;
   verified?: boolean;
+  irShapeSource?: 'AUTO' | 'USER' | 'UNKNOWN';
   shape?:
     | "sharp"
     | "broad"

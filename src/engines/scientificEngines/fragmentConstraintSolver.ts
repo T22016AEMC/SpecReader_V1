@@ -1,7 +1,6 @@
 import { StructuralConstraints } from "../../types/spectrum";
 import {
   CandidateMolecularFormula,
-  FormulaGenerator,
 } from "../candidateGeneration/formulaGenerator";
 import {
   ChemicalFragmentDefinition,
@@ -16,6 +15,7 @@ export interface SolvedConstraintSpace {
   estimatedNominalMW?: number;
   aromaticPattern: StructuralConstraints["aromaticSubstitutionPattern"];
   solverLog: string[];
+  searchResult?: import("./deNovoGraphSearch").DeNovoSearchResult;
 }
 
 export class FragmentConstraintSolver {
@@ -28,13 +28,8 @@ export class FragmentConstraintSolver {
   ): SolvedConstraintSpace {
     const solverLog: string[] = [];
 
-    const plausibleFormulas =
-      FormulaGenerator.enumeratePlausibleFormulas(constraints);
-    if (plausibleFormulas.length > 0) {
-      solverLog.push(
-        `分子式枚舉器根據分子量與化合價奇偶規則收斂出 ${plausibleFormulas.length} 組候選分子式，首選為 ${plausibleFormulas[0].formula} (DBE=${plausibleFormulas[0].unsaturationIndex})。`
-      );
-    }
+    const plausibleFormulas:CandidateMolecularFormula[] = [];
+    solverLog.push('先建立局部化學環境與圖限制；不以前置推測分子式限制候選。使用者分子式另作硬限制。');
 
     const requiredFragments =
       FragmentLibrary.selectCompatibleFragments(constraints);

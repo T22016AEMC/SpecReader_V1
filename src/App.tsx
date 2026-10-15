@@ -2491,7 +2491,8 @@ export default function App() {
                 </div>
                 {completedAnalysis&&<>
                 <p data-testid="generation-status" data-code={modeAOrchestration.generationStatus?.code}>{modeAOrchestration.generationStatus?.message} {modeAOrchestration.generationStatus?.limits}</p>
-                <p className="text-xs text-slate-400">組成來源：{modeAOrchestration.generationStatus?.userFormula?`使用者指定 ${modeAOrchestration.generationStatus.userFormula}（完整候選硬限制）`:'未指定；推測組成不等於候選分子圖分子式'}；候選卡分子式由各自分子圖計算。</p>
+                <p className="text-xs text-slate-400">組成來源：{modeAOrchestration.generationStatus?.userFormula?`使用者指定 ${modeAOrchestration.generationStatus.userFormula}（完整候選硬限制）`:'未指定；不以前置猜測分子式限制搜尋'}；候選卡分子式由各自分子圖計算。</p>
+                {!!modeAOrchestration.generationStatus?.partialHypotheses?.length&&<ul data-testid="local-structure-hypotheses" className="text-xs text-slate-300">{modeAOrchestration.generationStatus.partialHypotheses.map((h,i)=><li key={i}>{h}</li>)}</ul>}
                 {/* 第 3 頁頂部工作列（與第 1、2 頁標記及校正工具完全分離） */}
                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-500/30 bg-slate-900/90 px-4 py-3">
                   <div>
@@ -2564,12 +2565,10 @@ export default function App() {
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
                   <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-3">
                     <div className="text-[11px] text-slate-400">
-                      推論 / 輸入分子式
+                      使用者指定分子式
                     </div>
                     <div className="mt-1 font-mono text-base font-bold text-cyan-300">
-                      {bundle.userSuppliedFormula || solvedConstraintSpace.plausibleFormulas[0]?.formula ||
-                        molecularFormulaInput.trim() ||
-                        "待補充分子式或 MS"}
+                      {bundle.userSuppliedFormula || "未指定（選填）；組成見各候選"}
                     </div>
                   </div>
                   <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-3">
@@ -2676,10 +2675,7 @@ export default function App() {
                           const isSinglePeakOnly =
                             associatedEv.length === 1 &&
                             srcModalities.length <= 1;
-                          const confPct =
-                            fg.confidence <= 1
-                              ? Math.round(fg.confidence * 100)
-                              : Math.round(fg.confidence);
+
 
                           return (
                             <div
@@ -2705,7 +2701,7 @@ export default function App() {
                                             : "border border-slate-700 bg-slate-800 text-slate-400"
                                     }`}
                                   >
-                                    {fg.status} · 可信度 {confPct}%
+                                    {fg.status} · 經驗假設（非機率）
                                   </span>
                                 </div>
 
@@ -2792,10 +2788,6 @@ export default function App() {
                                   : f.observedPeak !== undefined
                                     ? [f.observedPeak]
                                     : [];
-                              const confVal =
-                                (f.confidence || 0.7) <= 1
-                                  ? Math.round((f.confidence || 0.7) * 100)
-                                  : Math.round(f.confidence || 70);
                               return (
                                 <div
                                   key={i}
@@ -2806,7 +2798,7 @@ export default function App() {
                                       {f.groupName || f.functionalGroup}
                                     </span>
                                     <span className="font-mono text-[10px]">
-                                      {confVal}%
+                                      {f.matchLevel==='Strong'?'較支持':f.matchLevel==='Weak'?'證據不足':'可能'}
                                     </span>
                                   </div>
                                   <div className="mt-0.5 font-mono text-[10px] text-cyan-200">

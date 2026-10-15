@@ -54,22 +54,33 @@ export function scoreScientificEvidence(smiles:string,bundle:IntegratedAnalysisB
   const hPred=NMRGraphPredictor.predict1HFromStructureGraph(structure,{solvent:sources['1H_NMR']?.nmrSolvent??'Unknown'}).environments;
   const cPred=NMRGraphPredictor.predict13CFromStructureGraph(structure,{solvent:sources['13C_NMR']?.nmrSolvent??'Unknown'}).environments;
 
-  const exchangeableShifts=bundle.h1Environments.filter(e=>e.isExchangeable).map(e=>e.shiftPpm);
-  const expHSum=evidence.filter(e=>e.sourceModality==='1H_NMR'&&!exchangeableShifts.some(x=>Math.abs(x-(e.originalObservedData.position??-100))<.001)).reduce((sum,e)=>sum+(e.originalObservedData.relativeIntegral??0),0);
-  const predHSum=hPred.filter(e=>!e.isExchangeable).reduce((sum,e)=>sum+(e.integration??0),0);
   const hObs=evidence.filter(e=>e.sourceModality==='1H_NMR'),cObs=evidence.filter(e=>e.sourceModality==='13C_NMR');
   const hMatrix=hObs.map(ev=>hPred.map(p=>{
     let v=gaussian((ev.originalObservedData.position??0)-p.shiftPpm,(p.uncertaintyPpm??.3)+.2);
     const mult=ev.originalObservedData.multiplicity;
     if(mult&&p.multiplicity&&mult!==p.multiplicity&&!['m','unresolved','br s'].includes(mult))v*=.5;
-    if(ev.originalObservedData.relativeIntegral!=null&&expHSum>0&&predHSum>0&&!p.isExchangeable)v*=gaussian(ev.originalObservedData.relativeIntegral/expHSum-(p.integration??0)/predHSum,.15);
     const observedJ=ev.originalObservedData.jValues??[],predictedJ=p.couplings?.map(c=>c.J)??[];
     if(observedJ.length&&predictedJ.length)v*=.7+.3*observedJ.reduce((sum,j)=>sum+Math.max(...predictedJ.map(k=>gaussian(j-k,3))),0)/observedJ.length;
     return v;
   }));
   const cObsTotal=cObs.reduce((sum,e)=>sum+(e.originalObservedData.relativeIntegral??0),0),cPredTotal=cPred.reduce((sum,e)=>sum+(e.equivalentCarbonCount??1),0);
   const cMatrix=cObs.map(ev=>cPred.map(p=>{let v=gaussian((ev.originalObservedData.position??0)-p.shiftPpm,(p.uncertaintyPpm??8)+3);if(sources['13C_NMR']?.quantitativeCarbonExperiment&&cObsTotal>0&&ev.originalObservedData.relativeIntegral!=null)v*=gaussian(ev.originalObservedData.relativeIntegral/cObsTotal-(p.equivalentCarbonCount??1)/cPredTotal,.15);return v;}));
-  const hAssignment=globalPeakAssignment(hMatrix),cAssignment=globalPeakAssignment(cMatrix);
+  let hAssignment=globalPeakAssignment(hMatrix);
+  // Relative integrals constrain ratios only among matched observations. Extra
+  // predicted environments may simply be unmarked; they are never the denominator.
+  const relativeScale=(assignment:Map<number,number>)=>{
+    const ratios=[...assignment].flatMap(([i,j])=>{const value=hObs[i].originalObservedData.relativeIntegral,p=hPred[j];return value!=null&&value>0&&!p.isExchangeable&&(p.integration??0)>0?[value/p.integration!]:[];}).sort((a,b)=>a-b);
+    return ratios.length>=2?ratios[Math.floor(ratios.length/2)]:null;
+  };
+  const integralScale=relativeScale(hAssignment);
+  if(integralScale!==null){
+    for(let i=0;i<hObs.length;i++)for(let j=0;j<hPred.length;j++){
+      const value=hObs[i].originalObservedData.relativeIntegral,p=hPred[j];
+      if(value!=null&&value>0&&!p.isExchangeable&&(p.integration??0)>0)hMatrix[i][j]*=gaussian(Math.log(value/(integralScale*p.integration!)),.4);
+    }
+    hAssignment=globalPeakAssignment(hMatrix);
+  }
+  const cAssignment=globalPeakAssignment(cMatrix);
   const irPred=IREngine.predictIRFromStructure(structure).spectrum.peaks;
   const candidateIRBands=irCandidateBands(smiles);
   const irProcessed=sources.IR?prepareIR(sources.IR):null;
@@ -89,7 +100,7 @@ export function scoreScientificEvidence(smiles:string,bundle:IntegratedAnalysisB
     } else if(x!==undefined && ev.sourceModality==='1H_NMR') {
       const row=hObs.indexOf(ev),best=hAssignment.get(row);
       compatibility=best===undefined?0:hMatrix[row][best];weight=best!==undefined&&hPred[best].isExchangeable?.3:.8;
-      method='全域一對一位移／多重性／相對積分匹配（含未匹配訊號）';limitations.push('經驗一階模型；重疊及二階效應未完整求解');
+      method='全域一對一位移／多重性／J／已配對局部積分比例（未標記預測訊號不扣分）';limitations.push('經驗一階模型；重疊及二階效應未完整求解');
     } else if(x!==undefined && ev.sourceModality==='13C_NMR') {
       const row=cObs.indexOf(ev),best=cAssignment.get(row);
       compatibility=best===undefined?0:cMatrix[row][best];weight=.8;method='全域碳環境匹配（含未匹配訊號）';limitations.push('經驗位移與等價碳模型，非高精度量子或訓練模型');

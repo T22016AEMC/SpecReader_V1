@@ -20,10 +20,10 @@ it('像素曲線通過人工波數校正，正式候選管線呼叫圖生成',()
  const calibrated=SpectrumParser.calibrateImageFromTwoPoints(original,{pixelX:10,physicalX:4000},{pixelX:70,physicalX:400});
  expect(calibrated.points.length).toBe(61);expect(calibrated.validation.isValid).toBe(true);expect(calibrated.originalImageUrl).toBe(original.originalImageUrl);
  const result=WorkbenchOrchestrator.runModeAPipeline({}, {molecularFormula:'C2H6O'});
- expect(result.solvedConstraintSpace.solverLog.some(s=>s.startsWith('De novo'))).toBe(true);
+ expect(result.solvedConstraintSpace.solverLog.some(s=>s.includes('圖搜尋'))).toBe(true);
  expect(result.rankedCandidates.some(c=>c.sourceProvenance?.includes('De novo'))).toBe(true);
  const ir=WorkbenchOrchestrator.runModeAPipeline({IR:spectrum('IR',[{id:'band',x:3350,y:70,width:110,isBroad:true},{id:'co',x:1050,y:100}],'Relative intensity')});
- expect(ir.solvedConstraintSpace.solverLog.some(s=>s.startsWith('De novo'))).toBe(true);
+ expect(ir.solvedConstraintSpace.solverLog.some(s=>s.includes('圖搜尋'))).toBe(true);
 });
 it('非等距五點插值、端點延伸與負校正值',()=>{
  const anchors=[{x:0,y:1},{x:2,y:3},{x:5,y:6},{x:9,y:4},{x:10,y:5}];
@@ -47,5 +47,5 @@ it('幾何訊號產生峰形資料，圖枚舉具有有效性與資源狀態',()
  const result=searchMolecularGraphs('C2H6O',{timeMs:100,maxStates:100,maxResults:5});
  expect(result.status).toBe('BOUNDED');expect(result.smiles.length).toBeGreaterThan(0);expect(result.visited).toBeLessThanOrEqual(101);
  for(const s of result.smiles)expect(canonicalizeMolecule(s).valid).toBe(true);
- expect(searchMolecularGraphs('C30H62').status).toBe('UNSUPPORTED');
+ const larger=searchMolecularGraphs('C30H62',{maxStates:1,timeMs:100});expect(larger.status).toBe('BOUNDED');expect(larger.termination).toBe('STATE_BUDGET');
 });

@@ -1393,6 +1393,42 @@ export class ChemicalHardConstraintValidator {
     const isProticDeuteratedSolvent =
       nmrSolvent === "D2O" || nmrSolvent === "CD3OD";
 
+    // Manual peak tables provide relative, possibly partial integrals. No total-H
+    // comparison or symmetry multiplier is licensed without independent calibration.
+    if(!h1Summary.canDetermineAbsoluteProtonCount){
+      const note = `¹H NMR 積分為局部或不確定證據，候選結構總氫數為 ${computedTotalProtons}H (碳上氫 ${computedCarbonBoundProtons}H + 可交換質子 ${computedExchangeableProtons}H)，暫標示為「無法判定」`;
+      const uncertaintyNotes=[...h1Summary.uncertaintyReasons,note];
+
+      return {
+        targetFormulaMatch: hardValidation.formulaMatch,
+        computedTotalProtons,
+        computedCarbonBoundProtons,
+        computedExchangeableProtons,
+        computedTotalHydrogens: computedTotalProtons,
+        computedCarbonBoundHydrogens: computedCarbonBoundProtons,
+        computedExchangeableHydrogens: computedExchangeableProtons,
+        targetFormulaHydrogens,
+        nmrIntegralDataMode: h1Summary.integralDataMode,
+        nmrCompletenessLevel: h1Summary.completenessLevel,
+        observedTotalProtons: null,
+        observedRelativeRatioSum: h1Summary.inferredMinimumProtonUnitSum,
+        comparisonResult: "INCONCLUSIVE",
+        status: "INCONCLUSIVE",
+        isHardFailure: false,
+        penaltyPoints: 0,
+        scoreAdjustment: 0,
+        failureReason: null,
+        explanation: note,
+        diagnostics: uncertaintyNotes,
+        inconsistencyReasons: [],
+        contradictionReasons: [],
+        supportingNotes: [],
+        uncertaintyNotes,
+        uncertaintyExplanation: uncertaintyNotes.join("；"),
+        disposition: "INCONCLUSIVE",
+      };
+    }
+
     // Case 1: PARTIAL_OR_INCOMPLETE (僅部分訊號有積分或有重疊峰)
     if (
       h1Summary.integralDataMode === "PARTIAL_OR_INCOMPLETE" ||

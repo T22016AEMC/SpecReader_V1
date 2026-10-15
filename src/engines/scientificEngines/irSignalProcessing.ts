@@ -24,6 +24,28 @@ export function refreshIRSnapshot(source:ExperimentalSpectrumData,previous?:Expe
   const curveSignature=JSON.stringify(points.filter((_,i)=>i%Math.max(1,Math.floor(points.length/20))===0).map(p=>[p.x,Number(p.y.toFixed(4))]));
   return {...next,irAnalysisSnapshot:{settingsVersion:settings.revision??0,sourceVersion:next.dataVersion,featureSignature,curveSignature,featureChanged:previous?.irAnalysisSnapshot?.featureSignature!==featureSignature,previousRankingKey,curvePoints:points.length,peakCount:processed.peaks.length}};
 }
+/** Only actual calibrated samples are measured. No chemical inference and no
+ * fabricated width. Half-height endpoints must both exist in the supplied curve. */
+export function measureIRBandMorphology(s:ExperimentalSpectrumData,p:SpectralPeak):{shape:SpectralPeak['shape'];fwhm?:number} {
+ if((p.irShapeSource==='USER'||!p.irShapeSource&&p.userOverride)&&(p.shape==='broad'||p.shape==='sharp'))return {shape:p.shape};
+ if(p.pixelX!==undefined&&!p.isCalibrated)return {shape:'UNRESOLVED'};
+ const {raw,anchors}=physicalIRInputs(s),points=raw.filter(q=>Number.isFinite(q.x)&&Number.isFinite(q.y)).sort((a,b)=>a.x-b.x);
+ if(points.length<5)return {shape:'UNRESOLVED'};
+ const scale=resolveIRScale(s.yUnit,s.irManualSettings?.intensityScale??s.irIntensityScale),setting=s.irManualSettings?.direction;
+ const direction=setting&&setting!=='AUTO'?setting:scale==='ABSORBANCE'?'UP':scale==='TRANSMITTANCE'||scale==='PERCENT_TRANSMITTANCE'?'DOWN':inferIRDirection(points).direction;
+ const sign=direction==='DOWN'?-1:1,hasBaseline=s.irManualSettings?.enabled&&anchors.length===5;
+ const reference=direction==='DOWN'?Math.max(...points.map(q=>q.y)):Math.min(...points.map(q=>q.y));
+ const signal=points.map(q=>({x:q.x,y:sign*(q.y-(hasBaseline?baselineAt(q.x,anchors):reference))}));
+ let i=signal.reduce((best,q,k)=>Math.abs(q.x-p.x)<Math.abs(signal[best].x-p.x)?k:best,0);
+ if(i===0||i===signal.length-1||signal[i].y<=0)return {shape:'UNRESOLVED'};
+ // A mark off the actual peak top does not define a measured FWHM.
+ if(signal[i-1].y>signal[i].y||signal[i+1].y>signal[i].y)return {shape:'UNRESOLVED'};
+ const half=signal[i].y/2;let l=i,r=i;while(l>0&&signal[l].y>half)l--;while(r<signal.length-1&&signal[r].y>half)r++;
+ if(signal[l].y>half||signal[r].y>half||r-l<2)return {shape:'UNRESOLVED'};
+ const crossing=(a:number,b:number)=>signal[a].x+(half-signal[a].y)*(signal[b].x-signal[a].x)/(signal[b].y-signal[a].y);
+ const width=crossing(r-1,r)-crossing(l,l+1);
+ return Number.isFinite(width)&&width>0?{shape:width>=55?'broad':'sharp',fwhm:width}:{shape:'UNRESOLVED'};
+}
 export function toAbsorbance(value: number, scale: IRIntensityScale): number | null {
   if (!Number.isFinite(value)) return null;
   if (scale === 'TRANSMITTANCE' || scale === 'PERCENT_TRANSMITTANCE') {
@@ -112,7 +134,8 @@ export function prepareIR(s: ExperimentalSpectrumData): ExperimentalSpectrumData
   const peaks=(processed ? [...processed.peaks.filter(p=>!manual.some(m=>Math.abs(m.x-p.x)<Math.max(2,m.width??2))),...manual.map(p=>{
     const measured=processed.peaks.find(q=>Math.abs(q.x-p.x)<Math.max(3,p.width??3));
     const nearby=processed.points.reduce((best,q)=>Math.abs(q.x-p.x)<Math.abs(best.x-p.x)?q:best,processed.points[0]);
-    return {...measured,...p,y:nearby?.y??p.y,fwhm:p.fwhm??measured?.fwhm,area:p.area??measured?.area,relativeArea:p.relativeArea??measured?.relativeArea,signalToNoise:p.signalToNoise??measured?.signalToNoise};
+    const morphology=measureIRBandMorphology(s,p);
+    return {...measured,...p,shape:morphology.shape,isBroad:morphology.shape==='broad',y:nearby?.y??p.y,intensityKnown:nearby?true:p.intensityKnown,fwhm:morphology.fwhm??measured?.fwhm,area:p.area??measured?.area,relativeArea:p.relativeArea??measured?.relativeArea,signalToNoise:p.signalToNoise??measured?.signalToNoise};
   })] : converted.map(p=>({...p,y:max>0?100*p.y/max:0}))).filter(p=>p.y>0||p.intensityKnown===false);
   return {...s,rawExperimentalSnapshot:s.rawExperimentalSnapshot??{rawPoints:raw.map(p=>({...p})),rawX:raw.map(p=>p.x),rawY:raw.map(p=>p.y),originalImageUrl:s.originalImageUrl},peaks,irIntensityScale:effectiveScale,irProcessingApplied:true,irDataQuality:(isImage?s.irDataQuality??.45:processed?.invalidCount?.6:.85)*(s.irManualSettings?.enabled?.85:1),irProcessingWarnings:[...(s.irProcessingWarnings??[]),...(effectiveScale==='UNKNOWN'?['Y 刻度未確認；僅使用相對強度，原始尺度標籤只用於吸收方向判斷。']:[]),...(processed?.uncertain&&(!s.irManualSettings||s.irManualSettings.direction==='AUTO')?['峰方向判斷不確定，請手動確認。']:[]),...(s.irManualSettings?.enabled?['五點基線採端點常數延伸；控制點穿過寬峰可能移除真實訊號，請對照原圖。']:[]),...(processed?.invalidCount?['無效數值已排除。']:[])], ...(processed?{points:processed.points,irBaselinePoints:processed.baseline,irCorrectedPoints:processed.corrected}: {})};
 }

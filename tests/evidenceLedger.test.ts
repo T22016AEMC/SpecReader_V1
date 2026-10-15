@@ -1,4 +1,6 @@
-import {describe,it,expect} from 'vitest';
+import {initializeRDKit} from '../src/engines/scientificEngines/rdkitAdapter';
+beforeAll(()=>initializeRDKit());
+import {describe,it,expect,beforeAll} from 'vitest';
 import {ChemicalFeatureEngine} from '../src/engines/chemicalFeatureEngine';
 import {scoreScientificEvidence} from '../src/engines/scientificEngines/evidenceLedger';
 import {CandidateGenerator} from '../src/engines/candidateGenerator';
