@@ -14,7 +14,7 @@ describe('MS / MSMS / ToF 質量與來源（合成資料）',()=>{
     const candidates=MolecularFormulaCandidateEngine.generateCandidates({observedIonMz:mz,ionization:'ESI+',isHighResolution:true,massTolerancePpm:5,adductPreference:'[M+H]+'});
     const ethanol=candidates.find(c=>c.formula==='C2H6O');
     expect(ethanol).toBeDefined();expect(ethanol!.massErrorPpm).toBeGreaterThan(1);
-    const s=spectrum('MS',[{id:'M',x:mz,y:100,isMolecularIonCandidate:true}]);s.msParams={msType:'LC-MS',ionization:'ESI+',isHighResolution:true,adductType:'[M+H]+'};
+    const s=spectrum('MS',[{id:'M',x:mz,y:100,isMolecularIonCandidate:true}]);s.msParams={msType:'LC-MS',ionization:'ESI+',chargeState:1,ionAssignmentConfirmed:true,isHighResolution:true,adductType:'[M+H]+'};
     expect(MSAnalysisEngine.analyzeExperimentalMS(s).analysis?.candidateFormulas.some(c=>c.formula==='C2H6O')).toBe(true);
   });
   it('明確 Na 加合優先於 ESI+ 預設，雙電荷不改用一價',()=>{

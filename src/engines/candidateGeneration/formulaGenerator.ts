@@ -45,7 +45,7 @@ export class FormulaGenerator {
       ];
     }
 
-    if (constraints.molecularFormula?.lockedFormula) {
+    if (constraints.userSuppliedFormula?.isValid && constraints.molecularFormula?.lockedFormula) {
       const locked = constraints.molecularFormula.lockedFormula;
       const lockedCand = (constraints.molecularFormula.candidates || []).find(
         (c) => c.formula === locked
@@ -100,7 +100,7 @@ export class FormulaGenerator {
             nominalMass: Math.round(explicitCand.neutralExactMass),
             exactMass: explicitCand.neutralExactMass,
             unsaturationIndex: explicitCand.dbe,
-            score: Math.max(96, explicitCand.score || 96),
+            score: Math.min(85, explicitCand.score || 60),
             rationale:
               explicitCand.notes ||
               `依據質量約束推估分子式 (${explicitCand.formula}, DBE=${explicitCand.dbe})`,

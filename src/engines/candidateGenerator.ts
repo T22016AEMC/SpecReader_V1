@@ -204,6 +204,18 @@ export function rankCandidates(
     if(!scientificScoreLedger.formulaHardCompatible) continue;
     const finalScore=Math.round(scientificScoreLedger.totalScore);
     const ledgerScores=scientificScoreLedger.modalityScores;
+    supportingReasons.splice(0);contradictingReasons.splice(0);
+    const unknownEvidence:string[]=[];
+    for(const entry of scientificScoreLedger.entries){
+      const note=`${entry.sourceModality} [${entry.observationIds.join(',')}]: ${entry.method}`;
+      if(entry.compatibility===null||entry.weight===0)unknownEvidence.push(note+'（資料不足）');
+      else if(entry.compatibility>=.6)supportingReasons.push(note);
+      else if(entry.compatibility<.25)contradictingReasons.push(note+'（實測特徵不相容）');
+      else unknownEvidence.push(note+'（競爭解釋）');
+    }
+    satisfiedConstraints.splice(0,satisfiedConstraints.length,...supportingReasons);
+    violatedConstraints.splice(0,violatedConstraints.length,...contradictingReasons);
+
     const ledgerNote="評分是未校準的相容度，非結構正確機率；同一原始觀測僅計一次。";
     const scoreNotes=Object.entries(ledgerScores).filter(([,v])=>v!=null).map(([mod,v])=>`${mod}：${scientificScoreLedger.entries.filter(e=>e.sourceModality===mod&&e.weight>0).length} 個獨立觀測，模型相容分 ${v!.toFixed(1)}/100；方法與原始觀測 ID 可由 scientificScoreLedger 追溯。`);
     supportingReasons.unshift(ledgerNote,...scoreNotes);
@@ -281,7 +293,7 @@ export function rankCandidates(
       },
       hardValidation: hardCheck,
       protonConsistencyReport: hardCheck.protonConsistency,
-      nmrConsistencyAnalysis: modalityEvaluation.nmrConsistencyAnalysis,
+      nmrConsistencyAnalysis: Object.values(bundle.scientificSources??{}).some(s=>s?.observationCoverage==='CONFIRMED_COMPLETE')?modalityEvaluation.nmrConsistencyAnalysis:undefined,
       constraintSatisfaction,
       hardConstraintPassed: true,
       evidenceSupport: supportingReasons,
@@ -304,10 +316,11 @@ export function rankCandidates(
       supportingEvidence:
         matchedEvs.length > 0 ? matchedEvs : evidencePool.slice(0, 5),
       contradictingEvidence: contradictingReasons,
-      missingEvidence: modalityEvaluation.missingExpectedFeatures,
+      unknownEvidence,
+      missingEvidence: unknownEvidence,
       supportingReasons,
       contradictingReasons,
-      missingExpectedFeatures: modalityEvaluation.missingExpectedFeatures,
+      missingExpectedFeatures: [],
       evidenceProvenanceByModality: v5Evaluated?.evidenceProvenanceByModality,
       recommendedExperiments: v5Evaluated?.recommendedExperiments,
       pubchemCid: validatedGraph.rawCombinatorialCandidate.pubchemCid,

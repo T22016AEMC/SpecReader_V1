@@ -59,9 +59,9 @@ export class ToFSIMSScientificEngine
   ): ToFSIMSSurfaceConditionState {
     const rawParams = spectrum?.msParams?.tofSims;
     let polarity: ToFSIMSSurfaceConditionState["polarity"] = "NOT_PROVIDED";
-    if (rawParams?.polarity === "Positive") {
+    if (rawParams?.polarity === "Positive" || spectrum?.msParams?.polarity === "Positive") {
       polarity = "positive";
-    } else if (rawParams?.polarity === "Negative") {
+    } else if (rawParams?.polarity === "Negative" || spectrum?.msParams?.polarity === "Negative") {
       polarity = "negative";
     } else if (spectrum?.msParams?.ionization === "ESI-") {
       polarity = "negative";

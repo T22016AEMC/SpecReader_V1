@@ -1,7 +1,9 @@
-import {prepareIR,refreshIRSnapshot} from './engines/scientificEngines/irSignalProcessing';
+import {MassExperimentConditions} from './components/MassExperimentConditions';
+import {emptyModeAState,executeAnalysisWorker,type ModeAResult} from './engines/analysisSession';
+import {PeakObservationTable} from './components/PeakObservationTable';
 import type {IRManualSettings} from './engines/scientificEngines/irManualBaseline';
 import type {ExtendedSpectrumModality} from './types/spectrum';
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -34,10 +36,6 @@ import { ReportExportModal } from "./components/ReportExportModal";
 import { SpectrumViewer } from "./components/SpectrumViewer";
 import { StructureRenderer2D } from "./components/StructureRenderer2D";
 import { StructureSpectrumValidationPage } from "./components/StructureSpectrumValidationPage";
-import {
-  REFERENCE_SAMPLE_PRESETS,
-  buildPresetSpectra,
-} from "./data/referencePresets";
 import { SpectrumParser } from "./engines/spectrumParser";
 import {
   NMR_SOLVENT_REFERENCE_SHIFTS,
@@ -45,10 +43,6 @@ import {
   WorkbenchOrchestrator,
 } from "./engines/workbenchOrchestrator";
 import { TheoreticalModelRegistry } from "./models/theoreticalModelRegistry";
-import {
-  ScientificEngineTestSuite,
-  ScientificTestCaseResult,
-} from "./tests/scientificEngineTestSuite";
 import {
   ExperimentalSpectrumData,
   ImageSpectrumCalibration,
@@ -218,6 +212,7 @@ export default function App() {
   // ============================================================================
   // 4. Mode A 第 1 頁：手動訊號標記與編輯狀態
   // ============================================================================
+  const [markingEnabled,setMarkingEnabled]=useState(true);
   const [selectedPeakId, setSelectedPeakId] = useState<string | null>(null);
   const [irBaselineDraft,setIrBaselineDraft]=useState<IRManualSettings|undefined>();
   const [newExchangeable,setNewExchangeable]=useState(false);
@@ -225,7 +220,7 @@ export default function App() {
   const [newIRStart,setNewIRStart]=useState('');
   const [newIREnd,setNewIREnd]=useState('');
   const [newPeakX, setNewPeakX] = useState<string>("");
-  const [newPeakY, setNewPeakY] = useState<string>("65");
+  const [newPeakY, setNewPeakY] = useState<string>("");
   const [newPeakSignalDirection, setNewPeakSignalDirection] = useState<
     "PEAK_TOP" | "ABSORPTION_VALLEY" | "SHOULDER" | "ION_BAR"
   >("ABSORPTION_VALLEY");
@@ -274,9 +269,6 @@ export default function App() {
   const [uploadStatusMsg, setUploadStatusMsg] = useState<string | null>(null);
   const [autoDetectOnUpload, setAutoDetectOnUpload] = useState<boolean>(true);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
-  const [testResults, setTestResults] = useState<
-    ScientificTestCaseResult[] | null
-  >(null);
   const [historyRecords, setHistoryRecords] = useState<AnalysisHistoryRecord[]>(
     []
   );
@@ -299,7 +291,8 @@ export default function App() {
     mod: ExtendedModality,
     updated: ExperimentalSpectrumData | undefined
   ) => {
-    if(mod==='IR'&&updated?.irManualSettings)updated=refreshIRSnapshot(updated,spectra.IR,rankedCandidates.map(c=>c.smiles).join('|'));
+    // Editing never calls a scientific engine; analysis consumes an explicit snapshot.
+    if(updated)updated={...updated,dataVersion:(updated.dataVersion??0)+1,irProcessingApplied:false};
     const tagged = updated
       ? {
           ...updated,
@@ -446,7 +439,7 @@ export default function App() {
   const extraChemicalInput = useMemo(() => {
     const msmsSpec = auxSpectraMap["MS/MS"];
     const tofSimsSpec = auxSpectraMap["ToF-SIMS"];
-    const parsedPrecursor = parseFloat(msmsPrecursorMz);
+    const parsedPrecursor = msmsSpec?.msParams?.precursorMz??NaN;
     return {
       molecularFormula: molecularFormulaInput.trim() || undefined,
       chemicalNotes: chemicalNotesInput.trim() || undefined,
@@ -494,9 +487,22 @@ export default function App() {
   ]);
 
   // Mode A 獨立計算管線：僅依賴實驗光譜與化學證據，絕不依賴 selectedCandidateId 或 Mode B 狀態，亦絕不自動觸發 Mode B
-  const modeAOrchestration = useMemo(() => {
-    return WorkbenchOrchestrator.runModeAPipeline(spectra, extraChemicalInput);
-  }, [spectra, extraChemicalInput]);
+  const [completedAnalysis,setCompletedAnalysis]=useState<{result:ModeAResult;key:string;spectra:typeof spectra}|null>(null);
+  const [analysisBusy,setAnalysisBusy]=useState(false);
+  const [analysisError,setAnalysisError]=useState<string|null>(null);
+  const analysisLock=useRef(false);
+  const [analysisRuns,setAnalysisRuns]=useState(0);
+  const currentInputKey=useMemo(()=>JSON.stringify([spectra,extraChemicalInput]),[spectra,extraChemicalInput]);
+  const analysisStale=!!completedAnalysis&&completedAnalysis.key!==currentInputKey;
+  const modeAOrchestration=completedAnalysis?.result??emptyModeAState();
+  const handleStartAnalysis=async()=>{
+    if(analysisLock.current)return;
+    analysisLock.current=true;setAnalysisBusy(true);setAnalysisError(null);setAnalysisRuns(n=>n+1);
+    const key=currentInputKey,snapshot=structuredClone(spectra),extra=structuredClone(extraChemicalInput);
+    try{const result=await executeAnalysisWorker({spectra:snapshot,extraInput:extra});setCompletedAnalysis({result,key,spectra:result.inputSpectra??snapshot});}
+    catch(error){setAnalysisError(error instanceof Error?error.message:'分析執行失敗');}
+    finally{analysisLock.current=false;setAnalysisBusy(false);}
+  };
 
   const {
     bundle,
@@ -636,7 +642,7 @@ export default function App() {
       xUnit: meta.xUnit,
       yUnit: meta.yUnit,
       nmrSolvent:
-        mod === "1H_NMR" || mod === "13C_NMR" ? "CDCl3" : undefined,
+        mod === "1H_NMR" || mod === "13C_NMR" ? "Unknown" : undefined,
       points: [],
       peaks: [],
       validation: {
@@ -655,43 +661,6 @@ export default function App() {
     setUploadStatusMsg(
       `已建立 ${meta.title} 手動訊號工作表，可直接在下方新增或編輯實測訊號。`
     );
-  };
-
-  // 載入參考標準樣品
-  const handleSelectPreset = (presetId: string) => {
-    const found = REFERENCE_SAMPLE_PRESETS.find((p) => p.id === presetId);
-    if (!found) return;
-    setActivePresetId(presetId);
-    const nextSpectra = buildPresetSpectra(found);
-    setSpectra(nextSpectra);
-    setAuxSpectraMap({});
-    setMolecularFormulaInput(found.expectedFormula || "");
-    setSelectedCandidateId(undefined);
-    setUploadStatusMsg(
-      `已載入標準樣品「${found.title}」實驗數據與分子式 (${found.expectedFormula})。您可隨時刪除任意模態、修改標記或切換為空白未知物。`
-    );
-
-    const nextState = WorkbenchOrchestrator.runModeAPipeline(nextSpectra, {
-      molecularFormula: found.expectedFormula,
-    });
-    const top = nextState.rankedCandidates[0];
-    if (top) {
-      setHistoryRecords((prev) => [
-        {
-          id: `hist-${Date.now()}`,
-          timestamp: new Date().toLocaleTimeString(),
-          presetName: found.title,
-          activeModalities: [
-            `Formula(${found.expectedFormula})`,
-            ...Object.keys(nextSpectra),
-          ],
-          topCandidateName: top.name,
-          topCandidateFormula: top.molecularFormula,
-          topScore: top.scoreBreakdown.totalScore,
-        },
-        ...prev.slice(0, 14),
-      ]);
-    }
   };
 
   // 第 1 頁：上傳光譜檔案（整合自動讀譜與手動覆核能力，保留原始數據）
@@ -771,13 +740,6 @@ export default function App() {
   const decorateManualPeak=(updated:ExperimentalSpectrumData,original:ExperimentalSpectrumData,x:number):ExperimentalSpectrumData|null=>{
     const marker=updated.peaks.find(p=>!original.peaks.some(o=>o.id===p.id))??updated.peaks.find(p=>Math.abs(p.x-x)<.05);
     if(!marker)return updated;
-    if(focusedModality==='IR'&&newIRShape!=='AUTO'){
-      const start=Number(newIRStart),end=Number(newIREnd);
-      if(newIRShape==='broad'&&(!newIRStart||!newIREnd||!Number.isFinite(start)||!Number.isFinite(end)||start===end)){setManualPeakError('寬峰必須提供有效的起點與終點，不能只標峰頂。');return null;}
-      const pixel=original.sourceType==='IMAGE_EXPERIMENTAL'&&!SpectrumParser.isSpectrumCalibrated(original);
-      updated=WorkbenchOrchestrator.updatePeak(updated,marker.id,{shape:newIRShape as SpectralPeak['shape'],isBroad:newIRShape==='broad',userOverride:true,manualEdited:true,...(newIRStart&&newIREnd?{observedRange:[Math.min(start,end),Math.max(start,end)] as [number,number],rangeCoordinateSpace:pixel?'PIXEL':'PHYSICAL',width:Math.abs(end-start),fwhm:newIRShape==='broad'?Math.abs(end-start):undefined}:{})});
-    }
-    if(focusedModality==='1H_NMR'&&newExchangeable)updated=WorkbenchOrchestrator.updatePeak(updated,marker.id,{isExchangeable:true});
     setManualPeakError('');return updated;
   };
   const handleMarkPeakFromImage = (params: {
@@ -796,7 +758,7 @@ export default function App() {
       pixelX: params.pixelX,
       pixelY: params.pixelY,
       isCalibrated: isAlreadyCalibrated,
-      signalDirection: newPeakSignalDirection,
+      signalDirection: focusedModality==='IR'?'ABSORPTION_VALLEY':'PEAK_TOP',
       multiplicity:
         focusedModality === "1H_NMR" ? newPeakMultiplicity : undefined,
       integral:
@@ -861,12 +823,9 @@ export default function App() {
     if (!spec) return;
 
     const snapMode =
-      newPeakSignalDirection === "ABSORPTION_VALLEY"
+      focusedModality === "IR"
         ? "ABSORPTION_VALLEY"
-        : newPeakSignalDirection === "PEAK_TOP" ||
-            newPeakSignalDirection === "ION_BAR"
-          ? "PEAK_TOP"
-          : "EXACT";
+        : "PEAK_TOP";
 
     const snapped = SpectrumParser.snapToLocalNumericExtremum(
       spec,
@@ -879,7 +838,7 @@ export default function App() {
       x: snapped.x,
       y: snapped.y,
       isCalibrated: true,
-      signalDirection: newPeakSignalDirection,
+      signalDirection: focusedModality==='IR'?'ABSORPTION_VALLEY':'PEAK_TOP',
       multiplicity:
         focusedModality === "1H_NMR" ? newPeakMultiplicity : undefined,
       integral:
@@ -917,12 +876,9 @@ export default function App() {
     const spec = currentSpectrum;
     if (!spec) return;
     const snapMode =
-      newPeakSignalDirection === "ABSORPTION_VALLEY"
+      focusedModality === "IR"
         ? "ABSORPTION_VALLEY"
-        : newPeakSignalDirection === "PEAK_TOP" ||
-            newPeakSignalDirection === "ION_BAR"
-          ? "PEAK_TOP"
-          : "EXACT";
+        : "PEAK_TOP";
     const snapped = SpectrumParser.snapToLocalNumericExtremum(
       spec,
       physicalX,
@@ -943,8 +899,9 @@ export default function App() {
     const spec = currentSpectrum;
     if (!spec) return;
     const xNum = parseFloat(newPeakX);
-    const yNum = parseFloat(newPeakY);
-    if (!Number.isFinite(xNum) || !Number.isFinite(yNum)) return;
+    const enteredY=parseFloat(newPeakY),yKnown=Number.isFinite(enteredY),yNum=yKnown?enteredY:0;
+    if(!Number.isFinite(xNum))return;
+    if(!yKnown&&(spec.modality==='MS'||spec.digitizedFromImage)){setManualPeakError('圖片座標或 MS 相對強度需要有效的 Y 值；NMR／IR 未提供強度可留空。');return;}
 
     const isImg =
       spec.sourceType === "IMAGE_EXPERIMENTAL" || spec.digitizedFromImage;
@@ -962,7 +919,7 @@ export default function App() {
       pixelX: isImg && !isAlreadyCalibrated ? Math.round(xNum) : undefined,
       pixelY: isImg && !isAlreadyCalibrated ? Math.round(yNum) : undefined,
       isCalibrated: isAlreadyCalibrated,
-      signalDirection: newPeakSignalDirection,
+      signalDirection: focusedModality==='IR'?'ABSORPTION_VALLEY':'PEAK_TOP',
       multiplicity:
         focusedModality === "1H_NMR" ? newPeakMultiplicity : undefined,
       integral:
@@ -977,7 +934,9 @@ export default function App() {
       userClassification: newPeakClass,
     });
 
-    const decorated=decorateManualPeak(updated,spec,xNum);if(!decorated)return;
+    let decorated=decorateManualPeak(updated,spec,xNum);if(!decorated)return;
+    const added=decorated.peaks.find(p=>!spec.peaks.some(old=>old.id===p.id));
+    if(added)decorated=WorkbenchOrchestrator.updatePeak(decorated,added.id,{intensityKnown:yKnown});
     updateSpectrumForModality(focusedModality,decorated);
     setNewPeakX("");
     setNewPeakAssignment("");
@@ -1164,7 +1123,7 @@ export default function App() {
               }`}
             >
               <FolderKanban className="h-3.5 w-3.5" />
-              <span>標準樣品庫</span>
+              <span>專案資訊</span>
             </button>
 
             <button
@@ -1343,22 +1302,7 @@ export default function App() {
                   >
                     重置空白未知物 (Empty Unknown)
                   </button>
-                  <span className="text-slate-700">|</span>
-                  <span className="text-[11px] text-slate-400">標準測試樣品：</span>
-                  {REFERENCE_SAMPLE_PRESETS.map((preset) => (
-                    <button
-                      key={preset.id}
-                      type="button"
-                      onClick={() => handleSelectPreset(preset.id)}
-                      className={`rounded-lg border px-2.5 py-1 text-xs font-medium transition ${
-                        activePresetId === preset.id
-                          ? "border-cyan-500 bg-cyan-950/60 text-cyan-200"
-                          : "border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700 hover:text-slate-200"
-                      }`}
-                    >
-                      {preset.name}
-                    </button>
-                  ))}
+
                 </div>
               </div>
 
@@ -1378,7 +1322,7 @@ export default function App() {
                       type="text"
                       value={molecularFormulaInput}
                       onChange={(e) => setMolecularFormulaInput(e.target.value)}
-                      placeholder="例如：C9H8O4、C8H8O2、C10H12O2（可單獨輸入立即推論）"
+                      aria-label="分子式（選填）" placeholder="輸入實驗分子式（選填；按開始分析後使用）"
                       className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 font-mono text-xs text-slate-100 focus:border-cyan-500 focus:outline-none"
                     />
                     {molecularFormulaInput && (
@@ -1391,19 +1335,7 @@ export default function App() {
                       </button>
                     )}
                   </div>
-                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px] text-slate-400">
-                    <span>快速填入分子式測試：</span>
-                    {["C9H8O4", "C8H8O2", "C8H9NO2", "C4H8O2"].map((fm) => (
-                      <button
-                        key={fm}
-                        type="button"
-                        onClick={() => setMolecularFormulaInput(fm)}
-                        className="rounded border border-slate-800 bg-slate-900 px-1.5 py-0.5 font-mono text-[10px] text-cyan-300 hover:border-cyan-500/40"
-                      >
-                        {fm}
-                      </button>
-                    ))}
-                  </div>
+
                 </div>
 
                 <div className="md:col-span-5 rounded-lg border border-slate-800 bg-slate-950/90 p-3">
@@ -1633,42 +1565,8 @@ export default function App() {
                       {/* 標記方向與溶劑設定控制列 */}
                       <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-800 bg-slate-900/80 px-3.5 py-2.5 text-xs">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-semibold text-slate-200">
-                            點擊標記訊號類型 ({focusedModalityMeta.shortLabel})：
-                          </span>
-                          {(
-                            [
-                              {
-                                id: "ABSORPTION_VALLEY",
-                                label: "吸收谷底 (IR Valley)",
-                              },
-                              {
-                                id: "PEAK_TOP",
-                                label: "共振/訊號峰頂 (Peak Top)",
-                              },
-                              {
-                                id: "SHOULDER",
-                                label: "肩峰 (Shoulder)",
-                              },
-                              {
-                                id: "ION_BAR",
-                                label: "質譜離子頂點 (Ion Bar)",
-                              },
-                            ] as const
-                          ).map((dir) => (
-                            <button
-                              key={dir.id}
-                              type="button"
-                              onClick={() => setNewPeakSignalDirection(dir.id)}
-                              className={`rounded-lg border px-2.5 py-1 font-mono text-[11px] font-semibold transition ${
-                                newPeakSignalDirection === dir.id
-                                  ? "border-cyan-500 bg-cyan-950/70 text-cyan-200"
-                                  : "border-slate-800 bg-slate-950 text-slate-400 hover:text-slate-200"
-                              }`}
-                            >
-                              {dir.label}
-                            </button>
-                          ))}
+                          <button type="button" className="rounded border border-cyan-600 px-3 py-1" aria-pressed={markingEnabled} onClick={()=>{setMarkingEnabled(v=>!v);setSelectedPeakId(null);}}>標記圖譜</button>
+                          <span>點圖後於資料列補充觀測資訊。</span>
                         </div>
 
                         {(focusedModality === "1H_NMR" ||
@@ -1679,7 +1577,7 @@ export default function App() {
                                 氘代溶劑：
                               </span>
                               <select
-                                value={currentSpectrum.nmrSolvent || "CDCl3"}
+                                aria-label="氘代溶劑" value={currentSpectrum.nmrSolvent || "Unknown"}
                                 onChange={(e) =>
                                   handleChangeNmrSolvent(
                                     focusedModality,
@@ -1752,33 +1650,16 @@ export default function App() {
                         )}
                       </div>
 
-                      {focusedModality === "MS/MS" && (
-                        <div className="flex items-center gap-2 rounded-xl border border-violet-500/30 bg-violet-950/20 px-3.5 py-2 text-xs">
-                          <span className="font-semibold text-violet-200">
-                            MS/MS 母離子 (Precursor Ion m/z)：
-                          </span>
-                          <input
-                            type="number"
-                            step="any"
-                            value={msmsPrecursorMz}
-                            onChange={(e) => setMsmsPrecursorMz(e.target.value)}
-                            placeholder="例如：180.04 或 137"
-                            className="w-36 rounded border border-violet-500/40 bg-slate-950 px-2.5 py-1 font-mono text-xs text-violet-200"
-                          />
-                          <span className="text-[11px] text-slate-400">
-                            設定母離子 m/z 可於第 3 頁自動計算 MS/MS 中性丟失 (Neutral Losses)。
-                          </span>
-                        </div>
-                      )}
-
+                      {['MS','MS/MS','ToF-SIMS'].includes(focusedModality)&&<MassExperimentConditions spectrum={currentSpectrum} modality={focusedModality} onChange={s=>updateSpectrumForModality(focusedModality,s)}/>}
+                      {focusedModality==='13C_NMR'&&<label className="text-xs text-slate-300"><input aria-label="13C 已確認定量實驗" type="checkbox" checked={currentSpectrum.quantitativeCarbonExperiment??false} onChange={e=>updateSpectrumForModality('13C_NMR',{...currentSpectrum,quantitativeCarbonExperiment:e.target.checked})}/>已確認為適當定量 ¹³C 實驗（一般寬頻去耦請勿勾選）</label>}
                       <SpectrumViewer
                         spectrum={currentSpectrum}
                         selectedPeakId={selectedPeakId}
                         onSelectPeak={(pk) => setSelectedPeakId(pk.id)}
                         imageInteractionMode="MARK_PEAK"
-                        onMarkPeakFromImage={handleMarkPeakFromImage}
+                        onMarkPeakFromImage={markingEnabled?handleMarkPeakFromImage:undefined}
                         onMovePeakFromImage={handleMovePeakMarkerOnImage}
-                        onMarkPeakFromPlot={handleMarkPeakFromPlot}
+                        onMarkPeakFromPlot={markingEnabled?handleMarkPeakFromPlot:undefined}
                         onMovePeakFromPlot={handleMovePeakFromPlot}
                         hideModeSwitchButtons
                         height={340}
@@ -1911,9 +1792,6 @@ export default function App() {
                               新增標記
                             </button>
                           </div>
-                          {focusedModality==='IR'&&<div className="col-span-full flex gap-2 items-center"><label>峰型 <select aria-label="IR 人工峰型" className="bg-slate-900" value={newIRShape} onChange={e=>setNewIRShape(e.target.value)}><option value="AUTO">自動判斷</option><option value="sharp">一般／尖峰</option><option value="broad">寬峰</option><option value="shoulder">重疊峰／肩峰</option></select></label><input aria-label="IR 寬峰起點" placeholder="範圍起點" type="number" step="any" className="w-24 bg-slate-900" value={newIRStart} onChange={e=>setNewIRStart(e.target.value)} required={newIRShape==='broad'}/><input aria-label="IR 寬峰終點" placeholder="範圍終點" type="number" step="any" className="w-24 bg-slate-900" value={newIREnd} onChange={e=>setNewIREnd(e.target.value)} required={newIRShape==='broad'}/><span>未校正圖片填 px；校正後填 cm⁻¹。寬峰需提供區間。</span></div>}
-                          {focusedModality==='1H_NMR'&&<div className="col-span-full flex gap-2 text-xs"><label>相對積分 <input aria-label="人工 NMR 相對積分" className="w-16 bg-slate-900" type="number" min="0" step="any" value={newPeakIntegral} onChange={e=>setNewPeakIntegral(e.target.value)}/></label><label>多重性 <select aria-label="人工 NMR 多重性" className="bg-slate-900" value={newPeakMultiplicity??'unresolved'} onChange={e=>setNewPeakMultiplicity(e.target.value as SpectralPeak['multiplicity'])}>{['unresolved','s','d','t','q','quint','sext','sept','m','br s'].map(v=><option key={v} value={v}>{v==='unresolved'?'未知':v}</option>)}</select></label><label>J (Hz) <input aria-label="人工 NMR J" className="w-20 bg-slate-900" value={newPeakJValues} onChange={e=>setNewPeakJValues(e.target.value)}/></label><label><input aria-label="人工 NMR 可交換" type="checkbox" checked={newExchangeable} onChange={e=>setNewExchangeable(e.target.checked)}/>可交換 OH／NH</label></div>}
-                          {focusedModality==='13C_NMR'&&<label className="col-span-full">額外 DEPT／APT 指認（選填） <select aria-label="人工碳 DEPT 指認" className="bg-slate-900" value={newPeakCarbonType??'Unknown'} onChange={e=>setNewPeakCarbonType(e.target.value as SpectralPeak['carbonType'])}>{['Unknown','CH','CH2','CH3','C'].map(v=><option key={v} value={v}>{v==='Unknown'?'未提供；一般去耦':v}</option>)}</select></label>}
                           {manualPeakError&&<p className="col-span-full text-amber-300" role="status">{manualPeakError}</p>}
                         </form>
 
@@ -1924,334 +1802,8 @@ export default function App() {
                               目前尚無任何訊號標記。請直接點擊左側原始圖片或真實數值曲線上的吸收谷底/峰頂進行標記。
                             </div>
                           ) : (
-                            <table className="w-full border-collapse text-left text-xs">
-                              <thead>
-                                <tr className="border-b border-slate-800 text-[10px] text-slate-400">
-                                  <th className="py-1.5 pr-2">原始像素 / 位置</th>
-                                  <th className="px-2 py-1.5">校正狀態 / 物理值</th>
-                                  {focusedModality === "1H_NMR" && (
-                                    <th className="px-2 py-1.5">裂分 / 積分</th>
-                                  )}
-                                  {focusedModality === "13C_NMR" && (
-                                    <th className="px-2 py-1.5">DEPT</th>
-                                  )}
-                                  <th className="px-2 py-1.5">分類 / 備註</th>
-                                  <th className="py-1.5 pl-2 text-right">刪除</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-slate-800/60">
-                                {currentSpectrum.peaks.map((pk) => {
-                                  const isSel = pk.id === selectedPeakId;
-                                  const isUncal = pk.isCalibrated === false;
-                                  return (
-                                    <tr
-                                      key={pk.id}
-                                      onClick={() => setSelectedPeakId(pk.id)}
-                                      className={`cursor-pointer transition ${
-                                        isSel
-                                          ? "bg-cyan-950/40"
-                                          : "hover:bg-slate-800/40"
-                                      }`}
-                                    >
-                                      {/* 原始像素位置 (可微調移動) */}
-                                      <td className="py-2 pr-2 font-mono text-[11px]">
-                                        {pk.pixelX !== undefined &&
-                                        pk.pixelY !== undefined ? (
-                                          <div className="flex items-center gap-1">
-                                            <span className="text-slate-400">
-                                              px(
-                                            </span>
-                                            <input
-                                              type="number"
-                                              value={pk.pixelX}
-                                              onChange={(e) => {
-                                                const nextPx = Number(
-                                                  e.target.value
-                                                );
-                                                if (!Number.isFinite(nextPx))
-                                                  return;
-                                                handleUpdatePeak(
-                                                  focusedModality,
-                                                  pk.id,
-                                                  {
-                                                    pixelX: nextPx,
-                                                    x: isUncal ? nextPx : pk.x,
-                                                  }
-                                                );
-                                              }}
-                                              className="w-14 rounded border border-slate-700 bg-slate-950 px-1 py-0.5 font-mono text-[11px] text-amber-300"
-                                              title="微調原始像素 X"
-                                            />
-                                            <span className="text-slate-400">
-                                              ,
-                                            </span>
-                                            <input
-                                              type="number"
-                                              value={pk.pixelY}
-                                              onChange={(e) => {
-                                                const nextPy = Number(
-                                                  e.target.value
-                                                );
-                                                if (!Number.isFinite(nextPy))
-                                                  return;
-                                                handleUpdatePeak(
-                                                  focusedModality,
-                                                  pk.id,
-                                                  {
-                                                    pixelY: nextPy,
-                                                  }
-                                                );
-                                              }}
-                                              className="w-14 rounded border border-slate-700 bg-slate-950 px-1 py-0.5 font-mono text-[11px] text-amber-300"
-                                              title="微調原始像素 Y"
-                                            />
-                                            <span className="text-slate-400">
-                                              )
-                                            </span>
-                                          </div>
-                                        ) : (
-                                          <input
-                                            type="number"
-                                            step="any"
-                                            value={pk.x}
-                                            onChange={(e) => {
-                                              const nextX = Number(
-                                                e.target.value
-                                              );
-                                              if (!Number.isFinite(nextX))
-                                                return;
-                                              handleUpdatePeak(
-                                                focusedModality,
-                                                pk.id,
-                                                { x: nextX }
-                                              );
-                                            }}
-                                            className="w-20 rounded border border-slate-700 bg-slate-950 px-1.5 py-0.5 font-mono text-[11px] text-cyan-300"
-                                          />
-                                        )}
-                                      </td>
+                            <PeakObservationTable spectrum={currentSpectrum} modality={focusedModality} selectedId={selectedPeakId} onSelect={setSelectedPeakId} onUpdate={(id,patch)=>handleUpdatePeak(focusedModality,id,patch)} onDelete={id=>handleDeletePeak(focusedModality,id)}/>
 
-                                      {/* 校正狀態與物理座標 */}
-                                      <td className="px-2 py-2 font-mono text-[11px]">
-                                        {isUncal ? (
-                                          <span className="inline-flex items-center rounded border border-amber-500/40 bg-amber-950/50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-300">
-                                            尚未校正 (待第 2 頁轉換)
-                                          </span>
-                                        ) : (
-                                          <span className="font-bold text-emerald-300">
-                                            {pk.x} {currentSpectrum.xUnit}
-                                          </span>
-                                        )}
-                                      </td>
-
-                                      {/* 1H NMR 裂分、積分與 J 值 */}
-                                      {focusedModality === "1H_NMR" && (
-                                        <td className="px-2 py-2">
-                                          <div className="flex flex-col gap-1">
-                                            <div className="flex items-center gap-1">
-                                              <select
-                                                value={pk.multiplicity || "s"}
-                                                onChange={(e) =>
-                                                  handleUpdatePeak(
-                                                    focusedModality,
-                                                    pk.id,
-                                                    {
-                                                      multiplicity: e.target
-                                                        .value as SpectralPeak["multiplicity"],
-                                                    }
-                                                  )
-                                                }
-                                                className="rounded border border-slate-700 bg-slate-950 px-1 py-0.5 font-mono text-[10px] text-cyan-200"
-                                              >
-                                                {[
-                                                  "s",
-                                                  "d",
-                                                  "t",
-                                                  "q",
-                                                  "dd",
-                                                  "td",
-                                                  "dt",
-                                                  "ddd",
-                                                  "sept",
-                                                  "dq",
-                                                  "qd",
-                                                  "ABq",
-                                                  "m",
-                                                  "br s",
-                                                ].map((m) => (
-                                                  <option key={m} value={m}>
-                                                    {m}
-                                                  </option>
-                                                ))}
-                                              </select>
-                                              <input
-                                                type="number"
-                                                step="0.5"
-                                                min="0.5"
-                                                value={
-                                                  pk.integral ??
-                                                  pk.integration ??
-                                                  1
-                                                }
-                                                onChange={(e) => {
-                                                  const v =
-                                                    parseFloat(e.target.value) ||
-                                                    1;
-                                                  handleUpdatePeak(
-                                                    focusedModality,
-                                                    pk.id,
-                                                    {
-                                                      integral: v,
-                                                      integration: v,
-                                                    }
-                                                  );
-                                                }}
-                                                className="w-11 rounded border border-slate-700 bg-slate-950 px-1 py-0.5 font-mono text-[10px] text-emerald-300"
-                                              />
-                                              <span className="text-[10px] text-slate-400">
-                                                H
-                                              </span>
-                                            </div>
-                                            <div className="flex items-center gap-1">
-                                              <span className="font-mono text-[9px] text-slate-400">
-                                                J(Hz):
-                                              </span>
-                                              <input
-                                                type="text"
-                                                defaultValue={
-                                                  pk.jValues &&
-                                                  pk.jValues.length > 0
-                                                    ? pk.jValues.join(", ")
-                                                    : pk.jCouplingHz
-                                                      ? String(pk.jCouplingHz)
-                                                      : ""
-                                                }
-                                                placeholder="例: 7.8, 1.6"
-                                                onBlur={(e) => {
-                                                  const parsedJ = e.target.value
-                                                    .split(/[,\s]+/)
-                                                    .map((v) => parseFloat(v))
-                                                    .filter(
-                                                      (n) =>
-                                                        Number.isFinite(n) &&
-                                                        n > 0
-                                                    );
-                                                  handleUpdatePeak(
-                                                    focusedModality,
-                                                    pk.id,
-                                                    {
-                                                      jValues: parsedJ,
-                                                      jCouplingHz: parsedJ[0],
-                                                    }
-                                                  );
-                                                }}
-                                                className="w-20 rounded border border-slate-700 bg-slate-950 px-1 py-0.5 font-mono text-[10px] text-violet-200"
-                                              />
-                                            </div>
-                                          </div>
-                                        </td>
-                                      )}
-
-                                      {/* 13C NMR DEPT */}
-                                      {focusedModality === "13C_NMR" && (
-                                        <td className="px-2 py-2">
-                                          <select
-                                            value={
-                                              pk.carbonType ||
-                                              pk.deptType ||
-                                              "CH"
-                                            }
-                                            onChange={(e) =>
-                                              handleUpdatePeak(
-                                                focusedModality,
-                                                pk.id,
-                                                {
-                                                  carbonType: e.target
-                                                    .value as SpectralPeak["carbonType"],
-                                                }
-                                              )
-                                            }
-                                            className="rounded border border-slate-700 bg-slate-950 px-1 py-0.5 font-mono text-[10px] text-amber-200"
-                                          >
-                                            <option value="C_quat">
-                                              C (季碳)
-                                            </option>
-                                            <option value="CH">CH</option>
-                                            <option value="CH2">CH₂</option>
-                                            <option value="CH3">CH₃</option>
-                                          </select>
-                                        </td>
-                                      )}
-
-                                      {/* 分類與備註 */}
-                                      <td className="px-2 py-2">
-                                        <div className="flex flex-col gap-1">
-                                          <select
-                                            value={
-                                              pk.userClassification ||
-                                              "COMPOUND"
-                                            }
-                                            onChange={(e) =>
-                                              handleUpdatePeak(
-                                                focusedModality,
-                                                pk.id,
-                                                {
-                                                  userClassification: e.target
-                                                    .value as SpectralPeak["userClassification"],
-                                                }
-                                              )
-                                            }
-                                            className="rounded border border-slate-700 bg-slate-950 px-1 py-0.5 font-mono text-[10px] text-slate-200"
-                                          >
-                                            <option value="COMPOUND">
-                                              樣品實測峰 (Sample)
-                                            </option>
-                                            <option value="SOLVENT">
-                                              溶劑峰 (Solvent)
-                                            </option>
-                                            <option value="IMPURITY">
-                                              雜質峰 (Impurity)
-                                            </option>
-                                            <option value="NOISE">
-                                              雜訊 (Noise)
-                                            </option>
-                                          </select>
-                                          <input
-                                            type="text"
-                                            value={pk.assignment || ""}
-                                            onChange={(e) =>
-                                              handleUpdatePeak(
-                                                focusedModality,
-                                                pk.id,
-                                                { assignment: e.target.value }
-                                              )
-                                            }
-                                            placeholder="備註..."
-                                            className="rounded border border-slate-800 bg-slate-950 px-1.5 py-0.5 text-[11px] text-slate-300"
-                                          />
-                                        </div>
-                                      </td>
-
-                                      <td className="py-2 pl-2 text-right">
-                                        <button
-                                          type="button"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleDeletePeak(
-                                              focusedModality,
-                                              pk.id
-                                            );
-                                          }}
-                                          className="rounded p-1 text-slate-400 hover:bg-rose-950/60 hover:text-rose-300"
-                                        >
-                                          <Trash2 className="h-3.5 w-3.5" />
-                                        </button>
-                                      </td>
-                                    </tr>
-                                  );
-                                })}
-                              </tbody>
-                            </table>
                           )}
                         </div>
                       </div>
@@ -2932,6 +2484,14 @@ export default function App() {
             {/* =============================================================== */}
             {modeAPage === "PAGE_3_INTERPRETATION" && (
               <div className="space-y-5">
+                <div className="rounded border border-cyan-600 p-3 text-sm" data-testid="analysis-control" data-analysis-runs={analysisRuns} data-worker-rdkit={completedAnalysis?.result.runtime?.rdkitAvailable??false} data-result-current={!!completedAnalysis&&!analysisStale}>
+                 <button type="button" disabled={analysisBusy} onClick={handleStartAnalysis} className="rounded bg-cyan-600 px-5 py-2 font-bold disabled:opacity-50">{analysisBusy?'分析中…':'開始分析'}</button>
+                 <span className="ml-3" role="status">{analysisBusy?'正在背景分析，編輯不會重複啟動任務。':analysisError?'分析失敗；輸入已保留，舊結果供參考。':analysisStale?'資料已變更，請重新分析':completedAnalysis?'分析完成（使用已保存輸入快照）':'尚未分析；上傳與編輯不執行科學推論。'}</span>
+                 {analysisError&&<p role="alert">{analysisError}</p>}
+                </div>
+                {completedAnalysis&&<>
+                <p data-testid="generation-status" data-code={modeAOrchestration.generationStatus?.code}>{modeAOrchestration.generationStatus?.message} {modeAOrchestration.generationStatus?.limits}</p>
+                <p className="text-xs text-slate-400">組成來源：{modeAOrchestration.generationStatus?.userFormula?`使用者指定 ${modeAOrchestration.generationStatus.userFormula}（完整候選硬限制）`:'未指定；推測組成不等於候選分子圖分子式'}；候選卡分子式由各自分子圖計算。</p>
                 {/* 第 3 頁頂部工作列（與第 1、2 頁標記及校正工具完全分離） */}
                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-500/30 bg-slate-900/90 px-4 py-3">
                   <div>
@@ -3007,7 +2567,7 @@ export default function App() {
                       推論 / 輸入分子式
                     </div>
                     <div className="mt-1 font-mono text-base font-bold text-cyan-300">
-                      {solvedConstraintSpace.plausibleFormulas[0]?.formula ||
+                      {bundle.userSuppliedFormula || solvedConstraintSpace.plausibleFormulas[0]?.formula ||
                         molecularFormulaInput.trim() ||
                         "待補充分子式或 MS"}
                     </div>
@@ -3429,7 +2989,7 @@ export default function App() {
                 </div>
 
                 {/* =========================================================== */}
-                {spectra.IR?.irAnalysisSnapshot&&<div className="text-xs text-amber-200" data-testid="ir-analysis-version" data-version={spectra.IR.irAnalysisSnapshot.settingsVersion} data-curve-signature={spectra.IR.irAnalysisSnapshot.curveSignature}>IR 已使用設定 v{spectra.IR.irAnalysisSnapshot.settingsVersion} · {spectra.IR.irAnalysisSnapshot.curvePoints} 個相對吸收數值／{spectra.IR.irAnalysisSnapshot.peakCount} 個峰 · {spectra.IR.irAnalysisSnapshot.featureChanged?'峰特徵已更新':'設定已使用，峰特徵未實質改變'} · {spectra.IR.irAnalysisSnapshot.previousRankingKey===rankedCandidates.map(c=>c.smiles).join('|')?'證據不足以改變候選順序':'候選順序已重新計算'}</div>}
+                {completedAnalysis?.spectra.IR?.irAnalysisSnapshot&&<div className="text-xs text-amber-200" data-testid="ir-analysis-version" data-version={completedAnalysis.spectra.IR!.irAnalysisSnapshot!.settingsVersion} data-curve-signature={completedAnalysis.spectra.IR!.irAnalysisSnapshot!.curveSignature}>IR 已使用設定 v{completedAnalysis.spectra.IR!.irAnalysisSnapshot!.settingsVersion} · {completedAnalysis.spectra.IR!.irAnalysisSnapshot!.curvePoints} 個相對吸收數值／{completedAnalysis.spectra.IR!.irAnalysisSnapshot!.peakCount} 個峰 · {completedAnalysis.spectra.IR!.irAnalysisSnapshot!.featureChanged?'峰特徵已更新':'設定已使用，峰特徵未實質改變'} · {completedAnalysis.spectra.IR!.irAnalysisSnapshot!.previousRankingKey===rankedCandidates.map(c=>c.smiles).join('|')?'證據不足以改變候選順序':'候選順序已重新計算'}</div>}
                 {!spectra.IR&&!spectra['1H_NMR']&&!spectra['13C_NMR']&&(spectra.MS||auxSpectraMap['MS/MS']||auxSpectraMap['ToF-SIMS'])&&<p className="text-xs text-amber-200">本版本可利用 MS 質量、可能分子式及碎片資訊提供結構限制，但尚無法僅憑 MS 資料可靠確定完整分子結構，建議搭配 IR 或 NMR。</p>}
                 {/* 第二部分：候選結構生成、正反證據鏈與排序 (Candidate Structures) */}
                 {/* =========================================================== */}
@@ -3456,7 +3016,7 @@ export default function App() {
                         目前尚無收斂之完整候選分子結構
                       </h3>
                       <p className="mx-auto mt-1 max-w-xl text-xs text-slate-400">
-                        若您僅標記了單一峰（如單一 IR 吸收峰），基於科學嚴謹性，系統只會列出上方「可能官能基與化學環境範圍」，絕不會單憑單一峰妄斷唯一分子結構。您可以於上方「一級輸入證據：分子式」輸入分子式（如 C9H8O4、C8H8O2），或補充 MS / NMR 訊號以生成並排序候選結構。
+                        {modeAOrchestration.generationStatus?.message} 請保留上方局部化學環境假設；搜尋無結果不代表該分子式不存在。
                       </p>
                     </div>
                   ) : (
@@ -3643,6 +3203,7 @@ export default function App() {
                               st:
                                 | "SUPPORTED"
                                 | "COMPATIBLE"
+                                | "INSUFFICIENT_DATA"
                                 | "CONTRADICTED"
                                 | "NOT_PROVIDED"
                                 | undefined,
@@ -3658,20 +3219,21 @@ export default function App() {
                               if (st === "SUPPORTED") {
                                 return (
                                   <span className="rounded border border-emerald-500/30 bg-emerald-950/60 px-2 py-0.5 font-mono text-[10px] font-bold text-emerald-300">
-                                    SUPPORTED ({sc}%)
+                                    SUPPORTED ({sc}/100)
                                   </span>
                                 );
                               }
+                              if(st==='INSUFFICIENT_DATA')return <span className="text-slate-400">資料不足／未評分</span>;
                               if (st === "COMPATIBLE") {
                                 return (
                                   <span className="rounded border border-cyan-500/30 bg-cyan-950/60 px-2 py-0.5 font-mono text-[10px] font-bold text-cyan-300">
-                                    COMPATIBLE ({sc}%)
+                                    COMPATIBLE ({sc}/100)
                                   </span>
                                 );
                               }
                               return (
                                 <span className="rounded border border-rose-500/30 bg-rose-950/60 px-2 py-0.5 font-mono text-[10px] font-bold text-rose-300">
-                                  CONTRADICTED ({sc}%)
+                                  CONTRADICTED ({sc}/100)
                                 </span>
                               );
                             };
@@ -3855,6 +3417,7 @@ export default function App() {
                     </ul>
                   </div>
                 </div>
+                </>}
               </div>
             )}
           </div>
@@ -3879,72 +3442,7 @@ export default function App() {
         {/* =================================================================== */}
         {/* 標準測試樣品庫 (PROJECTS)                                           */}
         {/* =================================================================== */}
-        {primaryMode === "PROJECTS" && (
-          <div className="space-y-4">
-            <h2 className="text-base font-bold text-slate-100">
-              標準未知物樣品專案庫 (Reference Elucidation Projects)
-            </h2>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {REFERENCE_SAMPLE_PRESETS.map((preset) => (
-                <div
-                  key={preset.id}
-                  className="flex flex-col justify-between rounded-xl border border-slate-800 bg-slate-900/80 p-4"
-                >
-                  <div>
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-mono text-xs font-bold text-cyan-300">
-                        {preset.expectedFormula}
-                      </span>
-                      <span className="rounded bg-slate-800 px-2 py-0.5 text-[10px] text-slate-300">
-                        IR + ¹H + ¹³C + MS
-                      </span>
-                    </div>
-                    <h3 className="mt-1.5 text-sm font-bold text-slate-100">
-                      {preset.title}
-                    </h3>
-                    <p className="mt-1 text-xs text-slate-400">
-                      {preset.description}
-                    </p>
-                    <div className="mt-3">
-                      <StructureRenderer2D
-                        smiles={preset.referenceSmiles}
-                        formula={preset.expectedFormula}
-                        compact
-                      />
-                    </div>
-                  </div>
-                  <div className="mt-3 flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        handleSelectPreset(preset.id);
-                        setPrimaryMode("MODE_A");
-                        setModeAPage("PAGE_1_SIGNAL_MARKING");
-                      }}
-                      className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-cyan-600 px-3 py-2 text-xs font-semibold text-white hover:bg-cyan-500"
-                    >
-                      載入至 Mode A 分析
-                      <ArrowRight className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const targetSmiles =
-                          preset.referenceSmiles || preset.smiles;
-                        setModeBStructureInput(targetSmiles);
-                        handleExecuteModeBPrediction(targetSmiles);
-                        setPrimaryMode("MODE_B");
-                      }}
-                      className="rounded-lg border border-amber-500/40 bg-amber-950/50 px-3 py-2 text-xs font-semibold text-amber-200 hover:bg-amber-900/60"
-                    >
-                      Mode B 預測
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        {primaryMode === "PROJECTS" && <p className="text-slate-300">未知物工作台不載入預設化合物答案；請於 Mode A 輸入實驗資料。</p>}
 
         {/* =================================================================== */}
         {/* 歷史紀錄 (HISTORY)                                                  */}
@@ -4016,55 +3514,8 @@ export default function App() {
                     嚴格遵循：Mode A (三頁式標記 → 校正 → 判讀) 與 Mode B (結構 → 預測光譜) 獨立架構
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setTestResults(ScientificEngineTestSuite.runAllTests())
-                  }
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-emerald-500"
-                >
-                  <Play className="h-3.5 w-3.5" />
-                  執行全部核心科學引擎測試
-                </button>
               </div>
-
-              {testResults && (
-                <div className="mt-4 space-y-2 border-t border-slate-800 pt-4">
-                  <div className="text-xs font-bold text-emerald-300">
-                    自動化測試結果：通過{" "}
-                    {testResults.filter((t) => t.passed).length} /{" "}
-                    {testResults.length} 項
-                  </div>
-                  <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2">
-                    {testResults.map((tr) => (
-                      <div
-                        key={tr.id}
-                        className={`rounded-lg border p-3 text-xs ${
-                          tr.passed
-                            ? "border-emerald-500/40 bg-emerald-950/20"
-                            : "border-rose-500/40 bg-rose-950/20"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="font-bold text-slate-100">
-                            {tr.name}
-                          </span>
-                          <span className="font-mono text-[11px] text-emerald-300">
-                            {tr.passed ? "PASS" : "FAIL"} ({tr.durationMs} ms)
-                          </span>
-                        </div>
-                        <div className="mt-1 font-mono text-[11px] text-slate-400">
-                          預期：{tr.expectedSummary}
-                        </div>
-                        <div className="mt-0.5 font-mono text-[11px] text-cyan-300">
-                          實際：{tr.actualSummary}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
+              <p className="mt-3 text-xs text-slate-400">工程測試透過 pnpm test 執行；正式工作台不載入固定測試物。</p>
               <div className="mt-5 border-t border-slate-800 pt-4">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
                   TheoreticalModelRegistry 已註冊之科學模型

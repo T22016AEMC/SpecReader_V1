@@ -210,16 +210,16 @@ export class SpectralEvidenceExtractor {
           scientificProvenance: "EXPERIMENTAL",
           peakId: pk.id,
           peakPosition: Number(pk.x.toFixed(2)),
-          intensity: pk.integral ? `${pk.integral}H` : pk.y,
+          intensity: pk.integral ? `相對積分 ${pk.integral}` : pk.y,
           multiplicity: pk.multiplicity || "m",
-          integral: pk.integral || pk.integration || 1,
+          integral: pk.integral ?? pk.integration ?? undefined,
           inferredGroup: envLabel,
           chemicalMeaning: `δH ${pk.x.toFixed(2)} ppm (${
             pk.multiplicity || "m"
-          }, ${pk.integral || pk.integration || 1}H): ${envLabel}`,
+          }, 相對積分 ${pk.integral ?? pk.integration ?? "未知"}): ${envLabel}`,
           ruleApplied: "¹H NMR 化學位移屏蔽效應與 n+1 自旋偶合裂分規則",
           direction: "SUPPORTING",
-          dataQualityNote: `溶劑參考: ${spectra["1H_NMR"].nmrSolvent || "CDCl3"}`,
+          dataQualityNote: `溶劑參考: ${spectra["1H_NMR"].nmrSolvent || "Unknown"}`,
           uncertaintyNote:
             pk.multiplicity === "m" || pk.multiplicity === "br s"
               ? "多重重疊峰或交換性質子受溶劑與濃度影響"

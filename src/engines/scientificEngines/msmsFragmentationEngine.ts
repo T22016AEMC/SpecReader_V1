@@ -83,12 +83,12 @@ export class MSMSFragmentationEngine
       .sort((a, b) => b.x - a.x);
     const precursorMz =
       spectrum.msParams?.precursorMz ??
-      (sortedPeaks.length > 0 ? sortedPeaks[0].x : null);
+      null;
 
-    if (precursorMz === null) {
+    if (precursorMz === null || spectrum.msParams?.chargeState===undefined) {
       return {
-        precursorIon: null,
-        productIons: [],
+        precursorIon: precursorMz===null?null:{mz:precursorMz,charge:null,adductType:'UNKNOWN',activationMethod:spectrum.msParams?.activationMethod??'NOT_PROVIDED',collisionEnergyEv:spectrum.msParams?.collisionEnergyEv??'NOT_PROVIDED'},
+        productIons: sortedPeaks.map(p=>({mz:p.x,intensity:p.y,charge:null,possibleFormula:"UNKNOWN",confidence:0})) ,
         neutralLosses: [],
         fragmentRelations: [],
         possibleCleavages: [],
@@ -108,7 +108,7 @@ export class MSMSFragmentationEngine
               ? "[M-H]-"
               : "[M]+•",
       activationMethod:
-        spectrum.msParams?.msType === "MS/MS" ? "CID" : "NOT_PROVIDED",
+        spectrum.msParams?.activationMethod??"NOT_PROVIDED",
       collisionEnergyEv:
         typeof spectrum.msParams?.collisionEnergyEv === "number"
           ? spectrum.msParams.collisionEnergyEv
@@ -221,7 +221,7 @@ export class MSMSFragmentationEngine
         });
       }
 
-      const lossDa = (precursorMz - pk.x) * Math.abs(precursorIon.charge);
+      const lossDa = (precursorMz - pk.x) * Math.abs(precursorIon.charge!);
       const lossRound = Math.round(lossDa);
       if (lossRound > 0) {
         let possibleIdentity: NeutralLoss["possibleIdentity"] | null = null;

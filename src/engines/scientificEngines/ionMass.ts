@@ -17,3 +17,10 @@ export function neutralMassFromIon(mz:number,adduct:IonAdduct,charge=1):number {
   if (!Number.isFinite(mz)||mz<=0||!Number.isInteger(z)||z===0) throw new RangeError('Invalid m/z or charge');
   return mz*z-(ionMz(100,adduct,charge)*z-100);
 }
+
+/** Known precursor/adduct/charge is required before interpreting m/z as neutral mass. */
+export function confirmedNeutralMass(s:import('../../types/spectrum').ExperimentalSpectrumData|undefined,mz:number|undefined):number|null{
+ const p=s?.msParams;
+ if(!p?.ionAssignmentConfirmed||!p.chargeState||!p.adductType||p.adductType==='Auto'||mz===undefined)return null;
+ try{return neutralMassFromIon(mz,p.adductType,p.chargeState);}catch{return null;}
+}

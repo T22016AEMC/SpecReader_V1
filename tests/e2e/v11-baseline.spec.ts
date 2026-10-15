@@ -12,9 +12,9 @@ test('IR 五點控制、拖曳、校正預覽與重新分析',async({page})=>{
  if(!box)throw new Error('Missing baseline control');
  await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();await page.mouse.move(box.x+20,box.y+20,{steps:4});await page.mouse.up();
  expect(await point.getAttribute('cy')).not.toBe(before);
- await page.getByRole('button',{name:'套用 IR 設定並更新分析',exact:true}).click();
+ await page.getByRole('button',{name:'套用 IR 設定',exact:true}).click();
  await expect(page.getByTestId('ir-draft-status')).toContainText('正式設定');
- await page.getByRole('button',{name:/^第 3 頁.*化學判讀/}).click();
+ await page.getByRole('button',{name:/^第 3 頁.*化學判讀/}).click();await page.getByRole('button',{name:'開始分析',exact:true}).click();await expect(page.getByTestId('analysis-control')).toHaveAttribute('data-result-current','true',{timeout:45000});
  await expect(page.getByText('De novo 搜尋狀態與界限',{exact:true})).toBeVisible();
  expect(errors).toEqual([]);
 });

@@ -19,7 +19,7 @@ export interface CrossSpectrumValidationMatrixRow {
   totalScore: number;
   modalityStatus: Record<
     ExtendedSpectrumModality,
-    "SUPPORTED" | "COMPATIBLE" | "CONTRADICTED" | "NOT_PROVIDED"
+    "SUPPORTED" | "COMPATIBLE" | "CONTRADICTED" | "NOT_PROVIDED" | "INSUFFICIENT_DATA"
   >;
   modalityScores: Record<ExtendedSpectrumModality, number | null>;
   graphValid: boolean;
@@ -33,7 +33,7 @@ export interface CrossSpectrumCandidateEvaluation {
   modalityEvaluation: CandidateModalityConsistencyEvaluation;
   modalityStatus: Record<
     ExtendedSpectrumModality,
-    "SUPPORTED" | "COMPATIBLE" | "CONTRADICTED" | "NOT_PROVIDED"
+    "SUPPORTED" | "COMPATIBLE" | "CONTRADICTED" | "NOT_PROVIDED" | "INSUFFICIENT_DATA"
   >;
   modalityScores: Record<ExtendedSpectrumModality, number | null>;
   crossSpectrumScore: number;
@@ -61,7 +61,7 @@ export class CrossSpectrumValidator {
 
       const mapStatus = (
         mod: SpectrumModality
-      ): "SUPPORTED" | "COMPATIBLE" | "CONTRADICTED" | "NOT_PROVIDED" => {
+      ): "SUPPORTED" | "COMPATIBLE" | "CONTRADICTED" | "NOT_PROVIDED" | "INSUFFICIENT_DATA" => {
         const d =
           mod === "IR"
             ? modalityEvaluation.irEval
@@ -71,6 +71,7 @@ export class CrossSpectrumValidator {
                 ? modalityEvaluation.c13Eval
                 : modalityEvaluation.msEval;
 
+        if(d?.status==='INSUFFICIENT_DATA')return 'INSUFFICIENT_DATA';
         if (!d || !d.available || d.status === "NOT_PROVIDED") {
           return "NOT_PROVIDED";
         }
@@ -100,11 +101,18 @@ export class CrossSpectrumValidator {
       const tofSimsStatus=tofSimsScore===null?"NOT_PROVIDED":tofSimsScore>=85?"SUPPORTED":tofSimsScore<25?"CONTRADICTED":"COMPATIBLE";
       for(const [mod,detail] of [["IR",modalityEvaluation.irEval],["1H_NMR",modalityEvaluation.h1Eval],["13C_NMR",modalityEvaluation.c13Eval],["MS",modalityEvaluation.msEval]] as const) {
         const score=scientificScoreLedger.modalityScores[mod];
-        if(score!=null){detail.score=score;detail.status=score>=85?"SUPPORTED":score<25?"CONTRADICTED":"COMPATIBLE";}
+        const input=bundle.scientificSources?.[mod]??bundle.calibratedSpectra?.[mod];
+        const terms=scientificScoreLedger.entries.filter(e=>e.sourceModality===mod);
+        detail.available=!!input;detail.isProvided=!!input;detail.score=score??0;
+        detail.status=!input?'NOT_PROVIDED':score==null?'INSUFFICIENT_DATA':score>=85?'SUPPORTED':score<25?'CONTRADICTED':'COMPATIBLE';
+        detail.matchedFeatures=terms.filter(e=>e.weight>0&&(e.compatibility??0)>=.6).map(e=>e.method);
+        detail.contradictions=terms.filter(e=>e.weight>0&&e.compatibility!==null&&e.compatibility<.25).map(e=>e.method);
+        detail.conflictingFeatures=detail.contradictions;detail.missingExpectedFeatures=[];
+
       }
       const modalityStatus: Record<
         ExtendedSpectrumModality,
-        "SUPPORTED" | "COMPATIBLE" | "CONTRADICTED" | "NOT_PROVIDED"
+        "SUPPORTED" | "COMPATIBLE" | "CONTRADICTED" | "NOT_PROVIDED" | "INSUFFICIENT_DATA"
       > = {
         IR: mapStatus("IR"),
         "1H_NMR": mapStatus("1H_NMR"),
@@ -160,84 +168,14 @@ export class CrossSpectrumValidator {
     rankedCandidates: CandidateStructure[],
     bundle?: IntegratedAnalysisBundle
   ): CrossSpectrumValidationMatrixRow[] {
-    const hasMsms = Boolean(bundle?.msmsAnalysis);
-    const hasTofSims = Boolean(bundle?.tofSimsAnalysis);
-
-    return rankedCandidates.map((cand) => {
-      const details = cand.scoreBreakdown.modalityDetails;
-
-      const mapStatus = (
-        mod: SpectrumModality
-      ): "SUPPORTED" | "COMPATIBLE" | "CONTRADICTED" | "NOT_PROVIDED" => {
-        const d = details?.[mod];
-        if (!d || !d.available || d.status === "NOT_PROVIDED") {
-          return "NOT_PROVIDED";
-        }
-        if (
-          d.status === "MAJOR_CONFLICT" ||
-          d.status === "PARTIAL_CONFLICT" ||
-          d.status === "CONTRADICTED"
-        ) {
-          return "CONTRADICTED";
-        }
-        if (
-          (d.status === "CONSISTENT" || d.status === "SUPPORTED") &&
-          d.score >= 85
-        ) {
-          return "SUPPORTED";
-        }
-        return "COMPATIBLE";
-      };
-
-      const msmsScoreVal = hasMsms
-        ? typeof cand.modalityScores?.msms === "number"
-          ? cand.modalityScores.msms
-          : null
-        : null;
-      const tofSimsScoreVal = hasTofSims
-        ? typeof cand.modalityScores?.tofSims === "number"
-          ? cand.modalityScores.tofSims
-          : null
-        : null;
-
-      return {
-        candidateId: cand.id,
-        candidateName: cand.name,
-        smiles: cand.smiles,
-        formula: cand.molecularFormula,
-        totalScore: cand.finalScore ?? cand.scoreBreakdown.totalScore,
-        modalityStatus: {
-          IR: mapStatus("IR"),
-          "1H_NMR": mapStatus("1H_NMR"),
-          "13C_NMR": mapStatus("13C_NMR"),
-          MS: mapStatus("MS"),
-          "MS/MS": hasMsms
-            ? (msmsScoreVal ?? 0) >= 85
-              ? "SUPPORTED"
-              : "COMPATIBLE"
-            : "NOT_PROVIDED",
-          "ToF-SIMS": hasTofSims
-            ? (tofSimsScoreVal ?? 0) >= 85
-              ? "SUPPORTED"
-              : "COMPATIBLE"
-            : "NOT_PROVIDED",
-        },
-        modalityScores: {
-          IR: cand.irScore ?? (details?.IR?.available ? details.IR.score : null),
-          "1H_NMR":
-            cand.h1NmrScore ??
-            (details?.["1H_NMR"]?.available ? details["1H_NMR"].score : null),
-          "13C_NMR":
-            cand.c13NmrScore ??
-            (details?.["13C_NMR"]?.available ? details["13C_NMR"].score : null),
-          MS: cand.msScore ?? (details?.MS?.available ? details.MS.score : null),
-          "MS/MS": msmsScoreVal,
-          "ToF-SIMS": tofSimsScoreVal,
-        },
-        graphValid: cand.graphValidationResult?.isValid ?? true,
-        keySupportingEvidence: cand.supportingReasons,
-        keyContradictions: cand.contradictingReasons,
-      };
+    return rankedCandidates.map(cand=>{
+      const ledger=cand.scientificScoreLedger??(bundle?scoreScientificEvidence(cand.smiles,bundle):null);
+      const sources:Partial<Record<ExtendedSpectrumModality,import('../../types/spectrum').ExperimentalSpectrumData>>=bundle?.scientificSources??bundle?.calibratedSpectra??{};
+      const mods:ExtendedSpectrumModality[]=['IR','1H_NMR','13C_NMR','MS','MS/MS','ToF-SIMS'];
+      const modalityStatus={} as CrossSpectrumValidationMatrixRow['modalityStatus'];
+      const modalityScores={} as CrossSpectrumValidationMatrixRow['modalityScores'];
+      for(const mod of mods){const score=ledger?.modalityScores[mod]??null;modalityScores[mod]=score;modalityStatus[mod]=!sources[mod]?'NOT_PROVIDED':score===null?'INSUFFICIENT_DATA':score>=85?'SUPPORTED':score<25?'CONTRADICTED':'COMPATIBLE';}
+      return {candidateId:cand.id,candidateName:cand.name,smiles:cand.smiles,formula:cand.molecularFormula,totalScore:cand.finalScore??cand.scoreBreakdown.totalScore,modalityStatus,modalityScores,graphValid:cand.graphValidationResult?.isValid??true,keySupportingEvidence:cand.supportingReasons,keyContradictions:cand.contradictingReasons};
     });
   }
 }

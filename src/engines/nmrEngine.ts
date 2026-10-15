@@ -1,3 +1,4 @@
+import {softenNMRConstraints} from './scientificEngines/observationSemantics';
 import {inferSignalEnvironments} from './scientificEngines/atomicChemicalEnvironment';
 import {findEthylPairs, findIsopropylPairs} from "./scientificEngines/nmrFragmentEvidence";
 import {
@@ -247,6 +248,7 @@ export class NMRAnalysisEngine {
       }
 
       const isExplicitlyConfirmedCompound =
+        p.manualPeak || p.manualEdited || p.detectionSource==='MANUAL' || p.detectionSource==='USER_MARKED' ||
         p.userClassification === "REAL" ||
         p.userClassification === "COMPOUND" ||
         p.role === "ANALYTE" ||
@@ -879,11 +881,11 @@ export class NMRAnalysisEngine {
       if(peak.isExchangeable!==undefined)env.isExchangeable=peak.isExchangeable;
       env.alternativeExplanations=hypotheses.map(h=>h.label);
     }
-    const structuralConstraints = this.build1HNMRStructuralConstraints(
+    const structuralConstraints = softenNMRConstraints(this.build1HNMRStructuralConstraints(
       spectrum,
       environments,
       expectedStructure
-    );
+    ));
     const integrationSemantics =
       ChemicalHardConstraintValidator.analyzeH1NMRIntegrationSemantics(
         environments,
@@ -1578,6 +1580,7 @@ export class NMRAnalysisEngine {
       }
 
       const isExplicitlyConfirmedCompound =
+        p.manualPeak || p.manualEdited || p.detectionSource==='MANUAL' || p.detectionSource==='USER_MARKED' ||
         p.userClassification === "REAL" ||
         p.userClassification === "COMPOUND" ||
         p.role === "ANALYTE" ||
@@ -1770,11 +1773,11 @@ export class NMRAnalysisEngine {
         "四級碳 (如 C=O、C≡N、Ar-C_ipso) 因無直接鍵結 ¹H，缺乏 NOE 增益且 T₁ 弛豫時間較長；若實驗缺漏 1–2 個四級碳訊號，屬於常見量測弛豫現象，不等同於結構直接矛盾。",
       solventExcludedCount,
     };
-    const structuralConstraints = this.build13CNMRStructuralConstraints(
+    const structuralConstraints = softenNMRConstraints(this.build13CNMRStructuralConstraints(
       spectrum,
       summary,
       expectedStructure
-    );
+    ));
 
     return {
       summary,

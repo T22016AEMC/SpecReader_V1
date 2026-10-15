@@ -40,7 +40,7 @@ export function buildScientificEvidence(bundle:IntegratedAnalysisBundle):Scienti
     for(const p of uniqueObservations(processed.peaks)) {
       const root=`${modality}:${s.sourceId??s.fileName}:${p.x}`;
       const interpretations=modality==='IR'?bundle.irFindings.filter(f=>Math.abs(f.observedPeak-p.x)<2).map(f=>f.family):modality==='1H_NMR'?bundle.h1Environments.filter(e=>Math.abs(e.shiftPpm-p.x)<.001).map(e=>e.environmentLabel):modality==='13C_NMR'?bundle.c13Summary.environments.filter(e=>Math.abs(e.shiftPpm-p.x)<.001).map(e=>e.assignment):[];
-      evidence.push({id:root,sourceModality:modality,observationIds:[root],originalObservedData:{position:p.x,intensity:rawPoints.find(raw=>raw.x===p.x)?.y??p.y,relativeIntegral:p.integration??p.integral??null,multiplicity:p.multiplicity??null,jValues:p.jValues??[]},processingMethod:modality==='IR'?'原始訊號－基線；依吸收方向取符號／相對峰形；原始資料保留':p.detectionSource==='MANUAL'?'人工標峰／座標校正':'數值峰或已校正圖像峰',processingSettings:modality==='IR'?{irBaseline:s.irManualSettings,intensityScale:processed.irIntensityScale}:undefined,proposedInterpretation:interpretations,supportedFeature:interpretations,alternativeInterpretations:['可能重疊、雜質或其他化學環境；未由單峰確認完整結構'],uncertainty:{kind:'UNVALIDATED_MODEL',note:'經驗判讀與模型相容度尚未以實測校準為機率'},dataCoverage:{min:xs.length?Math.min(...xs):null,max:xs.length?Math.max(...xs):null,complete:modality==='IR'&&xs.length>=30&&irRangeCovered(s,Math.min(...xs),Math.max(...xs))},dependency:[],correlationGroup:root});
+      evidence.push({id:root,sourceModality:modality,observationIds:[root],originalObservedData:{position:p.x,intensity:p.intensityKnown===false?undefined:rawPoints.find(raw=>raw.x===p.x)?.y??p.y,relativeIntegral:p.integration??p.integral??null,multiplicity:p.multiplicity??null,jValues:p.jValues??[]},processingMethod:modality==='IR'?'原始訊號－基線；依吸收方向取符號／相對峰形；原始資料保留':p.detectionSource==='MANUAL'?'人工標峰／座標校正':'數值峰或已校正圖像峰',processingSettings:modality==='IR'?{irBaseline:s.irManualSettings,intensityScale:processed.irIntensityScale}:undefined,proposedInterpretation:interpretations,supportedFeature:interpretations,alternativeInterpretations:['可能重疊、雜質或其他化學環境；未由單峰確認完整結構'],uncertainty:{kind:'UNVALIDATED_MODEL',note:'經驗判讀與模型相容度尚未以實測校準為機率'},dataCoverage:{min:xs.length?Math.min(...xs):null,max:xs.length?Math.max(...xs):null,complete:modality==='IR'&&irRangeCovered(s,Math.min(...xs),Math.max(...xs))},dependency:[],correlationGroup:root});
     }
   }
   if(bundle.userSuppliedFormula)evidence.push({id:'user-formula',sourceModality:'FORMULA',observationIds:['user-formula'],originalObservedData:{formula:bundle.userSuppliedFormula},processingMethod:'元素組成解析',proposedInterpretation:['使用者提供分子式'],supportedFeature:['ELEMENTAL_COMPOSITION'],alternativeInterpretations:[],uncertainty:{kind:'MEASUREMENT',note:'由使用者提供，未聲稱質量或光譜已驗證'},dataCoverage:{min:null,max:null,complete:false},dependency:[],correlationGroup:'user-formula'});
@@ -67,14 +67,15 @@ export function scoreScientificEvidence(smiles:string,bundle:IntegratedAnalysisB
     if(observedJ.length&&predictedJ.length)v*=.7+.3*observedJ.reduce((sum,j)=>sum+Math.max(...predictedJ.map(k=>gaussian(j-k,3))),0)/observedJ.length;
     return v;
   }));
-  const cMatrix=cObs.map(ev=>cPred.map(p=>gaussian((ev.originalObservedData.position??0)-p.shiftPpm,(p.uncertaintyPpm??8)+3)));
+  const cObsTotal=cObs.reduce((sum,e)=>sum+(e.originalObservedData.relativeIntegral??0),0),cPredTotal=cPred.reduce((sum,e)=>sum+(e.equivalentCarbonCount??1),0);
+  const cMatrix=cObs.map(ev=>cPred.map(p=>{let v=gaussian((ev.originalObservedData.position??0)-p.shiftPpm,(p.uncertaintyPpm??8)+3);if(sources['13C_NMR']?.quantitativeCarbonExperiment&&cObsTotal>0&&ev.originalObservedData.relativeIntegral!=null)v*=gaussian(ev.originalObservedData.relativeIntegral/cObsTotal-(p.equivalentCarbonCount??1)/cPredTotal,.15);return v;}));
   const hAssignment=globalPeakAssignment(hMatrix),cAssignment=globalPeakAssignment(cMatrix);
   const irPred=IREngine.predictIRFromStructure(structure).spectrum.peaks;
   const candidateIRBands=irCandidateBands(smiles);
   const irProcessed=sources.IR?prepareIR(sources.IR):null;
   const precursor=bundle.msmsAnalysis?.physicsModel.precursorIon;
   const msmsFragments=graphFragments(smiles,adduct(sources['MS/MS']),sources['MS/MS']?.msParams?.chargeState??1);
-  const tofNegative=sources['ToF-SIMS']?.msParams?.tofSims?.polarity==='Negative';
+  const tofNegative=(sources['ToF-SIMS']?.msParams?.tofSims?.polarity??sources['ToF-SIMS']?.msParams?.polarity)==='Negative';
   const tofFragments=graphFragments(smiles,'[M]+•',tofNegative?-1:1,true);
   for(const ev of evidence) {
     const x=ev.originalObservedData.position;let compatibility:number|null=null,weight=0,method='資料不足；無獨立分數';const limitations:string[]=[];
@@ -94,9 +95,9 @@ export function scoreScientificEvidence(smiles:string,bundle:IntegratedAnalysisB
       compatibility=best===undefined?0:cMatrix[row][best];weight=.8;method='全域碳環境匹配（含未匹配訊號）';limitations.push('經驗位移與等價碳模型，非高精度量子或訓練模型');
     } else if(x!==undefined && ev.sourceModality==='MS') {
       const s=sources.MS,observed=bundle.msAnalysis?.molecularIonCandidateMz;
-      if(observed!==null&&observed!==undefined&&Math.abs(x-observed)<.001){const theoretical=ionMz(ChemistryEngine.calculateMasses(structure.atomCounts).exactMass,adduct(s),s?.msParams?.chargeState??1);const tolerance=s?.msParams?.isHighResolution?theoretical*(s.msParams.massTolerancePpm??5)/1e6:(s?.msParams?.massToleranceDa??.5);compatibility=gaussian(x-theoretical,tolerance);weight=.9;method='實測分子離子候選與理論離子 m/z／電荷／加合比較';limitations.push('未人工確認分子離子時，其歸屬仍為假設');}
+      if(s?.msParams?.ionAssignmentConfirmed&&observed!==null&&observed!==undefined&&Math.abs(x-observed)<.001){const theoretical=ionMz(ChemistryEngine.calculateMasses(structure.atomCounts).exactMass,adduct(s),s?.msParams?.chargeState??1);const tolerance=s?.msParams?.isHighResolution?theoretical*(s.msParams.massTolerancePpm??5)/1e6:(s?.msParams?.massToleranceDa??.5);compatibility=gaussian(x-theoretical,tolerance);weight=.9;method='實測分子離子候選與理論離子 m/z／電荷／加合比較';limitations.push('未人工確認分子離子時，其歸屬仍為假設');}
     } else if(x!==undefined && ev.sourceModality==='MS/MS') {
-      if(!precursor||Math.abs(x-precursor.mz)<.01)continue;
+      if(!precursor||precursor.charge===null){method='前驅／電荷未提供，保留實測產品離子，無法可靠換算中性損失';limitations.push('未指定電荷時不將 m/z 差當 Da');entries.push({evidenceId:ev.id,observationIds:ev.observationIds,sourceModality:ev.sourceModality,compatibility:null,weight:0,contribution:0,method,limitations});continue;}if(Math.abs(x-precursor.mz)<.01)continue;
       const params=sources['MS/MS']?.msParams;
       const tol=params?.isHighResolution?Math.max(1e-6,x*(params.massTolerancePpm??5)/1e6):(params?.massToleranceDa??.5);
       compatibility=msmsFragments.length?Math.max(...msmsFragments.map(f=>gaussian(x-f.mz,tol)*f.plausibility)):null;

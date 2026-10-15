@@ -1,6 +1,6 @@
-import { DataValidator } from "../engines/dataValidator";
-import { SpectrumParser } from "../engines/spectrumParser";
-import { ExperimentalSpectrumData, SpectrumModality } from "../types/spectrum";
+import { DataValidator } from "../../src/engines/dataValidator";
+import { SpectrumParser } from "../../src/engines/spectrumParser";
+import { ExperimentalSpectrumData, SpectrumModality } from "../../src/types/spectrum";
 
 export interface ReferenceSamplePreset {
   id: string;

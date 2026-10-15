@@ -951,7 +951,7 @@ export class SpectrumParser {
         : "LOW";
 
     const sourceId = `${this.resolveExtendedModality(modality, msParams)}-num-${fileName}`;
-    return SignalCharacterizationEngine.characterizeSpectrumSignals({
+    return SignalCharacterizationEngine.measureSpectrumSignals({
       sourceId,
       dataVersion: 1,
       sourceType: "NUMERIC_EXPERIMENTAL",
@@ -1245,7 +1245,7 @@ export class SpectrumParser {
         : "LOW";
 
     const sourceId = `${this.resolveExtendedModality(modality, msParams)}-num-${fileName}`;
-    return SignalCharacterizationEngine.characterizeSpectrumSignals({
+    return SignalCharacterizationEngine.measureSpectrumSignals({
       sourceId,
       dataVersion: 1,
       sourceType: "NUMERIC_EXPERIMENTAL",
@@ -1941,7 +1941,7 @@ export class SpectrumParser {
     });
 
     const tracedPoints=spectrum.irPixelCurve?.map(p=>({x:this.pixelToPhysicalX(p.x,newCalibration),y:100*(newCalibration.plotBottomPx-p.y)/(newCalibration.plotBottomPx-newCalibration.plotTopPx)}))??[];
-    if(tracedPoints.length>=30&&this.isImageCalibrationValid(newCalibration)){
+    if(tracedPoints.length>=5&&this.isImageCalibrationValid(newCalibration)){
       const traced=processIRSeries(tracedPoints,'UNKNOWN',spectrum.irManualSettings);
       updatedPeaks.push(...traced.peaks.filter(p=>!updatedPeaks.some(q=>Math.abs(p.x-q.x)<3)).map(p=>({...p,isCalibrated:true})));
     }
@@ -1969,7 +1969,7 @@ export class SpectrumParser {
     const isCalValid = this.isImageCalibrationValid(newCalibration);
     const nextVersion = (spectrum.dataVersion || 1) + 1;
 
-    return SignalCharacterizationEngine.characterizeSpectrumSignals({
+    return SignalCharacterizationEngine.measureSpectrumSignals({
       ...spectrum,
       sourceId:
         spectrum.sourceId ||
@@ -2280,7 +2280,7 @@ export class SpectrumParser {
       extractedPeaks.length === 0
     );
 
-    return SignalCharacterizationEngine.characterizeSpectrumSignals({
+    return SignalCharacterizationEngine.measureSpectrumSignals({
       sourceId: `${this.resolveExtendedModality(modality, msParams)}-img-${fileName}`,
       dataVersion: 1,
       sourceType: "IMAGE_EXPERIMENTAL",
@@ -2393,7 +2393,7 @@ export class SpectrumParser {
     if(modality==='IR'&&imgData){
       const trace=traceIRPixels(imgData,width,height,baseCal);
       const result=this.createImageSpectrum({modality,fileName:file.name,originalImageUrl:dataUrl,imageDimensions,calibration:baseCal,detectedSignals:[],digitizationMethod:'Canvas',isBlurryOrLowConfidence:true,msParams});
-      return {...result,irPixelCurve:trace.pixels,irDataQuality:trace.quality*.5,irIntensityScale:'UNKNOWN',yUnit:'相對影像尺度（非吸光度）',points:trace.pixels.map(p=>({x:this.pixelToPhysicalX(p.x,baseCal),y:100*(baseCal.plotBottomPx-p.y)/(baseCal.plotBottomPx-baseCal.plotTopPx)})),digitizationFailed:trace.pixels.length<30,irProcessingWarnings:['原始像素曲線；請確認繪圖區與波數校正，文字及格線仍可能造成擷取誤差。']};
+      return {...result,irPixelCurve:trace.pixels,irDataQuality:trace.quality*.5,irIntensityScale:'UNKNOWN',yUnit:'相對影像尺度（非吸光度）',points:trace.pixels.map(p=>({x:this.pixelToPhysicalX(p.x,baseCal),y:100*(baseCal.plotBottomPx-p.y)/(baseCal.plotBottomPx-baseCal.plotTopPx)})),digitizationFailed:trace.pixels.length===0,irProcessingWarnings:['原始像素曲線；請確認繪圖區與波數校正，文字及格線仍可能造成擷取誤差。']};
     }
     try {
       const response = await fetch("/api/digitize-spectrum", {
@@ -3006,6 +3006,7 @@ export class SpectrumParser {
             : a.physicalX !== undefined && isSpectrumCalibrated;
 
         return {
+          ...prevPk,
           id: a.id,
           x:
             pkCalibrated && a.physicalX !== undefined
@@ -3018,10 +3019,10 @@ export class SpectrumParser {
           signalDirection: isTarget
             ? updatedSignal.signalDirection ?? prevPk?.signalDirection
             : a.signalDirection ?? prevPk?.signalDirection,
-          width: prevPk?.width ?? (spectrum.modality === "IR" ? 24 : 0.05),
+          width: prevPk?.width,
           shape:
             (isTarget ? updatedSignal.bandShape : prevPk?.bandShape) ||
-            (a.signalType === "SHOULDER" ? "SHOULDER" : prevPk?.shape || "sharp"),
+            (a.signalType === "SHOULDER" ? "SHOULDER" : prevPk?.shape || "UNRESOLVED"),
           bandShape: isTarget ? updatedSignal.bandShape ?? prevPk?.bandShape : prevPk?.bandShape,
           irIntensity: isTarget
             ? updatedSignal.irIntensity ?? prevPk?.irIntensity
@@ -3105,7 +3106,7 @@ export class SpectrumParser {
           p.provenance === "USER_MODIFIED"
       );
 
-      return SignalCharacterizationEngine.characterizeSpectrumSignals({
+      return SignalCharacterizationEngine.measureSpectrumSignals({
         ...spectrum,
         dataVersion: (spectrum.dataVersion || 1) + 1,
         imageAnnotations: nextAnns,
@@ -3151,14 +3152,15 @@ export class SpectrumParser {
 
     const existingPeak = (spectrum.peaks || []).find((p) => p.id === sigId);
     const newPeak: SpectralPeak = {
+      ...existingPeak,
       id: sigId,
       x: physX,
       y: physY,
-      width: existingPeak?.width ?? (spectrum.modality === "IR" ? 24 : 0.05),
+      width: existingPeak?.width,
       shape:
         updatedSignal.bandShape ||
         existingPeak?.shape ||
-        (newNumAnn.signalType === "SHOULDER" ? "shoulder" : "sharp"),
+        (newNumAnn.signalType === "SHOULDER" ? "shoulder" : "UNRESOLVED"),
       bandShape: updatedSignal.bandShape ?? existingPeak?.bandShape,
       irIntensity: updatedSignal.irIntensity ?? existingPeak?.irIntensity,
       vibrationType: updatedSignal.vibrationType ?? existingPeak?.vibrationType,
@@ -3218,7 +3220,7 @@ export class SpectrumParser {
         p.provenance === "USER_MODIFIED"
     );
 
-    return SignalCharacterizationEngine.characterizeSpectrumSignals({
+    return SignalCharacterizationEngine.measureSpectrumSignals({
       ...spectrum,
       dataVersion: (spectrum.dataVersion || 1) + 1,
       signalAnnotations: nextAnns,
@@ -3260,7 +3262,7 @@ export class SpectrumParser {
       isImage && nextPeaks.length === 0
     );
 
-    return SignalCharacterizationEngine.characterizeSpectrumSignals({
+    return SignalCharacterizationEngine.measureSpectrumSignals({
       ...spectrum,
       dataVersion: (spectrum.dataVersion || 1) + 1,
       peaks: nextPeaks,
@@ -3338,7 +3340,7 @@ export class SpectrumParser {
       isImage && keptPeaks.length === 0
     );
 
-    return SignalCharacterizationEngine.characterizeSpectrumSignals({
+    return SignalCharacterizationEngine.measureSpectrumSignals({
       ...spectrum,
       peaks: keptPeaks,
       signalAnnotations: keptSigAnns,
@@ -3443,7 +3445,7 @@ export class SpectrumParser {
         false
       );
 
-      return SignalCharacterizationEngine.characterizeSpectrumSignals({
+      return SignalCharacterizationEngine.measureSpectrumSignals({
         ...spectrum,
         dataVersion: (spectrum.dataVersion || 1) + 1,
         peaks: mergedPeaks,
@@ -3495,7 +3497,7 @@ export class SpectrumParser {
       }
     }
 
-    return SignalCharacterizationEngine.characterizeSpectrumSignals(spectrum);
+    return SignalCharacterizationEngine.measureSpectrumSignals(spectrum);
   }
 
   static applyNumericShiftOffset(
@@ -3504,7 +3506,7 @@ export class SpectrumParser {
   ): ExperimentalSpectrumData {
     if (!Number.isFinite(shiftOffset) || shiftOffset === 0) return spectrum;
     const decimals = spectrum.modality === "1H_NMR" ? 3 : 2;
-    return SignalCharacterizationEngine.characterizeSpectrumSignals({
+    return SignalCharacterizationEngine.measureSpectrumSignals({
       ...spectrum,
       x: spectrum.x ? spectrum.x.map((v) => Number((v + shiftOffset).toFixed(decimals))) : undefined,
       points: (spectrum.points || []).map((pt) => ({

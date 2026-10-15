@@ -87,6 +87,10 @@ export class DeterministicStructureGenerator {
         ? constraints.userSuppliedFormula.normalizedFormula
         : null;
 
+    if(!authoritativeTargetFormula&&(!(constraints.contributingSources??[]).length||(!constraints.estimatedMolecularWeight&&!(constraints.contributingSources??[]).some(source=>['IR','1H_NMR','13C_NMR'].includes(source))))){
+      solvedSpace.solverLog.push('缺少可支持組成的實測約束；保留局部觀測，不生成任意完整分子。');
+      return {validatedGraphs:[],rejectedCandidates:[]};
+    }
     // 1. 取得結構模板與同分異構物對照
     const templateGraphs = GraphAssemblyEngine.assembleCandidates(
       constraints,
@@ -127,21 +131,20 @@ export class DeterministicStructureGenerator {
     // Database retrieval above and graph enumeration below run on every request.
     // Without composition, enumerate explicitly labelled small representative families;
     // their atom counts are search bounds, never a measured molecular formula.
-    if(!targetFormulas.length||(!authoritativeTargetFormula&&!constraints.estimatedMolecularWeight&&targetFormulas.every(tf=>Object.entries(ChemistryEngine.parseFormulaCounts(tf.formula)).reduce((sum,[e,n])=>sum+(e==='H'?0:n),0)>9))){
-      const clues=JSON.stringify([...solvedSpace.requiredFragments,...(constraints.functionalGroups??[]).filter(f=>f.status==='REQUIRED'||f.status==='SUPPORTED')]).toLowerCase();
-      const oxygen=/oh|oxygen|carbonyl|ester|醇|羧|羰|氧/.test(clues)?1:0;
-      const nitrogen=/amine|nitr|氮|胺/.test(clues)?1:0;
-      for(let c=2;c<=5;c++)for(let dbe=0;dbe<=2;dbe++){
-        const h=2*c+2+nitrogen-2*dbe;
-        targetFormulas.push({formula:ChemistryEngine.formatFormula({C:c,H:h,...(oxygen?{O:oxygen}:{}),...(nitrogen?{N:nitrogen}:{})}),dbe});
+    if(!authoritativeTargetFormula&&!constraints.estimatedMolecularWeight){
+      const representative:Array<{formula:string;dbe:number}>=[];
+      for(let c=2;c<=4;c++)for(let n=0;n<=1;n++)for(let o=0;o<=1;o++)for(let dbe=0;dbe<=1;dbe++){
+        const h=2*c+2+n-2*dbe;
+        representative.push({formula:ChemistryEngine.formatFormula({C:c,H:h,...(n?{N:n}:{}),...(o?{O:o}:{})}),dbe});
       }
+      targetFormulas.unshift(...representative);
     }
     const graphSearchNotes:string[]=[];
     const deNovoGraphs:AssembledCandidateGraph[]=[];
     const graphDeadline=performance.now()+450;
-    for(const tf of targetFormulas.slice(0,12)){
+    for(const tf of targetFormulas.slice(0,24)){
       if(performance.now()>graphDeadline||deNovoGraphs.length>=36)break;
-      const generated=searchMolecularGraphs(tf.formula,{maxResults:Math.min(6,36-deNovoGraphs.length),maxStates:2500,timeMs:Math.min(80,Math.max(1,graphDeadline-performance.now()))});
+      const generated=searchMolecularGraphs(tf.formula,{maxResults:Math.min(2,36-deNovoGraphs.length),maxStates:2500,timeMs:Math.min(80,Math.max(1,graphDeadline-performance.now()))});
       graphSearchNotes.push(generated.note);
       for(const smiles of generated.smiles){
         const p=ChemistryEngine.parseStructureInput(smiles);

@@ -1,3 +1,5 @@
+import {generationStatus,type GenerationStatus} from './candidateGeneration/generationStatus';
+import {observationSpectrum} from './scientificEngines/observationSemantics';
 import {
   CandidateResult,
   CandidateStructure,
@@ -173,6 +175,7 @@ export interface AuxiliaryModalityData {
 }
 
 export interface WorkbenchOrchestrationState {
+  generationStatus?:GenerationStatus;
   bundle: IntegratedAnalysisBundle;
   modeAReport: ModeADeductionReport;
   spectrumEvidenceList: SpectrumEvidence[];
@@ -201,6 +204,8 @@ export class WorkbenchOrchestrator {
     WorkbenchOrchestrationState,
     "selectedCandidate" | "bidirectionalReport" | "modeBReport"
   > {
+    spectra=Object.fromEntries(Object.entries(spectra).map(([key,value])=>[key,observationSpectrum(value)]));
+    if(extraInput)extraInput={...extraInput,msmsSpectrum:extraInput.msmsSpectrum?observationSpectrum(extraInput.msmsSpectrum):undefined,tofSimsSpectrum:extraInput.tofSimsSpectrum?observationSpectrum(extraInput.tofSimsSpectrum):undefined};
     const normalizedExtraInput: ExtraChemicalEvidenceInput | undefined =
       extraInput || spectra["MS/MS"] || spectra["ToF-SIMS"]
         ? {
@@ -234,6 +239,7 @@ export class WorkbenchOrchestrator {
     );
 
     return {
+      generationStatus:generationStatus(bundle.constraints,rankedCandidates.length,solvedConstraintSpace.solverLog),
       bundle,
       modeAReport,
       spectrumEvidenceList,
@@ -566,7 +572,7 @@ export class WorkbenchOrchestrator {
       solventName: merged.solventName,
       provenance: merged.provenance,
     });
-    return {...updated,irProcessingApplied:false,dataVersion:(spectrum.dataVersion??0)+1,peaks:updated.peaks.map(p=>p.id===peakId?{...p,...patch,manualEdited:true,userModified:true}:p)};
+    return {...updated,irProcessingApplied:false,dataVersion:(spectrum.dataVersion??0)+1,peaks:updated.peaks.map(p=>p.id===peakId?{...existing,...p,...patch,manualEdited:true,userModified:true}:p)};
   }
 
   /**

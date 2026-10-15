@@ -6,12 +6,13 @@ const SOURCE='https://www2.chemistry.msu.edu/faculty/reusch/VirtTxtJml/Spectrpy/
 type Range=[number,number];
 export interface IRBandKnowledge {
  id:string;family:string;label:string;environment:string;range:Range;uncertainty:number;
+ specificity:'LOW'|'MEDIUM';
  intensity:'weak'|'variable'|'medium'|'strong';shape:'broad'|'sharp'|'variable';widthRange:Range;
  shoulderPossible:boolean;companions:Range[];fingerprint:Range[];confusable:string[];
  missingBandCondition:string;measurementLimits:string;source:string;
  feature?:string;smarts?:string;context?:'CONJUGATED'|'SATURATED';
 }
-const band=(id:string,family:string,label:string,environment:string,range:Range,feature:string,options:Partial<IRBandKnowledge>={}):IRBandKnowledge=>({id,family,label,environment,range,feature,uncertainty:20,intensity:'variable',shape:'variable',widthRange:[5,90],shoulderPossible:true,companions:[],fingerprint:[],confusable:['其他相近振動／重疊／雜質'],missingBandCondition:'只在實際完整掃描、已知方向及足夠檢出能力下作弱反證；不是硬限制',measurementLimits:'凝聚相／溶液常用經驗區間；氣相、ATR、溶劑、氫鍵及耦合可改變位置／峰形，不能單峰確認',source:SOURCE,...options});
+const band=(id:string,family:string,label:string,environment:string,range:Range,feature:string,options:Partial<IRBandKnowledge>={}):IRBandKnowledge=>({id,family,label,environment,range,feature,specificity:range[1]<1500?'LOW':'MEDIUM',uncertainty:20,intensity:'variable',shape:'variable',widthRange:[5,90],shoulderPossible:true,companions:[],fingerprint:[],confusable:['其他相近振動／重疊／雜質'],missingBandCondition:'只在實際完整掃描、已知方向及足夠檢出能力下作弱反證；不是硬限制',measurementLimits:'凝聚相／溶液常用經驗區間；氣相、ATR、溶劑、氫鍵及耦合可改變位置／峰形，不能單峰確認',source:SOURCE,...options});
 /** Local-environment ranges, not whole-molecule reference answers. Values are
  * broad teaching ranges, not calibrated likelihoods or individual peak truths. */
 export const IR_BAND_KNOWLEDGE:IRBandKnowledge[]=[
@@ -63,14 +64,15 @@ export const IR_BAND_KNOWLEDGE:IRBandKnowledge[]=[
 const inRange=(x:number,[a,b]:Range)=>x>=a&&x<=b;
 export function irBandMatch(k:IRBandKnowledge,p:SpectralPeak,peaks:SpectralPeak[],coverage?:(a:number,b:number)=>boolean):number {
  const distance=Math.max(k.range[0]-p.x,0,p.x-k.range[1]);
- let score=Math.exp(-.5*(distance/k.uncertainty)**2);
+ let score=(k.specificity==='LOW'?.75:1)*Math.exp(-.5*(distance/k.uncertainty)**2);
  const width=p.observedRange?Math.abs(p.observedRange[1]-p.observedRange[0]):p.fwhm??p.width;
  const broad=p.isBroad||p.shape==='broad'||p.shape==='BROAD'||(width??0)>55;
- if(k.shape==='broad'&&!broad)score*=.4;
- if(k.shape==='sharp'&&broad)score*=.45;
+ const shapeKnown=width!==undefined||p.isBroad===true||['broad','sharp','BROAD','SHARP','shoulder','SHOULDER','OVERLAPPED'].includes(p.shape??'');
+ if(shapeKnown&&k.shape==='broad'&&!broad)score*=.4;
+ if(shapeKnown&&k.shape==='sharp'&&broad)score*=.45;
  if(width&&k.shape==='broad'&&width<k.widthRange[0])score*=.6;
  if(p.observedRange){const overlap=Math.max(0,Math.min(p.observedRange[1],k.range[1])-Math.max(p.observedRange[0],k.range[0]));if(!overlap&&distance>0)score*=.6;}
- score*=k.intensity==='weak'?.75+.25*(1-Math.min(1,p.y/100)):.7+.3*Math.min(1,Math.max(0,p.y)/100);
+ if(p.intensityKnown!==false)score*=k.intensity==='weak'?.75+.25*(1-Math.min(1,p.y/100)):.7+.3*Math.min(1,Math.max(0,p.y)/100);
  if(k.companions.length){let matched=0,coveredMissing=0;for(const range of k.companions){if(peaks.some(q=>q.id!==p.id&&inRange(q.x,range)))matched++;else if(coverage?.(...range))coveredMissing++;}score*=.65+.35*matched/k.companions.length;score*=1-.1*coveredMissing/k.companions.length;}
  return Math.max(0,Math.min(1,score));
 }

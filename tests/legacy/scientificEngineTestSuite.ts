@@ -1,24 +1,24 @@
 import {
   REFERENCE_SAMPLE_PRESETS,
   buildPresetSpectra,
-} from "../data/referencePresets";
-import { CandidateGenerator } from "../engines/candidateGenerator";
+} from "./referencePresets";
+import { CandidateGenerator } from "../../src/engines/candidateGenerator";
 import {
   CombinatorialCandidateAssembler,
   FormulaConstraintEngine,
-} from "../engines/candidateGeneration/combinatorialAssembler";
-import { EvidenceAccumulator } from "../engines/chemicalFeatureEngine";
-import { ReasoningEngine } from "../engines/reasoningEngine";
+} from "../../src/engines/candidateGeneration/combinatorialAssembler";
+import { EvidenceAccumulator } from "../../src/engines/chemicalFeatureEngine";
+import { ReasoningEngine } from "../../src/engines/reasoningEngine";
 import {
   IRScientificEngine,
   MassSpectrometryEngine,
   NMRScientificEngine,
-} from "../engines/scientificEngines";
-import { ChemicalHardConstraintValidator } from "../engines/scientificEngines/chemicalHardConstraintValidator";
-import { CrossSpectrumValidator } from "../engines/scientificEngines/crossSpectrumValidator";
-import { MolecularGraphValidator } from "../engines/scientificEngines/molecularGraphValidator";
-import { SpectrumParser } from "../engines/spectrumParser";
-import { WorkbenchOrchestrator } from "../engines/workbenchOrchestrator";
+} from "../../src/engines/scientificEngines";
+import { ChemicalHardConstraintValidator } from "../../src/engines/scientificEngines/chemicalHardConstraintValidator";
+import { CrossSpectrumValidator } from "../../src/engines/scientificEngines/crossSpectrumValidator";
+import { MolecularGraphValidator } from "../../src/engines/scientificEngines/molecularGraphValidator";
+import { SpectrumParser } from "../../src/engines/spectrumParser";
+import { WorkbenchOrchestrator } from "../../src/engines/workbenchOrchestrator";
 
 export interface ScientificTestCaseResult {
   id: string;

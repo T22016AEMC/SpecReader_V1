@@ -1,3 +1,4 @@
+import {confirmedNeutralMass} from './scientificEngines/ionMass';
 import {
   Carbon13SummaryAnalysis,
   ChemicalFeatureEvidence,
@@ -694,7 +695,7 @@ export class ChemicalFeatureEngine {
       }
 
       protonSummary = {
-        solvent: spectra["1H_NMR"].nmrSolvent || "CDCl3",
+        solvent: spectra["1H_NMR"].nmrSolvent || "Unknown",
         totalIntegratedProtons: totalIntegratedProtons || 0,
         aromaticPatternHint: h1SymmetrySummary,
         environments: h1Environments,
@@ -1066,21 +1067,8 @@ export class ChemicalFeatureEngine {
       })),
     ];
 
-    const estMw = parsedUserFormula
-      ? parsedUserFormula.nominalMass
-      : userFormulaValidation && !userFormulaValidation.isValid
-        ? null
-        : msAnalysis?.estimatedNominalMw ??
-          (msmsAnalysis?.physicsModel.precursorIon
-            ? Math.round(
-                msmsAnalysis.physicsModel.precursorIon.mz -
-                  (msmsAnalysis.physicsModel.precursorIon.adductType === "[M+H]+"
-                    ? 1
-                    : msmsAnalysis.physicsModel.precursorIon.adductType === "[M-H]-"
-                      ? -1
-                      : 0)
-              )
-            : null);
+    const confirmedPrecursorMass=confirmedNeutralMass(rawMsmsSpec,msmsAnalysis?.physicsModel.precursorIon?.mz);
+    const estMw=parsedUserFormula?parsedUserFormula.nominalMass:userFormulaValidation&&!userFormulaValidation.isValid?null:msAnalysis?.estimatedNominalMw??(confirmedPrecursorMass!==null?Math.round(confirmedPrecursorMass):null);
 
     const nitrogenParity: "ODD" | "EVEN" | "UNKNOWN" = parsedUserFormula
       ? parsedUserFormula.nitrogenParity
@@ -1131,7 +1119,7 @@ export class ChemicalFeatureEngine {
       (f) => (f.family === "Nitro" || f.groupFamily === "Nitro") && f.status === "PRESENT"
     );
     const h1HasExchangeableOh = h1Environments.some((e) => e.isExchangeable);
-    const h1Solvent = spectra["1H_NMR"]?.nmrSolvent || "CDCl3";
+    const h1Solvent = spectra["1H_NMR"]?.nmrSolvent || "Unknown";
 
     if (hasIrOh && spectra["1H_NMR"] && !h1HasExchangeableOh) {
       crossModalNotes.push(

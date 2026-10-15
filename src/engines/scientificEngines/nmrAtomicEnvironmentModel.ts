@@ -489,7 +489,7 @@ export const DEUTERATED_SOLVENT_PROFILES: Record<NMRSolvent, DeuteratedSolventPr
   },
   Unknown: {
     solvent: "Unknown",
-    labelZh: "未指定溶劑 (預設以 CDCl₃ 基準評估並放寬溶劑位移不確定度)",
+    labelZh: "未指定溶劑（通用環境參數；放寬位移不確定性）",
     h1ResidualShifts: [],
     h1WaterShiftPpm: 1.56,
     h1WaterMultiplicity: "s",

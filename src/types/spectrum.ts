@@ -343,6 +343,8 @@ export interface Signal {
 }
 
 export interface SpectralPeak {
+  note?: string;
+  intensityKnown?: boolean;
   isExchangeable?:boolean;
   observedRange?:[number,number];
   rangeCoordinateSpace?:'PIXEL'|'PHYSICAL';
@@ -486,6 +488,10 @@ export interface ToFSIMSParameters {
 }
 
 export interface MSParameters {
+  activationMethod?:'CID'|'HCD'|'EI_IN_SOURCE';
+  ionAssignmentConfirmed?:boolean;
+  conditionNotes?:string;
+  polarity?:'Positive'|'Negative'|'Unknown';
   msType: MSType;
   ionization: IonizationMode;
   massToleranceDa?: number;
@@ -788,6 +794,8 @@ export interface ExperimentalSpectrumData {
   irPixelCurve?: DataPoint[];
   irMirroredPoints?: DataPoint[];
   irCorrectedPoints?: DataPoint[];
+  observationCoverage?: 'PARTIAL_MARKERS'|'CONTINUOUS_TRACE'|'CONFIRMED_COMPLETE';
+  quantitativeCarbonExperiment?: boolean;
   nmrCorrelations?: import('../engines/scientificEngines/atomicChemicalEnvironment').NMRCorrelationConstraint[];
   irBaselinePoints?: DataPoint[];
   irAnalysisSnapshot?: {settingsVersion:number;curveSignature:string;featureSignature:string;featureChanged:boolean;previousRankingKey:string;sourceVersion:number;curvePoints:number;peakCount:number};
@@ -1558,7 +1566,8 @@ export interface ModalityEvaluationDetail {
     | "CONSISTENT"
     | "COMPATIBLE"
     | "PARTIAL_CONFLICT"
-    | "MAJOR_CONFLICT";
+    | "MAJOR_CONFLICT"
+    | "INSUFFICIENT_DATA";
   matchedFeatures: string[];
   missingExpectedFeatures?: string[];
   contradictions?: string[];
@@ -2671,7 +2680,7 @@ export interface FormulaCandidate {
 
 export interface PrecursorIon {
   mz: number;
-  charge: number;
+  charge: number|null;
   adductType: string;
   activationMethod: "CID" | "HCD" | "EI_IN_SOURCE" | "NOT_PROVIDED";
   collisionEnergyEv: number | "NOT_PROVIDED";
@@ -2680,7 +2689,7 @@ export interface PrecursorIon {
 export interface ProductIon {
   mz: number;
   intensity: number;
-  charge: number;
+  charge: number|null;
   possibleFormula: string;
   structuralMotifHint?: string;
   confidence: number;

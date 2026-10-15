@@ -15,7 +15,7 @@ import {
   SpectralPeak,
   StructuralConstraints,
 } from "../types/spectrum";
-import { ChemistryEngine, KNOWN_STRUCTURAL_LIBRARY } from "./chemistryEngine";
+import { ChemistryEngine } from "./chemistryEngine";
 import { DataValidator } from "./dataValidator";
 import { SpectrumParser } from "./spectrumParser";
 
@@ -142,10 +142,11 @@ export class MSAnalysisEngine {
     const charge = spectrum.msParams?.chargeState ?? 1;
     if (!Number.isInteger(charge) || charge === 0 || Math.abs(charge)>4) return {analysis:null,structuralConstraints:{source:"MS",confidence:0,evidence:[]},statusMessage:"電荷狀態無效；須為非零整數且 |z|≤4。"};
     const adduct: IonAdduct = spectrum.msParams?.adductType && spectrum.msParams.adductType !== "Auto" ? spectrum.msParams.adductType : ionization === "ESI-" ? "[M-H]-" : ionization === "ESI+" ? "[M+H]+" : "[M]+•";
+    const ionKnown=spectrum.msParams?.ionAssignmentConfirmed===true;
     const neutralObserved = neutralMassFromIon(parentMz, adduct, charge);
     const isEsiPlus = ionization === "ESI+";
     const estimatedNominalMw =
-      msType === "ToF-SIMS"
+      msType === "ToF-SIMS" || !ionKnown
         ? null
         : Math.round(neutralObserved);
 
@@ -171,7 +172,7 @@ export class MSAnalysisEngine {
       m1Ratio > 1.1 && m1Ratio < 30 ? Math.round(m1Ratio / 1.1) : null;
 
     // 候選分子式推算
-    const candidateFormulas = msType === "ToF-SIMS" ? [] : MolecularFormulaCandidateEngine.generateCandidates({observedIonMz:parentMz,ionization,adductPreference:adduct,chargeState:charge,isHighResolution:spectrum.msParams?.isHighResolution,massToleranceDa:spectrum.msParams?.massToleranceDa,massTolerancePpm:spectrum.msParams?.massTolerancePpm,hasBromine:hasBromineSignature,hasChlorine:hasChlorineSignature,hasSulfurOrSilicon:hasSulfurOrSiliconSignature});
+    const candidateFormulas = msType === "ToF-SIMS" || !ionKnown ? [] : MolecularFormulaCandidateEngine.generateCandidates({observedIonMz:parentMz,ionization,adductPreference:adduct,chargeState:charge,isHighResolution:spectrum.msParams?.isHighResolution,massToleranceDa:spectrum.msParams?.massToleranceDa,massTolerancePpm:spectrum.msParams?.massTolerancePpm,hasBromine:hasBromineSignature,hasChlorine:hasChlorineSignature,hasSulfurOrSilicon:hasSulfurOrSiliconSignature});
     for(const candidate of candidateFormulas) {
       const predicted=isotopeEnvelope(ChemistryEngine.parseFormulaCounts(candidate.formula));
       if(mPlus1 || mPlus2) {
@@ -319,7 +320,7 @@ export class MSAnalysisEngine {
       estimatedNominalMw,
       exactMassEstimate: candidateFormulas[0]?.neutralExactMass || estimatedNominalMw,
       isNominalMassOnly: !spectrum.msParams?.isHighResolution,
-      adductLabel: `${adduct} (|z|=${Math.abs(charge)})`,
+      adductLabel: ionKnown?`${adduct} (|z|=${Math.abs(charge)})`:"離子／電荷／加合歸屬未確認；m/z 不是中性分子量",
       candidateFormulas,
       isotopePatternSummary: {
         hasChlorineSignature,
@@ -368,7 +369,7 @@ export class MSAnalysisEngine {
         nominalMw: estimatedNominalMw,
         exactMass: candidateFormulas[0]?.neutralExactMass || estimatedNominalMw,
         observedIonMz: parentMz,
-        adductLabel: `${adduct} (|z|=${Math.abs(charge)})`,
+        adductLabel: ionKnown?`${adduct} (|z|=${Math.abs(charge)})`:"離子／電荷／加合歸屬未確認；m/z 不是中性分子量",
         isHighResolution: Boolean(spectrum.msParams?.isHighResolution),
         confidence: 88,
       },

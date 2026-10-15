@@ -1025,13 +1025,6 @@ export class ChemistryEngine {
   }
 
   static estimateFormulaFromSmiles(smiles: string): Record<string, number> | null {
-    const matched = KNOWN_STRUCTURAL_LIBRARY.find((k) =>
-      k.smilesAliases.some((a) => a.toLowerCase() === smiles.trim().toLowerCase())
-    );
-    if (matched) {
-      return this.parseFormulaCounts(matched.formula);
-    }
-
     const parsed = StructureParserAdapter.parseSmilesGraph(smiles);
     if (!parsed.valid || !parsed.graph) {
       return null;
@@ -1160,7 +1153,6 @@ export class ChemistryEngine {
       const { mw, exactMass } = this.calculateMasses(atomCounts);
       const dbe = this.calculateDBE(atomCounts);
       const formatted = this.formatFormula(atomCounts);
-      const isomers = this.getIsomersForFormula(formatted);
 
       if (!formatted || mw <= 0) {
         return finalize({
@@ -1194,11 +1186,7 @@ export class ChemistryEngine {
         atomCounts,
         detectedFunctionalGroups: [
           `不飽和度 DBE = ${dbe}（可對應芳香環或多重雙鍵/環系）`,
-          isomers.length > 0
-            ? `內建參考庫中包含 ${isomers.length} 個常見憲法異構物（如：${isomers
-                .map((i) => i.name.split(" ")[0])
-                .join("、")}）`
-            : "需搭配 IR / NMR / MS 光譜約束方能決定連接性",
+          "分子式不決定連接性，需搭配已提供的光譜約束",
         ],
         symmetryFactor: "未知（單憑分子式無法決定分子對稱性）",
         uniqueProtonEnvironmentsCount: null,
@@ -1209,39 +1197,6 @@ export class ChemistryEngine {
         parserAdapterStatus,
         pubchemStatus: "NOT_QUERIED",
         sourceMethod: "Molecular Formula",
-      });
-    }
-
-    const known = KNOWN_STRUCTURAL_LIBRARY.find(
-      (k) =>
-        k.smilesAliases.some((a) => a.toLowerCase() === trimmed.toLowerCase()) ||
-        (trimmed.startsWith("InChI=") && trimmed.startsWith(k.inchiPrefix))
-    );
-
-    if (known) {
-      const atomCounts = this.parseFormulaCounts(known.formula);
-      const { mw, exactMass } = this.calculateMasses(atomCounts);
-      const dbe = this.calculateDBE(atomCounts);
-      return finalize({
-        name: known.name,
-        iupacName: known.iupacName,
-        smiles: known.smilesAliases[0],
-        inchi: `${known.inchiPrefix}`,
-        molecularFormula: known.formula,
-        molecularWeight: mw,
-        exactMass,
-        dbe,
-        atomCounts,
-        detectedFunctionalGroups: known.functionalGroups,
-        symmetryFactor: known.symmetryFactor,
-        uniqueProtonEnvironmentsCount: known.uniqueH,
-        uniqueCarbonEnvironmentsCount: known.uniqueC,
-        isFormulaOnly: false,
-        parserAdapterStatus,
-        pubchemCid: known.pubchemCid,
-        pubchemUrl: `https://pubchem.ncbi.nlm.nih.gov/compound/${known.pubchemCid}`,
-        pubchemStatus: "SUCCESS",
-        sourceMethod: method,
       });
     }
 

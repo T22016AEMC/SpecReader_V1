@@ -1,7 +1,7 @@
 import React,{useRef} from 'react';
 import type {DataPoint,ExperimentalSpectrumData} from '../types/spectrum';
-import {prepareIR,resolveIRScale} from '../engines/scientificEngines/irSignalProcessing';
-import {baselineAt,defaultPixelBaseline,irSettingsKey,type IRManualSettings} from '../engines/scientificEngines/irManualBaseline';
+import {resolveIRScale} from '../engines/scientificEngines/irSignalProcessing';
+import {physicalIRInputs,relativeIRSignal,baselineAt,defaultPixelBaseline,irSettingsKey,type IRManualSettings} from '../engines/scientificEngines/irManualBaseline';
 import {SpectrumParser} from '../engines/spectrumParser';
 
 export function initialIRSettings(s:ExperimentalSpectrumData):IRManualSettings {
@@ -14,10 +14,14 @@ export function initialIRSettings(s:ExperimentalSpectrumData):IRManualSettings {
  return {direction:'AUTO',enabled:true,coordinateSpace:'PHYSICAL',intensityScale:resolveIRScale(s.yUnit,s.irIntensityScale),anchors:Array.from({length:5},(_,i)=>({x:min+(max-min)*i/4,y}))};
 }
 export function IRCalibrationPanel({s,settings,onDraft,onApply}:{s:ExperimentalSpectrumData;settings:IRManualSettings;onDraft:(v:IRManualSettings)=>void;onApply:(v:IRManualSettings)=>void}) {
- const preview=prepareIR({...s,irProcessingApplied:false,irManualSettings:{...settings,enabled:settings.enabled}});
+ const input=physicalIRInputs(s,settings);
+ const direction=settings.direction==='AUTO'?(settings.intensityScale==='ABSORBANCE'?'UP':'DOWN'):settings.direction;
+ const background=direction==='DOWN'?Math.max(0,...input.raw.map(p=>p.y)):0;
+ const baseline=input.raw.map(p=>({x:p.x,y:settings.enabled?baselineAt(p.x,input.anchors):background}));
+ const previewCurve=relativeIRSignal(input.raw,baseline,direction);
  const changed=irSettingsKey(settings)!==irSettingsKey(s.irManualSettings);
  const valid=settings.anchors.length===5&&new Set(settings.anchors.map(p=>p.x)).size===5;
- const curve=preview.irCorrectedPoints??[],ys=curve.map(p=>p.y),lo=Math.min(...ys,0),hi=Math.max(...ys,1);
+ const curve=previewCurve,ys=curve.map(p=>p.y),lo=Math.min(...ys,0),hi=Math.max(...ys,1);
  const display=curve.filter((_,i)=>i%Math.max(1,Math.ceil(curve.length/1000))===0);
  return <div className="mb-2 rounded border border-amber-600/40 bg-slate-950 p-2 text-xs text-slate-300" data-testid="ir-calibration-panel">
    <p className="font-semibold text-amber-200">IR 五點基線 · 與原圖座標校正共用畫布</p>
@@ -27,13 +31,13 @@ export function IRCalibrationPanel({s,settings,onDraft,onApply}:{s:ExperimentalS
     {s.originalImageUrl&&<><label>Y 軸下端 <input aria-label="IR Y 軸下端" type="number" step="any" className="w-16 bg-slate-900" value={settings.yAxisRange?.[0]??''} onChange={e=>onDraft({...settings,yAxisRange:[Number(e.target.value),settings.yAxisRange?.[1]??100]})}/></label><label>上端 <input aria-label="IR Y 軸上端" type="number" step="any" className="w-16 bg-slate-900" value={settings.yAxisRange?.[1]??''} onChange={e=>onDraft({...settings,yAxisRange:[settings.yAxisRange?.[0]??0,Number(e.target.value)]})}/></label></>}
     <label><input aria-label="啟用 IR 五點基線" type="checkbox" checked={settings.enabled} onChange={e=>onDraft({...settings,enabled:e.target.checked})}/>使用五點基線</label>
     <button type="button" onClick={()=>{const clean={...s,irManualSettings:undefined};onDraft({...initialIRSettings(clean),enabled:true});}}>重設五點基線</button>
-    <button type="button" disabled={!valid||settings.yAxisRange?.[0]===settings.yAxisRange?.[1]&&settings.yAxisRange!==undefined} onClick={()=>onApply(settings)}>套用 IR 設定並更新分析</button>
-    <button type="button" onClick={()=>{const next={...settings,enabled:false};onDraft(next);onApply(next);}}>停用基線並重新分析</button>
+    <button type="button" disabled={!valid||settings.yAxisRange?.[0]===settings.yAxisRange?.[1]&&settings.yAxisRange!==undefined} onClick={()=>onApply(settings)}>套用 IR 設定</button>
+    <button type="button" onClick={()=>{const next={...settings,enabled:false};onDraft(next);onApply(next);}}>停用基線</button>
    </div>
    <p data-testid="ir-draft-status">{changed?'預覽：尚未套用':'正式設定'} · 已套用版本 {s.irManualSettings?.revision??0}；直接拖曳原圖黃色五點。</p>
    {!s.irPixelCurve?.length&&s.originalImageUrl&&<p className="text-amber-300">尚未擷取到可靠曲線；五點仍可調整，但不能自動產生實測峰，請校正或人工標峰。</p>}
    <p>基線穿過寬 OH／NH 或弱峰可能移除真實吸收，請對照原圖。未知 Y 刻度僅為相對影像尺度；不轉換成吸光度。</p>
-   <details><summary>同設定相對吸收預覽（未套用不影響第 3 頁）</summary><p data-testid="ir-preview-features">{preview.peaks.length} 個峰；{curve.length} 個相對吸收數值；負值保留作基線品質判斷。</p><svg viewBox="0 0 500 90" className="w-full h-24" aria-label="IR 基線相對吸收預覽"><polyline fill="none" stroke="#22d3ee" points={display.map((p,i,a)=>`${i*500/Math.max(1,a.length-1)},${85-(p.y-lo)*80/Math.max(1e-9,hi-lo)}`).join(' ')}/></svg></details>
+   <details><summary>相對吸收預覽（不執行科學分析）</summary><p data-testid="ir-preview-features">{curve.length} 個相對吸收數值；負值保留作基線品質判斷。</p><svg viewBox="0 0 500 90" className="w-full h-24" aria-label="IR 基線相對吸收預覽"><polyline fill="none" stroke="#22d3ee" points={display.map((p,i,a)=>`${i*500/Math.max(1,a.length-1)},${85-(p.y-lo)*80/Math.max(1e-9,hi-lo)}`).join(' ')}/></svg></details>
  </div>;
 }
 export function IRBaselineHandles({settings,onChange,mapPoint,unmapPoint,width,height,bounds}:{settings:IRManualSettings;onChange:(s:IRManualSettings)=>void;mapPoint:(p:DataPoint)=>DataPoint;unmapPoint:(p:DataPoint)=>DataPoint;width:number;height:number;bounds:{left:number;right:number;top:number;bottom:number}}){

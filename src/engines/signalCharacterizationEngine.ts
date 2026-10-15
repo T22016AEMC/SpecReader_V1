@@ -12,6 +12,11 @@ import {
 } from "../types/spectrum";
 
 export class SignalCharacterizationEngine {
+  /** Editing path: preserve observations only; no chemistry, assignments or inferred integrals. */
+  static measureSpectrumSignals(spectrum:ExperimentalSpectrumData):ExperimentalSpectrumData {
+    return {...spectrum,peaks:spectrum.peaks.map(p=>({...p})),signals:[]};
+  }
+
   static estimateNoiseFloor(points: DataPoint[], modality: SpectrumModality): number {
     if (!points || points.length < 10) {
       return modality === "MS" ? 0.8 : 1.5;

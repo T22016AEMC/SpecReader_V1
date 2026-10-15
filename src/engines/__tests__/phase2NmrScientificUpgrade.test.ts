@@ -1,4 +1,6 @@
-import { describe, expect, it } from "vitest";
+import {initializeRDKit,canonicalizeMolecule} from '../scientificEngines/rdkitAdapter';
+beforeAll(()=>initializeRDKit());
+import { beforeAll, describe, expect, it } from "vitest";
 import { CandidateGenerator } from "../candidateGenerator";
 import { ChemicalFeatureEngine } from "../chemicalFeatureEngine";
 import { ChemistryEngine } from "../chemistryEngine";
@@ -459,9 +461,7 @@ describe("SpecReader Phase 2 — ¹H NMR / ¹³C NMR Scientific Engine Comprehen
     const pipelinePara = CandidateGenerator.executeUnifiedPipelineFromBundle(bundlePara);
     expect(pipelinePara.rankedCandidates.length).toBeGreaterThanOrEqual(3);
     // Top ranked candidate for para NMR must be the 1,4-para isomer!
-    expect(pipelinePara.rankedCandidates[0].smiles).toBe(
-      "CC(=O)Oc1ccc(C(=O)O)cc1"
-    );
+    expect(canonicalizeMolecule(pipelinePara.rankedCandidates[0].smiles).canonical).toBe(canonicalizeMolecule("CC(=O)Oc1ccc(C(=O)O)cc1").canonical);
 
     // Case B: Experimental 1H + 13C NMR of 1,3-meta-acetoxybenzoic acid (1H isolated narrow s/t at 7.82 ppm + 3x1H, 9 unique 13C signals)
     const metaH1 = makeSpectrum("1H_NMR", [

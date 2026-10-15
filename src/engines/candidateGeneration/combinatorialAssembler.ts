@@ -5,8 +5,6 @@ import {
 } from "../../types/spectrum";
 import {
   ChemistryEngine,
-  KNOWN_STRUCTURAL_LIBRARY,
-  KnownCompoundEntry,
 } from "../chemistryEngine";
 import {
   AtomBudget,
@@ -317,22 +315,6 @@ function formatHillFormulaFromBudget(budget: Partial<AtomBudget>): string {
   return ChemistryEngine.formatFormula(counts);
 }
 
-let cachedLibraryCanonicalMap: Map<string, KnownCompoundEntry> | null = null;
-
-function getLibraryCanonicalMap(): Map<string, KnownCompoundEntry> {
-  if (cachedLibraryCanonicalMap) return cachedLibraryCanonicalMap;
-  cachedLibraryCanonicalMap = new Map<string, KnownCompoundEntry>();
-  for (const entry of KNOWN_STRUCTURAL_LIBRARY) {
-    for (const alias of entry.smilesAliases) {
-      const val = ChemicalGraphValidator.validateCandidateSmiles(alias);
-      if (val.valid && val.canonicalSignature) {
-        cachedLibraryCanonicalMap.set(val.canonicalSignature, entry);
-      }
-    }
-  }
-  return cachedLibraryCanonicalMap;
-}
-
 export class CombinatorialCandidateAssembler {
   static inferFormulaSpaceFromConstraints(
     constraints: StructuralConstraints
@@ -352,7 +334,7 @@ export class CombinatorialCandidateAssembler {
       return [constraints.userSuppliedFormula.normalizedFormula];
     }
 
-    if (constraints.molecularFormula?.lockedFormula) {
+    if (constraints.userSuppliedFormula?.isValid && constraints.molecularFormula?.lockedFormula) {
       return [constraints.molecularFormula.lockedFormula];
     }
 
@@ -883,7 +865,6 @@ export class CombinatorialCandidateAssembler {
 
     const results: AssembledRawCandidate[] = [];
     const seenCanonicalSignatures = new Set<string>();
-    const libCanonicalMap = getLibraryCanonicalMap();
 
     const tryRegisterCandidate = (
       smiles: string,
@@ -904,32 +885,13 @@ export class CombinatorialCandidateAssembler {
       }
       seenCanonicalSignatures.add(val.canonicalSignature);
 
-      const matchedLib = libCanonicalMap.get(val.canonicalSignature);
-
       results.push({
-        id: matchedLib
-          ? matchedLib.id
-          : `gen-${formulaStr}-${results.length + 1}`,
-        name: matchedLib ? matchedLib.name : generatedNameZh,
-        iupacName: matchedLib ? matchedLib.iupacName : generatedIupac,
-        smiles: matchedLib ? matchedLib.smilesAliases[0] : smiles,
-        canonicalSignature: val.canonicalSignature,
-        molecularFormula: formulaStr,
-        origin: matchedLib
-          ? "[Known Library Candidate]"
-          : "[Generated Candidate]",
-        generationMethodLabel: matchedLib
-          ? "Combinatorial Graph Assembly + Known Library Reference"
-          : "Combinatorial Chemical Graph & Fragment Assembly",
-        sourceProvenance: matchedLib
-          ? `化學結構圖組合生成引擎 + 內建參考庫標記 (${matchedLib.name}, PubChem CID: ${matchedLib.pubchemCid})`
-          : `Candidate Generation Engine（依分子式 ${formulaStr}, DBE=${targetDbe} 進行骨架與官能基拓樸組合生成）`,
+        id:`gen-${formulaStr}-${results.length+1}`,name:generatedNameZh,iupacName:generatedIupac,smiles,
+        canonicalSignature:val.canonicalSignature,molecularFormula:ChemistryEngine.parseStructureInput(smiles).molecularFormula,
+        origin:'[Generated Candidate]',generationMethodLabel:'Constrained Fragment Assembly',sourceProvenance:'依元素組成與局部片段組裝；不是資料庫答案',
         assemblyNotes,
         scaffoldType,
-        pubchemCid: matchedLib?.pubchemCid,
-        pubchemUrl: matchedLib
-          ? `https://pubchem.ncbi.nlm.nih.gov/compound/${matchedLib.pubchemCid}`
-          : undefined,
+
       });
     };
 

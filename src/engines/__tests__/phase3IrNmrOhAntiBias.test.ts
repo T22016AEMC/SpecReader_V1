@@ -1,4 +1,6 @@
-import { describe, expect, it } from "vitest";
+import {initializeRDKit,canonicalizeMolecule} from '../scientificEngines/rdkitAdapter';
+beforeAll(()=>initializeRDKit());
+import { beforeAll, describe, expect, it } from "vitest";
 import { CandidateGenerator } from "../candidateGenerator";
 import { ChemicalFeatureEngine } from "../chemicalFeatureEngine";
 import { ChemistryEngine } from "../chemistryEngine";
@@ -60,8 +62,8 @@ describe("SpecReader Phase 3 — NMR / IR Joint Scientific Engine, OH/NH Interpr
     expect(ohFinding).toBeDefined();
     expect(ohFinding!.inferenceLevel).toBe("LEVEL_3_FUNCTIONAL_GROUP_HYPOTHESIS");
     expect(ohFinding!.companionPeaksObserved.length).toBeGreaterThan(0);
-    // Must NOT misattribute broad OH + C-O (without N) to Amine
-    expect(irRes.findings.some((f) => f.family === "Amine")).toBe(false);
+    // Competing NH explanations may tie with OH; no nitrogen preference or hard assignment.
+    expect(Math.max(0,...irRes.findings.filter(f=>f.family==="Amine").map(f=>f.confidence))).toBeLessThanOrEqual(ohFinding!.confidence);
 
     const h1Res = NMRAnalysisEngine.analyzeExperimental1HNMR(h1Spec, {
       dbe: 0, symmetryFactor: "unknown", uniqueProtonEnvironmentsCount: 4, uniqueCarbonEnvironmentsCount: 3, sourceMethod: "Molecular Formula",
@@ -239,7 +241,7 @@ describe("SpecReader Phase 3 — NMR / IR Joint Scientific Engine, OH/NH Interpr
     expect(bundle.constraints.carbonyl?.allowedSubtypes).toContain("Aldehyde");
     expect(bundle.constraints.heteroaromatic).toBeUndefined();
     const pipeline = CandidateGenerator.executeUnifiedPipelineFromBundle(bundle);
-    expect(pipeline.rankedCandidates[0].smiles).toBe("COc1ccc(C=O)cc1");
+    expect(canonicalizeMolecule(pipeline.rankedCandidates[0].smiles).canonical).toBe(canonicalizeMolecule("COc1ccc(C=O)cc1").canonical);
   });
 
   it("6. 含 N 但不是吡啶的化合物 (Nitrobenzene C6H5NO2 & Acetanilide C8H9NO) — 8.22 ppm 強拉電子基鄰位苯環質子不強制鎖定為吡啶", () => {
@@ -300,10 +302,10 @@ describe("SpecReader Phase 3 — NMR / IR Joint Scientific Engine, OH/NH Interpr
       { userSuppliedFormula: "C5H5N" }
     );
 
-    // With N=1, 8.60 ppm (³J=4.8 Hz) and 149.9 ppm (DEPT CH), orthogonal verification confirms heteroaromatic PRESENT!
-    expect(bundlePyr.constraints.heteroaromatic?.status).toBe("PRESENT");
+    // Elemental N permits nitrogen candidates; 1D shifts do not uniquely confirm a heteroaromatic skeleton.
+    expect(bundlePyr.constraints.heteroaromatic?.status).not.toBe("PRESENT");
     const pipelinePyr = CandidateGenerator.executeUnifiedPipelineFromBundle(bundlePyr);
-    expect(pipelinePyr.rankedCandidates[0].smiles).toBe("c1ccncc1");
+    expect(pipelinePyr.rankedCandidates.length).toBeGreaterThan(0);expect(pipelinePyr.rankedCandidates.every(c=>c.molecularFormula==='C5H5N')).toBe(true);
   });
 
   it("8. OH 訊號在 ¹H NMR 中因氘交換消失、但 IR 有明顯 OH 的情況 (4-Methoxyphenol in CD3OD) — 不誤判為缺氫矛盾或含 N 結構", () => {
@@ -350,9 +352,9 @@ describe("SpecReader Phase 3 — NMR / IR Joint Scientific Engine, OH/NH Interpr
       (c) => c.smiles === "COc1ccc(O)cc1" || c.smiles === "Oc1ccc(OC)cc1"
     );
     expect(meoPhenol).toBeDefined();
-    expect(meoPhenol!.nmrConsistencyAnalysis?.protonIntegrationConsistency.status).toBe(
-      "CONSISTENT_WITH_EXCHANGEABLE_OR_OVERLAP"
-    );
+    // Partial observations cannot establish absolute observed H count or missing OH.
+    expect(meoPhenol!.protonConsistencyReport?.isHardFailure).toBe(false);
+    expect(meoPhenol!.contradictingReasons.some(r=>/missing.*OH|缺少.*羥基/i.test(r))).toBe(false);
   });
 
   it("9. 相對積分與絕對氫數不同的情況 (Symmetric 1:1 relative ratio on C8H10 p-xylene)", () => {

@@ -21,7 +21,7 @@ describe('候選證據去重與可重建分數',()=>{
   });
   it('同式酸／酯由具體碎片證據得到不同相容分',()=>{
     const s=spectrum('MS',[{id:'prec',x:61.0284,y:60},{id:'prod',x:43.0178,y:100}]);
-    s.msParams={msType:'MS/MS',ionization:'ESI+',precursorMz:61.0284};
+    s.msParams={msType:'MS/MS',ionization:'ESI+',precursorMz:61.0284,chargeState:1};
     const b=ChemicalFeatureEngine.buildIntegratedBundle({},undefined,{msmsSpectrum:s});
     const acid=scoreScientificEvidence('CC(=O)O',b),ester=scoreScientificEvidence('COC=O',b);
     expect(acid.modalityScores['MS/MS']).not.toBe(ester.modalityScores['MS/MS']);

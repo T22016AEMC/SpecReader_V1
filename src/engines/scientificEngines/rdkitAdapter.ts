@@ -10,7 +10,7 @@ export function initializeRDKit():Promise<void> {
     try {
       if (typeof window==='undefined') {
         const factory=(await import('@rdkit/rdkit')).default;
-        rdkit=await factory();
+        rdkit=await factory(typeof location!=='undefined'?{locateFile:(file:string)=>new URL('/rdkit/'+file,location.href).href}:undefined);
       } else {
         await new Promise<void>((resolve,reject)=>{
           const script=document.createElement('script');script.src='/rdkit/RDKit_minimal.js';

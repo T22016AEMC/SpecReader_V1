@@ -80,6 +80,7 @@ export function processIRSeries(points: DataPoint[], scale: IRIntensityScale,set
   return {points:smooth.map(p=>({x:p.x,y:100*p.y/max})),peaks,invalidCount:points.length-valid.length,mirrored,corrected,baseline,uncertain:inferred.uncertain};
 }
 export function irRangeCovered(s: ExperimentalSpectrumData, min: number, max: number): boolean {
+  if(s.observationCoverage!=='CONFIRMED_COMPLETE')return false;
   if (s.digitizedFromImage || s.sourceType==='IMAGE_EXPERIMENTAL' || s.sourceType==='IMAGE_DIGITIZED') return false;
   // Peak lists don't prove the absence of unreported bands.
   const xs = s.rawExperimentalSnapshot?.rawX ?? s.points.map(p=>p.x);
@@ -87,7 +88,7 @@ export function irRangeCovered(s: ExperimentalSpectrumData, min: number, max: nu
   if(scale==='UNKNOWN')return false; // 未知強度方向不能據缺峰作陰性證據。
   const raw=s.rawExperimentalSnapshot?.rawPoints ?? s.points;
   if (raw.some(p=>p.x>=min&&p.x<=max&&toAbsorbance(p.y,scale)===null)) return false;
-  return xs.length >= 30 && Math.min(...xs)<=min && Math.max(...xs)>=max;
+  return xs.length >= 2 && Math.min(...xs)<=min && Math.max(...xs)>=max;
 }
 export function prepareIR(s: ExperimentalSpectrumData): ExperimentalSpectrumData {
   if (s.irProcessingApplied) return s;
@@ -99,7 +100,7 @@ export function prepareIR(s: ExperimentalSpectrumData): ExperimentalSpectrumData
   const processed=continuous ? processIRSeries(raw,scale,s.irManualSettings?{...s.irManualSettings,anchors,coordinateSpace:'PHYSICAL'}:undefined) : null;
   const down=s.irManualSettings?.direction==='DOWN'||(s.irManualSettings?.direction!=='UP'&&(scale==='TRANSMITTANCE'||scale==='PERCENT_TRANSMITTANCE'));
   const reference=scale==='TRANSMITTANCE'?1:scale==='PERCENT_TRANSMITTANCE'?100:Math.max(0,...raw.map(p=>p.y).filter(Number.isFinite));
-  const converted=s.peaks.filter(p=>p.pixelX===undefined||p.isCalibrated===true).flatMap(p=>{
+  const converted=s.peaks.map(p=>p.observedRange?{...p,observedRange:[Math.min(...p.observedRange),Math.max(...p.observedRange)] as [number,number]}:p).filter(p=>p.pixelX===undefined||p.isCalibrated===true).flatMap(p=>{
     if(p.observedRange&&p.rangeCoordinateSpace==='PIXEL'&&s.imageCalibration){
       const c=s.imageCalibration,a=pixelIRX(p.observedRange[0],c),b=pixelIRX(p.observedRange[1],c);
       p={...p,observedRange:[Math.min(a,b),Math.max(a,b)],rangeCoordinateSpace:'PHYSICAL',width:Math.abs(a-b),fwhm:p.isBroad?Math.abs(a-b):p.fwhm};
@@ -112,7 +113,7 @@ export function prepareIR(s: ExperimentalSpectrumData): ExperimentalSpectrumData
     const measured=processed.peaks.find(q=>Math.abs(q.x-p.x)<Math.max(3,p.width??3));
     const nearby=processed.points.reduce((best,q)=>Math.abs(q.x-p.x)<Math.abs(best.x-p.x)?q:best,processed.points[0]);
     return {...measured,...p,y:nearby?.y??p.y,fwhm:p.fwhm??measured?.fwhm,area:p.area??measured?.area,relativeArea:p.relativeArea??measured?.relativeArea,signalToNoise:p.signalToNoise??measured?.signalToNoise};
-  })] : converted.map(p=>({...p,y:max>0?100*p.y/max:0}))).filter(p=>p.y>0);
+  })] : converted.map(p=>({...p,y:max>0?100*p.y/max:0}))).filter(p=>p.y>0||p.intensityKnown===false);
   return {...s,rawExperimentalSnapshot:s.rawExperimentalSnapshot??{rawPoints:raw.map(p=>({...p})),rawX:raw.map(p=>p.x),rawY:raw.map(p=>p.y),originalImageUrl:s.originalImageUrl},peaks,irIntensityScale:effectiveScale,irProcessingApplied:true,irDataQuality:(isImage?s.irDataQuality??.45:processed?.invalidCount?.6:.85)*(s.irManualSettings?.enabled?.85:1),irProcessingWarnings:[...(s.irProcessingWarnings??[]),...(effectiveScale==='UNKNOWN'?['Y 刻度未確認；僅使用相對強度，原始尺度標籤只用於吸收方向判斷。']:[]),...(processed?.uncertain&&(!s.irManualSettings||s.irManualSettings.direction==='AUTO')?['峰方向判斷不確定，請手動確認。']:[]),...(s.irManualSettings?.enabled?['五點基線採端點常數延伸；控制點穿過寬峰可能移除真實訊號，請對照原圖。']:[]),...(processed?.invalidCount?['無效數值已排除。']:[])], ...(processed?{points:processed.points,irBaselinePoints:processed.baseline,irCorrectedPoints:processed.corrected}: {})};
 }
 
