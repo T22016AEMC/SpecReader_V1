@@ -60,7 +60,7 @@ export async function createApp(options: { serveClient?: boolean } = {}) {
       h1NmrGiaoQuantumBackend: false,
       c13NmrGiaoQuantumBackend: false,
       msFormulaEngine: true,
-      internalReferencePresets: true,
+      internalReferencePresets: false,
       externalNistSdbsLiveConnection: false,
       pubchemRestConnection: true,
       geminiAiAvailable: aiAvailable,

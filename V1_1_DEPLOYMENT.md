@@ -17,3 +17,6 @@ Build：`npm install -g pnpm@11.25.0 && pnpm install --frozen-lockfile && pnpm r
 公開站以 `/api/health` 的version=1.1.2及revision核對GitHub main；另查 `/api/system-status`、WASM、Worker資源與公開互動。發佈結果以實際健康回應及交付回覆為準，不硬編碼自身commit雜湊。平台既有healthCheckPath先前為空／TCP，HTTP端點另行驗證，不能以YAML推定已修改平台。
 
 發佈前執行 `node scripts/verify-distribution.mjs`，排除.env（只留範例）、密鑰、node_modules、dist、快取及使用者原始圖譜。無新增套件／GPU／Python或模型權重；既有授權notice仍隨建置產生。
+
+
+公開驗收：核心修正Commit `1927ee32f8a01e5c88388a2c9b84d38b6f4f003f`，Render部署 `dep-db861rivcj2c738bq7ag` 於2026-10-15 05:14:29 UTC為Live；健康200、version1.1.2／revision一致。公開Chrome三項（明確分析／原圖拖曳／觀測欄位）3/3通過。後續僅同步狀態API的 `internalReferencePresets=false`，避免回報已移出正式App的舊測試入口。科學程式與該三項已驗證版本相同；最新部署revision以健康回應對照main。
