@@ -1,9 +1,10 @@
+import {irCandidateBands,irBandMatch} from './irBandKnowledge';
 import {globalPeakAssignment} from './globalPeakAssignment';
 import {IREngine} from '../irEngine';
 import type {IntegratedAnalysisBundle} from '../chemicalFeatureEngine';
 import type {ExtendedSpectrumModality,ExperimentalSpectrumData,SpectralPeak,NMRSolvent} from '../../types/spectrum';
 import {ChemistryEngine} from '../chemistryEngine';
-import {NMRGraphPredictor} from './nmrReferenceDatabase';
+import {NMRGraphPredictor} from './nmrAtomicEnvironmentModel';
 import {graphChemicalFeatures} from './graphChemicalFeatures';
 import {graphFragments} from './graphFragmentation';
 import {prepareIR,irRangeCovered} from './irSignalProcessing';
@@ -39,7 +40,7 @@ export function buildScientificEvidence(bundle:IntegratedAnalysisBundle):Scienti
     for(const p of uniqueObservations(processed.peaks)) {
       const root=`${modality}:${s.sourceId??s.fileName}:${p.x}`;
       const interpretations=modality==='IR'?bundle.irFindings.filter(f=>Math.abs(f.observedPeak-p.x)<2).map(f=>f.family):modality==='1H_NMR'?bundle.h1Environments.filter(e=>Math.abs(e.shiftPpm-p.x)<.001).map(e=>e.environmentLabel):modality==='13C_NMR'?bundle.c13Summary.environments.filter(e=>Math.abs(e.shiftPpm-p.x)<.001).map(e=>e.assignment):[];
-      evidence.push({id:root,sourceModality:modality,observationIds:[root],originalObservedData:{position:p.x,intensity:rawPoints.find(raw=>raw.x===p.x)?.y??p.y,relativeIntegral:p.integration??p.integral??null,multiplicity:p.multiplicity??null,jValues:p.jValues??[]},processingMethod:modality==='IR'?'幾何方向鏡像（非吸光度轉換）／基線／相對峰形；原始資料保留':p.detectionSource==='MANUAL'?'人工標峰／座標校正':'數值峰或已校正圖像峰',processingSettings:modality==='IR'?{irBaseline:s.irManualSettings,intensityScale:processed.irIntensityScale}:undefined,proposedInterpretation:interpretations,supportedFeature:interpretations,alternativeInterpretations:['可能重疊、雜質或其他化學環境；未由單峰確認完整結構'],uncertainty:{kind:'UNVALIDATED_MODEL',note:'經驗判讀與模型相容度尚未以實測校準為機率'},dataCoverage:{min:xs.length?Math.min(...xs):null,max:xs.length?Math.max(...xs):null,complete:modality==='IR'&&xs.length>=30&&irRangeCovered(s,Math.min(...xs),Math.max(...xs))},dependency:[],correlationGroup:root});
+      evidence.push({id:root,sourceModality:modality,observationIds:[root],originalObservedData:{position:p.x,intensity:rawPoints.find(raw=>raw.x===p.x)?.y??p.y,relativeIntegral:p.integration??p.integral??null,multiplicity:p.multiplicity??null,jValues:p.jValues??[]},processingMethod:modality==='IR'?'原始訊號－基線；依吸收方向取符號／相對峰形；原始資料保留':p.detectionSource==='MANUAL'?'人工標峰／座標校正':'數值峰或已校正圖像峰',processingSettings:modality==='IR'?{irBaseline:s.irManualSettings,intensityScale:processed.irIntensityScale}:undefined,proposedInterpretation:interpretations,supportedFeature:interpretations,alternativeInterpretations:['可能重疊、雜質或其他化學環境；未由單峰確認完整結構'],uncertainty:{kind:'UNVALIDATED_MODEL',note:'經驗判讀與模型相容度尚未以實測校準為機率'},dataCoverage:{min:xs.length?Math.min(...xs):null,max:xs.length?Math.max(...xs):null,complete:modality==='IR'&&xs.length>=30&&irRangeCovered(s,Math.min(...xs),Math.max(...xs))},dependency:[],correlationGroup:root});
     }
   }
   if(bundle.userSuppliedFormula)evidence.push({id:'user-formula',sourceModality:'FORMULA',observationIds:['user-formula'],originalObservedData:{formula:bundle.userSuppliedFormula},processingMethod:'元素組成解析',proposedInterpretation:['使用者提供分子式'],supportedFeature:['ELEMENTAL_COMPOSITION'],alternativeInterpretations:[],uncertainty:{kind:'MEASUREMENT',note:'由使用者提供，未聲稱質量或光譜已驗證'},dataCoverage:{min:null,max:null,complete:false},dependency:[],correlationGroup:'user-formula'});
@@ -69,6 +70,7 @@ export function scoreScientificEvidence(smiles:string,bundle:IntegratedAnalysisB
   const cMatrix=cObs.map(ev=>cPred.map(p=>gaussian((ev.originalObservedData.position??0)-p.shiftPpm,(p.uncertaintyPpm??8)+3)));
   const hAssignment=globalPeakAssignment(hMatrix),cAssignment=globalPeakAssignment(cMatrix);
   const irPred=IREngine.predictIRFromStructure(structure).spectrum.peaks;
+  const candidateIRBands=irCandidateBands(smiles);
   const irProcessed=sources.IR?prepareIR(sources.IR):null;
   const precursor=bundle.msmsAnalysis?.physicsModel.precursorIon;
   const msmsFragments=graphFragments(smiles,adduct(sources['MS/MS']),sources['MS/MS']?.msParams?.chargeState??1);
@@ -80,17 +82,9 @@ export function scoreScientificEvidence(smiles:string,bundle:IntegratedAnalysisB
       compatibility=structure.molecularFormula===ev.originalObservedData.formula?1:0;method='分子式硬限制；不再當作光譜加分';
     } else if(x!==undefined && ev.sourceModality==='IR') {
       const observed=irProcessed?.peaks.find(p=>Math.abs(p.x-x)<2);
-      compatibility=irPred.length?Math.max(...irPred.map(p=>{
-        let value=gaussian(x-p.x,Math.max(18,(p.width??20)*.6));
-        if(observed?.fwhm&&p.width)value*=Math.exp(-.25*Math.abs(Math.log(observed.fwhm/p.width)));
-        // Only relative geometry is compared. No absorbance amplitudes inferred.
-        if(observed?.isBroad&&p.shape!=='broad')value*=.6;
-        if(observed?.asymmetry&&observed.asymmetry>3)value*=.8;
-        if(observed&&irProcessed?.irIntensityScale==='ABSORBANCE')value*=.8+.2*gaussian(observed.y/100-p.y/100,.35);
-        return value;
-      })):0;
+      compatibility=observed&&candidateIRBands.length?Math.max(...candidateIRBands.map(k=>irBandMatch(k,observed,irProcessed!.peaks,(a,b)=>irRangeCovered(sources.IR!,a,b)))):0;
       weight=Math.min(1,(observed?.signalToNoise??10)/10)*(irProcessed?.irDataQuality??.6)*(.5+.5*Math.sqrt(Math.max(0,observed?.relativeArea??1)))*(.7+.3*Math.min(1,(observed?.prominence??100)/100));
-      method='候選分子圖振動特徵與實測峰位／峰寬／形狀直接比對；同一峰一次';limitations.push('經驗振動特徵模型，非量子光譜；相對像素峰高不是吸光度');
+      method='候選分子圖選出區間／環境知識，與實測峰型／寬度／伴隨峰比較；每原始峰只計一次';limitations.push('經驗振動特徵模型，非量子光譜；相對像素峰高不是吸光度');
     } else if(x!==undefined && ev.sourceModality==='1H_NMR') {
       const row=hObs.indexOf(ev),best=hAssignment.get(row);
       compatibility=best===undefined?0:hMatrix[row][best];weight=best!==undefined&&hPred[best].isExchangeable?.3:.8;

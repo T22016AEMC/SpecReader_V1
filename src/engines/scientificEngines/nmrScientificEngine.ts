@@ -20,7 +20,7 @@ import { NMRAnalysisEngine } from "../nmrEngine";
 import {
   DEUTERATED_SOLVENT_PROFILES,
   NMR_LITERATURE_REGISTRY,
-} from "./nmrReferenceDatabase";
+} from "./nmrAtomicEnvironmentModel";
 
 export class DefaultKarplusModel implements KarplusModel {
   readonly modelName = "Karplus Vicinal 3J(H,H) Dihedral Relation Interface";

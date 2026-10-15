@@ -540,7 +540,7 @@ export class WorkbenchOrchestrator {
       merged.userClassification = effectiveClass;
     }
 
-    return SpectrumParser.upsertUserSignalAnnotation(spectrum, {
+    const updated = SpectrumParser.upsertUserSignalAnnotation(spectrum, {
       id: peakId,
       x: merged.x,
       y: merged.y,
@@ -566,6 +566,7 @@ export class WorkbenchOrchestrator {
       solventName: merged.solventName,
       provenance: merged.provenance,
     });
+    return {...updated,irProcessingApplied:false,dataVersion:(spectrum.dataVersion??0)+1,peaks:updated.peaks.map(p=>p.id===peakId?{...p,...patch,manualEdited:true,userModified:true}:p)};
   }
 
   /**

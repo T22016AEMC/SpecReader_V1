@@ -1,3 +1,5 @@
+import {prepareIR,refreshIRSnapshot} from './engines/scientificEngines/irSignalProcessing';
+import type {IRManualSettings} from './engines/scientificEngines/irManualBaseline';
 import type {ExtendedSpectrumModality} from './types/spectrum';
 import React, { useMemo, useState } from "react";
 import {
@@ -217,17 +219,22 @@ export default function App() {
   // 4. Mode A 第 1 頁：手動訊號標記與編輯狀態
   // ============================================================================
   const [selectedPeakId, setSelectedPeakId] = useState<string | null>(null);
+  const [irBaselineDraft,setIrBaselineDraft]=useState<IRManualSettings|undefined>();
+  const [newExchangeable,setNewExchangeable]=useState(false);
+  const [newIRShape,setNewIRShape]=useState('AUTO');
+  const [newIRStart,setNewIRStart]=useState('');
+  const [newIREnd,setNewIREnd]=useState('');
   const [newPeakX, setNewPeakX] = useState<string>("");
   const [newPeakY, setNewPeakY] = useState<string>("65");
   const [newPeakSignalDirection, setNewPeakSignalDirection] = useState<
     "PEAK_TOP" | "ABSORPTION_VALLEY" | "SHOULDER" | "ION_BAR"
   >("ABSORPTION_VALLEY");
   const [newPeakMultiplicity, setNewPeakMultiplicity] =
-    useState<SpectralPeak["multiplicity"]>("s");
-  const [newPeakIntegral, setNewPeakIntegral] = useState<string>("1");
+    useState<SpectralPeak["multiplicity"]>("unresolved");
+  const [newPeakIntegral, setNewPeakIntegral] = useState<string>("");
   const [newPeakJValues, setNewPeakJValues] = useState<string>("");
   const [newPeakCarbonType, setNewPeakCarbonType] =
-    useState<SpectralPeak["carbonType"]>("CH");
+    useState<SpectralPeak["carbonType"]>("Unknown");
   const [newPeakAssignment, setNewPeakAssignment] = useState<string>("");
   const [newPeakClass, setNewPeakClass] =
     useState<SpectralPeak["userClassification"]>("COMPOUND");
@@ -292,6 +299,7 @@ export default function App() {
     mod: ExtendedModality,
     updated: ExperimentalSpectrumData | undefined
   ) => {
+    if(mod==='IR'&&updated?.irManualSettings)updated=refreshIRSnapshot(updated,spectra.IR,rankedCandidates.map(c=>c.smiles).join('|'));
     const tagged = updated
       ? {
           ...updated,
@@ -723,6 +731,7 @@ export default function App() {
         }
       );
 
+      if(mod==='IR')setIrBaselineDraft(undefined);
       updateSpectrumForModality(mod, parsed);
       handleSelectModality(mod);
       setCalibrationMessage(null);
@@ -758,6 +767,19 @@ export default function App() {
   };
 
   // 第 1 頁：直接點擊原始圖片標記訊號（僅記錄原始像素座標與訊號方向，若尚未校正則 isCalibrated=false）
+  const [manualPeakError,setManualPeakError]=useState('');
+  const decorateManualPeak=(updated:ExperimentalSpectrumData,original:ExperimentalSpectrumData,x:number):ExperimentalSpectrumData|null=>{
+    const marker=updated.peaks.find(p=>!original.peaks.some(o=>o.id===p.id))??updated.peaks.find(p=>Math.abs(p.x-x)<.05);
+    if(!marker)return updated;
+    if(focusedModality==='IR'&&newIRShape!=='AUTO'){
+      const start=Number(newIRStart),end=Number(newIREnd);
+      if(newIRShape==='broad'&&(!newIRStart||!newIREnd||!Number.isFinite(start)||!Number.isFinite(end)||start===end)){setManualPeakError('寬峰必須提供有效的起點與終點，不能只標峰頂。');return null;}
+      const pixel=original.sourceType==='IMAGE_EXPERIMENTAL'&&!SpectrumParser.isSpectrumCalibrated(original);
+      updated=WorkbenchOrchestrator.updatePeak(updated,marker.id,{shape:newIRShape as SpectralPeak['shape'],isBroad:newIRShape==='broad',userOverride:true,manualEdited:true,...(newIRStart&&newIREnd?{observedRange:[Math.min(start,end),Math.max(start,end)] as [number,number],rangeCoordinateSpace:pixel?'PIXEL':'PHYSICAL',width:Math.abs(end-start),fwhm:newIRShape==='broad'?Math.abs(end-start):undefined}:{})});
+    }
+    if(focusedModality==='1H_NMR'&&newExchangeable)updated=WorkbenchOrchestrator.updatePeak(updated,marker.id,{isExchangeable:true});
+    setManualPeakError('');return updated;
+  };
   const handleMarkPeakFromImage = (params: {
     pixelX: number;
     pixelY: number;
@@ -779,7 +801,7 @@ export default function App() {
         focusedModality === "1H_NMR" ? newPeakMultiplicity : undefined,
       integral:
         focusedModality === "1H_NMR"
-          ? parseFloat(newPeakIntegral) || 1
+          ? Number.isFinite(parseFloat(newPeakIntegral))&&parseFloat(newPeakIntegral)>0?parseFloat(newPeakIntegral):undefined
           : undefined,
       carbonType:
         focusedModality === "13C_NMR" ? newPeakCarbonType : undefined,
@@ -791,7 +813,9 @@ export default function App() {
       userClassification: newPeakClass,
     });
 
-    updateSpectrumForModality(focusedModality, updated);
+    const decorated=decorateManualPeak(updated,spec,params.physicalX);
+    if(!decorated)return;
+    updateSpectrumForModality(focusedModality,decorated);
 
     const newestPeak = updated.peaks.find(
       (pk) => pk.pixelX === params.pixelX && pk.pixelY === params.pixelY
@@ -860,7 +884,7 @@ export default function App() {
         focusedModality === "1H_NMR" ? newPeakMultiplicity : undefined,
       integral:
         focusedModality === "1H_NMR"
-          ? parseFloat(newPeakIntegral) || 1
+          ? Number.isFinite(parseFloat(newPeakIntegral))&&parseFloat(newPeakIntegral)>0?parseFloat(newPeakIntegral):undefined
           : undefined,
       carbonType:
         focusedModality === "13C_NMR" ? newPeakCarbonType : undefined,
@@ -870,7 +894,9 @@ export default function App() {
       userClassification: newPeakClass,
     });
 
-    updateSpectrumForModality(focusedModality, updated);
+    const decorated=decorateManualPeak(updated,spec,physicalX);
+    if(!decorated)return;
+    updateSpectrumForModality(focusedModality,decorated);
     const newestPeak = updated.peaks.find(
       (pk) => Math.abs(pk.x - snapped.x) < 1e-4
     );
@@ -930,7 +956,7 @@ export default function App() {
       .map((s) => parseFloat(s.trim()))
       .filter((n) => Number.isFinite(n) && n > 0);
 
-    const updated = WorkbenchOrchestrator.addManualPeak(spec, {
+    let updated = WorkbenchOrchestrator.addManualPeak(spec, {
       x: xNum,
       y: yNum,
       pixelX: isImg && !isAlreadyCalibrated ? Math.round(xNum) : undefined,
@@ -941,7 +967,7 @@ export default function App() {
         focusedModality === "1H_NMR" ? newPeakMultiplicity : undefined,
       integral:
         focusedModality === "1H_NMR"
-          ? parseFloat(newPeakIntegral) || 1
+          ? Number.isFinite(parseFloat(newPeakIntegral))&&parseFloat(newPeakIntegral)>0?parseFloat(newPeakIntegral):undefined
           : undefined,
       jValues:
         focusedModality === "1H_NMR" && jArr.length > 0 ? jArr : undefined,
@@ -951,9 +977,18 @@ export default function App() {
       userClassification: newPeakClass,
     });
 
-    updateSpectrumForModality(focusedModality, updated);
+    const decorated=decorateManualPeak(updated,spec,xNum);if(!decorated)return;
+    updateSpectrumForModality(focusedModality,decorated);
     setNewPeakX("");
     setNewPeakAssignment("");
+  };
+
+  const applyIRSettings=(draft:IRManualSettings)=>{
+    const source=spectra.IR;if(!source)return;
+    const revision=(source.irManualSettings?.revision??0)+1;
+    const settings={...draft,revision};
+    updateSpectrumForModality('IR',{...source,irManualSettings:settings,irProcessingApplied:false});
+    setIrBaselineDraft(settings);
   };
 
   // 第 1 頁：更新單一標記屬性
@@ -1738,7 +1773,6 @@ export default function App() {
 
                       <SpectrumViewer
                         spectrum={currentSpectrum}
-                        onIRSettingsChange={settings=>{setSpectra(prev=>({...prev,[focusedModality]:{...currentSpectrum,irManualSettings:settings,irProcessingApplied:false}}));}}
                         selectedPeakId={selectedPeakId}
                         onSelectPeak={(pk) => setSelectedPeakId(pk.id)}
                         imageInteractionMode="MARK_PEAK"
@@ -1808,6 +1842,7 @@ export default function App() {
                           onSubmit={handleAddManualPeak}
                           className="mt-3 grid grid-cols-2 gap-2 rounded-lg border border-slate-800 bg-slate-950/90 p-2.5 text-xs sm:grid-cols-4"
                         >
+
                           <div>
                             <label className="text-[10px] text-slate-400">
                               {currentSpectrum.sourceType ===
@@ -1876,6 +1911,10 @@ export default function App() {
                               新增標記
                             </button>
                           </div>
+                          {focusedModality==='IR'&&<div className="col-span-full flex gap-2 items-center"><label>峰型 <select aria-label="IR 人工峰型" className="bg-slate-900" value={newIRShape} onChange={e=>setNewIRShape(e.target.value)}><option value="AUTO">自動判斷</option><option value="sharp">一般／尖峰</option><option value="broad">寬峰</option><option value="shoulder">重疊峰／肩峰</option></select></label><input aria-label="IR 寬峰起點" placeholder="範圍起點" type="number" step="any" className="w-24 bg-slate-900" value={newIRStart} onChange={e=>setNewIRStart(e.target.value)} required={newIRShape==='broad'}/><input aria-label="IR 寬峰終點" placeholder="範圍終點" type="number" step="any" className="w-24 bg-slate-900" value={newIREnd} onChange={e=>setNewIREnd(e.target.value)} required={newIRShape==='broad'}/><span>未校正圖片填 px；校正後填 cm⁻¹。寬峰需提供區間。</span></div>}
+                          {focusedModality==='1H_NMR'&&<div className="col-span-full flex gap-2 text-xs"><label>相對積分 <input aria-label="人工 NMR 相對積分" className="w-16 bg-slate-900" type="number" min="0" step="any" value={newPeakIntegral} onChange={e=>setNewPeakIntegral(e.target.value)}/></label><label>多重性 <select aria-label="人工 NMR 多重性" className="bg-slate-900" value={newPeakMultiplicity??'unresolved'} onChange={e=>setNewPeakMultiplicity(e.target.value as SpectralPeak['multiplicity'])}>{['unresolved','s','d','t','q','quint','sext','sept','m','br s'].map(v=><option key={v} value={v}>{v==='unresolved'?'未知':v}</option>)}</select></label><label>J (Hz) <input aria-label="人工 NMR J" className="w-20 bg-slate-900" value={newPeakJValues} onChange={e=>setNewPeakJValues(e.target.value)}/></label><label><input aria-label="人工 NMR 可交換" type="checkbox" checked={newExchangeable} onChange={e=>setNewExchangeable(e.target.checked)}/>可交換 OH／NH</label></div>}
+                          {focusedModality==='13C_NMR'&&<label className="col-span-full">額外 DEPT／APT 指認（選填） <select aria-label="人工碳 DEPT 指認" className="bg-slate-900" value={newPeakCarbonType??'Unknown'} onChange={e=>setNewPeakCarbonType(e.target.value as SpectralPeak['carbonType'])}>{['Unknown','CH','CH2','CH3','C'].map(v=><option key={v} value={v}>{v==='Unknown'?'未提供；一般去耦':v}</option>)}</select></label>}
+                          {manualPeakError&&<p className="col-span-full text-amber-300" role="status">{manualPeakError}</p>}
                         </form>
 
                         {/* 標記列表表格 */}
@@ -2407,6 +2446,9 @@ export default function App() {
 
                       <SpectrumViewer
                         spectrum={currentSpectrum}
+                        irDraftSettings={irBaselineDraft}
+                        onIRDraftChange={setIrBaselineDraft}
+                        onIRSettingsChange={applyIRSettings}
                         selectedPeakId={selectedPeakId}
                         onSelectPeak={(pk) => setSelectedPeakId(pk.id)}
                         height={300}
@@ -2419,6 +2461,9 @@ export default function App() {
                       <div className="lg:col-span-7 space-y-3">
                         <SpectrumViewer
                           spectrum={currentSpectrum}
+                        irDraftSettings={irBaselineDraft}
+                        onIRDraftChange={setIrBaselineDraft}
+                        onIRSettingsChange={applyIRSettings}
                           selectedPeakId={selectedPeakId}
                           onSelectPeak={(pk) => setSelectedPeakId(pk.id)}
                           imageInteractionMode="CALIBRATE"
@@ -2566,6 +2611,7 @@ export default function App() {
                               <div className="mt-0.5 flex gap-1">
                                 <input
                                   type="number"
+                                  aria-label="校正點 A 像素 X"
                                   value={calibPointA.pixelX}
                                   onChange={(e) =>
                                     setCalibPointA((p) => ({
@@ -2577,6 +2623,7 @@ export default function App() {
                                 />
                                 <input
                                   type="number"
+                                  aria-label="校正點 A 像素 Y"
                                   value={calibPointA.pixelY}
                                   onChange={(e) =>
                                     setCalibPointA((p) => ({
@@ -2595,7 +2642,8 @@ export default function App() {
                               <input
                                 type="number"
                                 step="any"
-                                value={calibPointA.realX}
+                                aria-label="校正點 A 物理波數"
+                                  value={calibPointA.realX}
                                 onChange={(e) =>
                                   setCalibPointA((p) => ({
                                     ...p,
@@ -2634,6 +2682,7 @@ export default function App() {
                               <div className="mt-0.5 flex gap-1">
                                 <input
                                   type="number"
+                                  aria-label="校正點 B 像素 X"
                                   value={calibPointB.pixelX}
                                   onChange={(e) =>
                                     setCalibPointB((p) => ({
@@ -2645,6 +2694,7 @@ export default function App() {
                                 />
                                 <input
                                   type="number"
+                                  aria-label="校正點 B 像素 Y"
                                   value={calibPointB.pixelY}
                                   onChange={(e) =>
                                     setCalibPointB((p) => ({
@@ -2663,7 +2713,8 @@ export default function App() {
                               <input
                                 type="number"
                                 step="any"
-                                value={calibPointB.realX}
+                                aria-label="校正點 B 物理波數"
+                                  value={calibPointB.realX}
                                 onChange={(e) =>
                                   setCalibPointB((p) => ({
                                     ...p,
@@ -3378,6 +3429,8 @@ export default function App() {
                 </div>
 
                 {/* =========================================================== */}
+                {spectra.IR?.irAnalysisSnapshot&&<div className="text-xs text-amber-200" data-testid="ir-analysis-version" data-version={spectra.IR.irAnalysisSnapshot.settingsVersion} data-curve-signature={spectra.IR.irAnalysisSnapshot.curveSignature}>IR 已使用設定 v{spectra.IR.irAnalysisSnapshot.settingsVersion} · {spectra.IR.irAnalysisSnapshot.curvePoints} 個相對吸收數值／{spectra.IR.irAnalysisSnapshot.peakCount} 個峰 · {spectra.IR.irAnalysisSnapshot.featureChanged?'峰特徵已更新':'設定已使用，峰特徵未實質改變'} · {spectra.IR.irAnalysisSnapshot.previousRankingKey===rankedCandidates.map(c=>c.smiles).join('|')?'證據不足以改變候選順序':'候選順序已重新計算'}</div>}
+                {!spectra.IR&&!spectra['1H_NMR']&&!spectra['13C_NMR']&&(spectra.MS||auxSpectraMap['MS/MS']||auxSpectraMap['ToF-SIMS'])&&<p className="text-xs text-amber-200">本版本可利用 MS 質量、可能分子式及碎片資訊提供結構限制，但尚無法僅憑 MS 資料可靠確定完整分子結構，建議搭配 IR 或 NMR。</p>}
                 {/* 第二部分：候選結構生成、正反證據鏈與排序 (Candidate Structures) */}
                 {/* =========================================================== */}
                 <div className="rounded-xl border border-slate-800 bg-slate-900/90 p-4 space-y-4">
@@ -3395,7 +3448,7 @@ export default function App() {
                     </span>
                   </div>
 
-                  <details className="text-xs text-slate-400"><summary>De novo 搜尋狀態與界限</summary>{solvedConstraintSpace.solverLog.filter(s=>s.startsWith('De novo')).map((s,i)=><p key={i}>{s}</p>)}</details>
+                  <details className="text-xs text-slate-400"><summary>De novo 搜尋狀態與界限</summary><p>獨立原子／鍵枚舉目前支援中性 C/N/O/F/Cl/Br，至多九重原子、450 ms／36 候選；不支援的較大組成會保留局部環境假設，資料庫命中不代表答案正確。</p>{solvedConstraintSpace.solverLog.filter(s=>s.startsWith('De novo')).map((s,i)=><p key={i}>{s}</p>)}</details>
                   {rankedCandidates.length === 0 ? (
                     <div className="rounded-xl border border-dashed border-slate-800 bg-slate-950/60 p-8 text-center">
                       <FlaskConical className="mx-auto h-8 w-8 text-cyan-400" />

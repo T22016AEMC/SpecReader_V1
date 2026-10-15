@@ -1,0 +1,26 @@
+import {test,expect} from '@playwright/test';
+test('IR 原圖第 2 頁五點預設顯示、實際拖曳、縮放、校正及版本更新',async({page})=>{
+ test.setTimeout(90000);
+ const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/');
+ // Small deterministic UI fixture, not an experimental spectrum or accuracy test.
+ const image=await page.evaluate(()=>{const c=document.createElement('canvas');c.width=1000;c.height=600;const x=c.getContext('2d')!;x.fillStyle='white';x.fillRect(0,0,1000,600);x.strokeStyle='black';x.strokeRect(80,40,870,490);x.font='16px sans-serif';x.fillStyle='black';x.fillText('4000',80,565);x.fillText('400',925,565);x.strokeStyle='#1455dd';x.lineWidth=2;x.beginPath();for(let px=82;px<=948;px++){const y=115+90*Math.exp(-Math.pow((px-280)/60,2))+150*Math.exp(-Math.pow((px-650)/12,2))+6*Math.sin(px/20);if(px===82)x.moveTo(px,y);else x.lineTo(px,y);}x.stroke();return c.toDataURL('image/png');});
+ await page.locator('input[type=file]').first().setInputFiles({name:'engineering-original-ir.png',mimeType:'image/png',buffer:Buffer.from(image.split(',')[1],'base64')});
+ await expect(page.getByTestId('ir-calibration-panel')).toHaveCount(0);await page.getByRole('button',{name:/^第 2 頁.*座標校正/}).click();
+ const handles=page.locator('[aria-label^="原圖基線控制點"]');await expect(handles).toHaveCount(5);await expect(handles.first()).toBeVisible();await expect(page.getByTestId('ir-baseline-line')).toHaveAttribute('stroke-width','6');await page.screenshot({path:'validation/desktop-ir-image-initial.png'});
+ const original=page.getByAltText('engineering-original-ir.png',{exact:true});await expect(original).toHaveAttribute('src',image);
+ const svg=page.locator('svg').filter({has:page.getByLabel('原圖基線控制點 1')});
+ const drag=async(i:number,dx:number,dy:number)=>{const p=page.getByLabel(`原圖基線控制點 ${i}`);await p.scrollIntoViewIfNeeded();const old=await p.getAttribute('data-y'),box=await p.boundingBox();if(!box)throw Error('Missing baseline point');expect(await page.evaluate(({x,y})=>document.elementFromPoint(x,y)?.getAttribute('aria-label'),{x:box.x+box.width/2,y:box.y+box.height/2})).toBe(`原圖基線控制點 ${i}`);await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();await page.mouse.move(box.x+box.width/2+dx,box.y+box.height/2+dy,{steps:4});await page.mouse.up();expect(await p.getAttribute('data-y')).not.toBe(old);};
+ const lineBefore=await page.getByTestId('ir-baseline-line').getAttribute('points');for(let i=1;i<=5;i++)await drag(i,i===5?-8:8,12);expect(await page.getByTestId('ir-baseline-line').getAttribute('points')).not.toBe(lineBefore);
+ await svg.screenshot({path:'validation/desktop-ir-image-dragged.png'});
+ // Dragging a baseline must not consume either calibration point.
+ await expect(page.getByLabel('校正點 A 像素 X',{exact:true})).toHaveValue('120');await page.getByTitle('放大座標區間',{exact:true}).click();await drag(3,8,10);await page.getByTitle('重置縮放',{exact:true}).click();
+ await page.getByLabel('校正點 A 物理波數',{exact:true}).fill('4000');await page.getByLabel('校正點 B 物理波數',{exact:true}).fill('400');
+ await svg.scrollIntoViewIfNeeded();const box=await svg.boundingBox();if(!box)throw Error('Missing original image SVG');await svg.click({position:{x:80/1000*box.width,y:530/600*box.height}});await svg.click({position:{x:950/1000*box.width,y:530/600*box.height}});
+ await page.getByRole('button',{name:/套用兩點線性座標校正並轉換/}).click();await page.getByRole('button',{name:'重設五點基線',exact:true}).click();await expect(handles).toHaveCount(5);
+ await page.getByLabel('IR 吸收方向').selectOption('DOWN');await page.getByRole('button',{name:'套用 IR 設定並更新分析',exact:true}).click();const applied=await page.getByLabel('原圖基線控制點 3').getAttribute('data-y');
+ await page.getByRole('button',{name:/^第 3 頁.*化學判讀/}).click();const report=page.getByTestId('ir-analysis-version');await expect(report).toBeVisible();const signature=await report.getAttribute('data-curve-signature');expect(signature).not.toBe('[]');await expect(page.getByText('區間重疊／峰型／相對強度／伴隨峰競爭相容度',{exact:false}).first()).toBeVisible();
+ await page.getByRole('button',{name:/^第 2 頁.*座標校正/}).click();await expect(page.getByLabel('原圖基線控制點 3')).toHaveAttribute('data-y',applied!);await drag(3,0,15);await expect(page.getByTestId('ir-draft-status')).toContainText('預覽');
+ await page.getByRole('button',{name:'套用 IR 設定並更新分析',exact:true}).click();await page.getByRole('button',{name:/^第 3 頁.*化學判讀/}).click();expect(await report.getAttribute('data-curve-signature')).not.toBe(signature);
+ await page.getByRole('button',{name:/^第 2 頁.*座標校正/}).click();await page.getByRole('button',{name:'停用基線並重新分析',exact:true}).click();await expect(page.getByLabel('啟用 IR 五點基線')).not.toBeChecked();
+ await expect(page.getByLabel('IR 分析視圖')).toHaveCount(0);await expect(page.getByText('向上峰（幾何鏡像）',{exact:true})).toHaveCount(0);await expect(original).toHaveAttribute('src',image);await page.screenshot({path:'validation/desktop-ir-image-baseline.png'});expect(errors).toEqual([]);
+});

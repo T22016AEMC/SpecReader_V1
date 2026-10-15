@@ -14,3 +14,5 @@
 |研究，未整合|[SIRIUS](https://github.com/sirius-ms/sirius) LGPL-3 程式、服務／模型另有條件，DOI [10.1038/s41592-019-0344-8](https://doi.org/10.1038/s41592-019-0344-8)；[CFM-ID 官方程式](https://bitbucket.org/wishartlab/cfm-id-code/)，DOI [10.1021/acs.analchem.1c01465](https://doi.org/10.1021/acs.analchem.1c01465)|沒有 SIRIUS／CFM-ID 模型。CFM-ID 不捏造 GitHub 主庫；權重與再散布條件未完成確認，所以未導入。|
 
 工程依據：`tests/v11Engineering.test.ts`（運算／圖片校正／圖有效性／正式呼叫）、既有 NMR／MS 回歸與桌面測試。這些不是獨立科學準確率驗收。教材群頻率與經驗 NMR 參數沿用 V1 的來源與限制，未宣稱逐條新校準。
+
+修復版（2026-10-15）：新增知識為自行整理的群頻率／局部原子環境區間，來源 [MSU IR 教材](https://www2.chemistry.msu.edu/faculty/reusch/VirtTxtJml/Spectrpy/InfraRed/infrared.htm)／[MSU NMR 教材](https://www2.chemistry.msu.edu/faculty/reusch/VirtTxtJml/Spectrpy/nmr/nmr1.htm)，不複製整份教材、分子參考譜或第三方程式。`irBandKnowledge.ts` 記錄各列來源與限制，矽氧烷沿用 Socrates 群頻率教科書依據。`atomicChemicalEnvironment.ts`／`nmrAtomicEnvironmentModel.ts` 自行實作圖環境與經驗參數，未整合量子後端。無新依賴或模型授權變更。`tests/irNmrRepairFlow.test.ts` 及原圖桌面互動案例只驗證運作與資料傳遞。

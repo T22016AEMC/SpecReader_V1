@@ -1868,6 +1868,7 @@ export class SpectrumParser {
       );
       const physY = Number((ann.physicalY ?? prevPeak?.y ?? 75).toFixed(1));
       return {
+        ...prevPeak,
         id: ann.id,
         x: physX,
         y: physY,

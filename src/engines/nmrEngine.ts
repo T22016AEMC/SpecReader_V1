@@ -1,3 +1,4 @@
+import {inferSignalEnvironments} from './scientificEngines/atomicChemicalEnvironment';
 import {findEthylPairs, findIsopropylPairs} from "./scientificEngines/nmrFragmentEvidence";
 import {
   CandidateNMRConsistencyAnalysis,
@@ -19,7 +20,7 @@ import {
   StructuralConstraints,
   StructuralMotifConstraint,
 } from "../types/spectrum";
-import { KNOWN_STRUCTURAL_LIBRARY, StructureParserAdapter } from "./chemistryEngine";
+import { StructureParserAdapter } from "./chemistryEngine";
 import { DataValidator } from "./dataValidator";
 import { ChemicalHardConstraintValidator } from "./scientificEngines/chemicalHardConstraintValidator";
 import {
@@ -29,7 +30,7 @@ import {
   NMRGraphPredictor,
   SpinCouplingCalculator,
   TRACE_IMPURITY_REFERENCE_TABLE,
-} from "./scientificEngines/nmrReferenceDatabase";
+} from "./scientificEngines/nmrAtomicEnvironmentModel";
 import { SpectrumParser } from "./spectrumParser";
 
 export interface NMRSolventReferenceEntry {
@@ -869,6 +870,15 @@ export class NMRAnalysisEngine {
       symmetrySummary += ` 注意：其中 ${missingIntegCount} 組訊號未提供積分值（標示為「積分：未知」）、${missingMultCount} 組未提供精確多重峰型，系統絕不以峰高自動捏造積分或預設為單峰 (s)。`;
     }
 
+    for(const env of environments){
+      const peak=spectrum.peaks.find(p=>Math.abs(p.x-env.shiftPpm)<.005);if(!peak)continue;
+      const hypotheses=inferSignalEnvironments('1H_NMR',peak,activeSolvent);
+      env.environmentHypotheses=hypotheses;
+      if(hypotheses.length)env.confidence=Math.min(env.confidence,Math.round(80*hypotheses[0].compatibility));
+      if(hypotheses.length)env.environmentLabel=hypotheses.slice(0,3).map(h=>h.label).join('／');
+      if(peak.isExchangeable!==undefined)env.isExchangeable=peak.isExchangeable;
+      env.alternativeExplanations=hypotheses.map(h=>h.label);
+    }
     const structuralConstraints = this.build1HNMRStructuralConstraints(
       spectrum,
       environments,
@@ -1405,6 +1415,9 @@ export class NMRAnalysisEngine {
           )
         : 0;
 
+    if(heteroaromaticConstraints?.status==='PRESENT'){
+      heteroaromaticConstraints={...heteroaromaticConstraints,status:'POSSIBLE',confidence:Math.min(65,heteroaromaticConstraints.confidence??65),supportingSignals:[...(heteroaromaticConstraints.supportingSignals??[]),'1D 位移與 J 只能支持競爭局部環境，未確認特定雜環骨架']};
+    }
     return {
       source: "1H_NMR",
       heteroaromaticConstraints,
@@ -1663,10 +1676,7 @@ export class NMRAnalysisEngine {
             : "脂肪族 sp³ 碳 (CH₃ / CH₂ / CH / C)";
       }
 
-      const isQuatSlow =
-        dept === "C" ||
-        (shift >= 164 && dept !== "CH") ||
-        (shift >= 132 && shift < 164 && (pk.y ?? 80) <= 65 && dept === "Unknown");
+      const isQuatSlow = dept === "C";
 
       const hybridization: CarbonEnvironment["hybridization"] =
         shift >= 100 && shift <= 225
@@ -1742,6 +1752,13 @@ export class NMRAnalysisEngine {
       }
     }
 
+    for(const env of environments){
+      const peak=spectrum.peaks.find(p=>Math.abs(p.x-env.shiftPpm)<.005);if(!peak)continue;
+      const hypotheses=inferSignalEnvironments('13C_NMR',peak,spectrum.nmrSolvent??'Unknown');
+      env.environmentHypotheses=hypotheses;
+      if(hypotheses.length)env.confidence=Math.min(env.confidence,Math.round(80*hypotheses[0].compatibility));
+      if(hypotheses.length)env.assignment=hypotheses.slice(0,3).map(h=>h.label).join('／');
+    }
     const summary: Carbon13SummaryAnalysis = {
       observedSignalCount: environments.length,
       uniqueCarbonCount: environments.length,
@@ -2045,77 +2062,11 @@ export class NMRAnalysisEngine {
       const graphPred = NMRGraphPredictor.predict1HFromStructureGraph(structure, {
         solvent,
         spectrometerFrequencyMHz: freqMHz,
+        temperatureK:options?.temperatureK,
       });
       if (graphPred.environments.length > 0) {
         peaks = graphPred.peaks;
         graphEnvironments = graphPred.environments;
-      }
-    }
-
-    if (peaks.length === 0 && hasConnectivity) {
-      const topology = structure.integrity?.ringSubstitutionTopology ?? "unknown";
-      const groups = structure.detectedFunctionalGroups.join(" ").toLowerCase();
-      const known = KNOWN_STRUCTURAL_LIBRARY.find(
-        (k) => smiles && k.smilesAliases.some((a) => a.toLowerCase() === smiles.toLowerCase())
-      );
-
-      if (known) {
-        known.keyH1Shifts.forEach((sh, idx) => {
-          peaks.push({
-            id: `pred-h1-${idx}`,
-            x: sh.ppm,
-            y: Math.min(100, 42 + sh.integ * 16),
-            integration: sh.integ,
-            multiplicity: sh.mult as any,
-            jValues: sh.j ? [sh.j] : [],
-            assignment: `[經驗模型預測] δ ${sh.ppm} ppm (${sh.integ}H, ${sh.mult})`,
-          });
-        });
-      } else if (groups.includes("芳香")) {
-        if (topology === "1,4-para") {
-          peaks.push(
-            {
-              id: "p-h1-ar-para1",
-              x: 7.78,
-              y: 85,
-              integration: 2,
-              multiplicity: "d",
-              jValues: [8.5],
-              assignment: "[經驗區域預測] 1,4-對位雙取代芳香環低場 Ar-H (2H, d)",
-            },
-            {
-              id: "p-h1-ar-para2",
-              x: 7.02,
-              y: 82,
-              integration: 2,
-              multiplicity: "d",
-              jValues: [8.5],
-              assignment: "[經驗區域預測] 1,4-對位雙取代芳香環高場 Ar-H (2H, d)",
-            }
-          );
-        } else {
-          peaks.push({
-            id: "p-h1-ar-general",
-            x: 7.42,
-            y: 80,
-            integration: null,
-            multiplicity: null,
-            jValues: [],
-            assignment:
-              "[經驗區域預測] 芳香環質子區 Ar-H (6.8–8.2 ppm · 精確裂分與積分取決於取代位置，標記為 Unknown)",
-          });
-        }
-      } else if ((structure.atomCounts.H || 0) > 0) {
-        peaks.push({
-          id: "p-h1-aliph",
-          x: 1.35,
-          y: 90,
-          integration: null,
-          multiplicity: null,
-          jValues: [],
-          assignment:
-            "[經驗區域預測] 脂肪族 sp³ C-H 質子區 (0.8–2.0 ppm · 精確裂分與積分標記為 Unknown)",
-        });
       }
     }
 
@@ -2175,42 +2126,11 @@ export class NMRAnalysisEngine {
     if (hasConnectivity) {
       const graphPred = NMRGraphPredictor.predict13CFromStructureGraph(structure, {
         solvent,
+        temperatureK:options?.temperatureK,
       });
       if (graphPred.environments.length > 0) {
         peaks = graphPred.peaks;
         graphEnvironments = graphPred.environments;
-      }
-    }
-
-    if (peaks.length === 0 && hasConnectivity) {
-      const known = KNOWN_STRUCTURAL_LIBRARY.find(
-        (k) => smiles && k.smilesAliases.some((a) => a.toLowerCase() === smiles.toLowerCase())
-      );
-      if (known) {
-        known.keyC13Shifts.forEach((ppm, idx) => {
-          peaks.push({
-            id: `pred-c13-${idx}`,
-            x: ppm,
-            y: ppm > 155 ? 58 : 92,
-            deptType:
-              ppm > 185 && known.functionalGroups.some((g) => g.includes("醛"))
-                ? "CH"
-                : ppm > 135
-                ? "C"
-                : ppm > 105
-                ? "CH"
-                : "CH3",
-            assignment: `[經驗模型預測] ¹³C δ ${ppm} ppm`,
-          });
-        });
-      } else if ((structure.atomCounts.C || 0) > 0) {
-        peaks.push({
-          id: "p-c13-al",
-          x: 24.5,
-          y: 78,
-          deptType: "Unknown",
-          assignment: "[經驗區域預測] 脂肪族 sp³ 碳區 (10–45 ppm)",
-        });
       }
     }
 

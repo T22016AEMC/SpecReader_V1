@@ -10,7 +10,7 @@ import { IntegratedAnalysisBundle } from "../chemicalFeatureEngine";
 import { ChemistryEngine, StructureParserAdapter } from "../chemistryEngine";
 import { NMRAnalysisEngine } from "../nmrEngine";
 import { ChemicalHardConstraintValidator } from "../scientificEngines/chemicalHardConstraintValidator";
-import { NMRGraphPredictor } from "../scientificEngines/nmrReferenceDatabase";
+import { NMRGraphPredictor } from "../scientificEngines/nmrAtomicEnvironmentModel";
 import { AssembledCandidateGraph } from "./graphAssemblyEngine";
 
 export interface CandidateModalityConsistencyEvaluation {

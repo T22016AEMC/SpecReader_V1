@@ -343,6 +343,11 @@ export interface Signal {
 }
 
 export interface SpectralPeak {
+  isExchangeable?:boolean;
+  observedRange?:[number,number];
+  rangeCoordinateSpace?:'PIXEL'|'PHYSICAL';
+  environmentHypotheses?: import('../engines/scientificEngines/atomicChemicalEnvironment').SignalEnvironmentHypothesis[];
+
   asymmetry?: number;
   relativeArea?: number;
   jCouplingHz?: number;
@@ -783,6 +788,9 @@ export interface ExperimentalSpectrumData {
   irPixelCurve?: DataPoint[];
   irMirroredPoints?: DataPoint[];
   irCorrectedPoints?: DataPoint[];
+  nmrCorrelations?: import('../engines/scientificEngines/atomicChemicalEnvironment').NMRCorrelationConstraint[];
+  irBaselinePoints?: DataPoint[];
+  irAnalysisSnapshot?: {settingsVersion:number;curveSignature:string;featureSignature:string;featureChanged:boolean;previousRankingKey:string;sourceVersion:number;curvePoints:number;peakCount:number};
   irDataQuality?: number;
   irProcessingApplied?: boolean;
   irProcessingWarnings?: string[];
@@ -980,6 +988,9 @@ export interface KarplusModel {
 }
 
 export interface ProtonEnvironment {
+  atomicEnvironment?: import('../engines/scientificEngines/atomicChemicalEnvironment').AtomicChemicalEnvironment[];
+  environmentHypotheses?: import('../engines/scientificEngines/atomicChemicalEnvironment').SignalEnvironmentHypothesis[];
+
   id: string;
   atomId?: string;
   atomIndices?: number[];
@@ -1160,6 +1171,9 @@ export type CandidateDispositionCategory =
   | "INCONCLUSIVE_INSUFFICIENT_EVIDENCE";
 
 export interface CarbonEnvironment {
+  atomicEnvironment?: import('../engines/scientificEngines/atomicChemicalEnvironment').AtomicChemicalEnvironment[];
+  environmentHypotheses?: import('../engines/scientificEngines/atomicChemicalEnvironment').SignalEnvironmentHypothesis[];
+
   id: string;
   atomId?: string;
   atomIndices?: number[];

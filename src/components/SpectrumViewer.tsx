@@ -1,5 +1,5 @@
-import {prepareIR} from '../engines/scientificEngines/irSignalProcessing';
-import {baselineAt,mirrorIR,inferIRDirection,type IRManualSettings} from '../engines/scientificEngines/irManualBaseline';
+import {initialIRSettings,IRCalibrationPanel,IRBaselineHandles} from './IRCalibrationTools';
+import {type IRManualSettings} from '../engines/scientificEngines/irManualBaseline';
 import React, { useEffect, useMemo, useState } from "react";
 import {
   Crosshair,
@@ -59,12 +59,16 @@ interface SpectrumViewerProps {
   livePreviewMapPixelX?: ((pixelX: number) => number) | null;
   hideModeSwitchButtons?: boolean;
   onIRSettingsChange?: (settings:IRManualSettings)=>void;
+  irDraftSettings?:IRManualSettings;
+  onIRDraftChange?:(settings:IRManualSettings)=>void;
   height?: number;
 }
 
 export const SpectrumViewer: React.FC<SpectrumViewerProps> = ({
   spectrum: originalSpectrum,
   onIRSettingsChange,
+  irDraftSettings,
+  onIRDraftChange,
   overlaySpectrum,
   selectedPeakId,
   onSelectPeak,
@@ -81,23 +85,9 @@ export const SpectrumViewer: React.FC<SpectrumViewerProps> = ({
   hideModeSwitchButtons = false,
   height = 310,
 }) => {
-  const [irView,setIRView]=useState<'ORIGINAL'|'UP'|'CORRECTED'>('ORIGINAL');
-  const [draggingAnchor,setDraggingAnchor]=useState<number|null>(null);
-  const [baselineEdit,setBaselineEdit]=useState(false);
-  const [irDraft,setIRDraft]=useState<IRManualSettings|undefined>();
-  useEffect(()=>setIRDraft(undefined),[originalSpectrum.sourceId,originalSpectrum.fileName]);
-  const rawIR=originalSpectrum.irPixelCurve?originalSpectrum.points:originalSpectrum.rawExperimentalSnapshot?.rawPoints??originalSpectrum.points;
-  const settings=irDraft??originalSpectrum.irManualSettings??{direction:'AUTO' as const,anchors:[],enabled:false};
-  const direction=settings.direction==='AUTO'?(/transmitt|%t|透過/i.test(originalSpectrum.yUnit)?'DOWN':inferIRDirection(rawIR).direction):settings.direction;
-  const mirroredIR=mirrorIR(rawIR,direction);
-  const processedIR=useMemo(()=>originalSpectrum.modality==='IR'?prepareIR({...originalSpectrum,irProcessingApplied:false,irManualSettings:{...settings,enabled:settings.anchors.length===5&&new Set(settings.anchors.map(p=>p.x)).size===5}}):originalSpectrum,[originalSpectrum,irDraft]);
-  const spectrum=originalSpectrum.modality==='IR'&&irView!=='ORIGINAL'?{...processedIR,points:irView==='UP'?mirroredIR:processedIR.irCorrectedPoints??processedIR.points}:originalSpectrum;
-  const resetBaseline=()=>{
-    const sorted=mirroredIR.slice().sort((a,b)=>a.x-b.x);
-    if(sorted.length<5)return;
-    const anchors=Array.from({length:5},(_,i)=>({...sorted[Math.round(i*(sorted.length-1)/4)]}));
-    setIRDraft({...settings,anchors,enabled:false});setIRView('UP');setBaselineEdit(true);
-  };
+  const spectrum=originalSpectrum;
+  const settings=irDraftSettings??initialIRSettings(originalSpectrum);
+  const canEditIR=originalSpectrum.modality==='IR'&&!!onIRSettingsChange&&!!onIRDraftChange;
   const [showOverlay, setShowOverlay] = useState<boolean>(true);
   const [showPeakLabels, setShowPeakLabels] = useState<boolean>(true);
   const [showCalibrationGuides, setShowCalibrationGuides] =
@@ -287,19 +277,9 @@ export const SpectrumViewer: React.FC<SpectrumViewerProps> = ({
 
   return (
     <div className="rounded-xl border border-slate-800 bg-slate-950/95 p-3 shadow-inner">
-      {originalSpectrum.modality==='IR'&&onIRSettingsChange&&<div className="mb-2 flex flex-wrap gap-2 text-xs text-slate-300">
-        <select aria-label="IR 分析視圖" value={irView} onChange={e=>setIRView(e.target.value as typeof irView)} className="bg-slate-900"><option value="ORIGINAL">原始數值／原圖</option><option value="UP">向上峰（幾何鏡像）</option><option value="CORRECTED">基線校正預覽</option></select>
-        <select aria-label="IR 峰朝向" value={settings.direction} onChange={e=>{const next={...settings,direction:e.target.value as IRManualSettings['direction']};setIRDraft(next);onIRSettingsChange(next);}} className="bg-slate-900"><option value="AUTO">自動方向（請確認）</option><option value="UP">原峰朝上</option><option value="DOWN">原峰朝下</option></select>
-        <button onClick={resetBaseline}>重設五點基線</button>
-        <button onClick={()=>{setIRDraft({...settings,anchors:[],enabled:false});setBaselineEdit(true);setIRView('UP');}}>清除並選五點</button>
-        <button onClick={()=>{setBaselineEdit(!baselineEdit);setIRView('UP');}}>拖曳／點選五點</button>
-        <button disabled={settings.anchors.length!==5||new Set(settings.anchors.map(p=>p.x)).size!==5} onClick={()=>{const next={...settings,enabled:true};setIRDraft(next);onIRSettingsChange(next);setIRView('CORRECTED');setBaselineEdit(false);}}>套用基線並供重新分析</button>
-        <button onClick={()=>{setIRDraft({...settings,enabled:false,anchors:[]});onIRSettingsChange({...settings,enabled:false});}}>停用基線</button>
-        <span>相對幾何強度；不是吸光度。控制點穿過寬峰可能扣除真實吸收。</span>
-      </div>}
-      {originalSpectrum.modality==='IR'&&irView!=='ORIGINAL'&&<details className="text-xs text-slate-400 mb-2"><summary>峰型證據與資料品質</summary>{processedIR.irProcessingWarnings?.map((s,i)=><p key={i}>{s}</p>)}{processedIR.peaks.slice(0,16).map(p=><p key={p.id}>{p.x.toFixed(1)} cm⁻¹ · FWHM {p.fwhm?.toFixed(1)??'未量測'} · 面積 {p.area?.toFixed(2)??'未知'} · 相對峰高 {p.y.toFixed(1)} · S/N {p.signalToNoise?.toFixed(1)??'未知'}</p>)}</details>}
+      {canEditIR&&<IRCalibrationPanel s={spectrum} settings={settings} onDraft={onIRDraftChange!} onApply={onIRSettingsChange!}/>}
       {/* 頂部儀表列 */}
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-2">
+      <div className="relative mb-2 flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-2">
         <div className="flex flex-wrap items-center gap-2">
           <span className="rounded bg-cyan-500/15 px-2 py-0.5 font-mono text-xs font-bold text-cyan-300 border border-cyan-500/30">
             {spectrum.modality === "1H_NMR"
@@ -355,7 +335,7 @@ export const SpectrumViewer: React.FC<SpectrumViewerProps> = ({
 
         <div className="flex flex-wrap items-center gap-1.5">
           {hoverCoord && (
-            <span className="mr-1 inline-flex items-center gap-1 rounded bg-slate-900 px-2 py-0.5 font-mono text-[11px] text-cyan-300 border border-slate-800">
+            <span className="pointer-events-none absolute left-0 top-full z-20 inline-flex items-center gap-1 rounded bg-slate-900 px-2 py-0.5 font-mono text-[11px] text-cyan-300 border border-slate-800">
               <Crosshair className="h-3 w-3" />
               {hoverCoord.pixelX !== undefined ? (
                 <>
@@ -499,7 +479,7 @@ export const SpectrumViewer: React.FC<SpectrumViewerProps> = ({
             )}
           </button>
 
-          {showSvgChart && (
+          {(showSvgChart||isImageSpectrum) && (
             <>
               <button
                 type="button"
@@ -565,8 +545,8 @@ export const SpectrumViewer: React.FC<SpectrumViewerProps> = ({
             </div>
           )}
 
-          <div className="relative overflow-hidden rounded-lg border border-slate-800 bg-slate-950 flex justify-center">
-            <div className="relative inline-block w-full max-w-[960px]">
+          <div className="relative overflow-auto rounded-lg border border-slate-800 bg-slate-950" style={{maxHeight:650}}>
+            <div className="relative inline-block w-full" style={{width:`${zoomFactor*100}%`,maxWidth:zoomFactor===1?960:undefined}}>
               <img
                 src={imageSrc}
                 alt={spectrum.originalFileName || spectrum.fileName}
@@ -872,6 +852,7 @@ export const SpectrumViewer: React.FC<SpectrumViewerProps> = ({
                     </g>
                   );
                 })}
+                {canEditIR&&settings.coordinateSpace==='PIXEL'&&<IRBaselineHandles settings={settings} onChange={onIRDraftChange!} mapPoint={p=>p} unmapPoint={p=>p} width={imageDimensions.width} height={imageDimensions.height} bounds={{left:effectiveCalibration.plotLeftPx,right:effectiveCalibration.plotRightPx,top:effectiveCalibration.plotTopPx,bottom:effectiveCalibration.plotBottomPx}}/>}
               </svg>
             </div>
           </div>
@@ -913,10 +894,6 @@ export const SpectrumViewer: React.FC<SpectrumViewerProps> = ({
                   x: physX,
                   y: physY,
                 });
-                if(draggingAnchor!==null&&onIRSettingsChange){
-                  setDidDragPeak(true);
-                  setIRDraft({...settings,enabled:false,anchors:settings.anchors.map((p,i)=>i===draggingAnchor?{x:unmapX(relX),y:unmapY(relY)}:p)});
-                }
                 if (draggingPeakId && onMovePeakFromPlot) {
                   setDidDragPeak(true);
                   onMovePeakFromPlot(draggingPeakId, physX, physY);
@@ -926,11 +903,9 @@ export const SpectrumViewer: React.FC<SpectrumViewerProps> = ({
               }
             }}
             onMouseUp={() => {
-              setDraggingAnchor(null);
               if (draggingPeakId) setDraggingPeakId(null);
             }}
             onMouseLeave={() => {
-              setDraggingAnchor(null);
               setHoverCoord(null);
               setDraggingPeakId(null);
             }}
@@ -938,12 +913,6 @@ export const SpectrumViewer: React.FC<SpectrumViewerProps> = ({
               if (didDragPeak) {
                 setDidDragPeak(false);
                 return;
-              }
-              if(baselineEdit&&onIRSettingsChange){
-                const rect=e.currentTarget.getBoundingClientRect();
-                const point={x:unmapX((e.clientX-rect.left)/rect.width*svgWidth),y:unmapY((e.clientY-rect.top)/rect.height*svgHeight)};
-                const anchors=settings.anchors.length<5?[...settings.anchors,point]:settings.anchors;
-                setIRDraft({...settings,anchors,enabled:false});return;
               }
               if (!onMarkPeakFromPlot) return;
               const rect = e.currentTarget.getBoundingClientRect();
@@ -1223,9 +1192,7 @@ export const SpectrumViewer: React.FC<SpectrumViewerProps> = ({
             >
               {spectrum.xUnit} {isReversedX ? "(由高至低標準化學慣例)" : ""}
             </text>
-            {spectrum.modality==='IR'&&irView==='UP'&&settings.anchors.length===5&&new Set(settings.anchors.map(p=>p.x)).size===5&&<g>
-              <polyline fill="none" stroke="#fbbf24" strokeWidth="2" points={mirroredIR.map(p=>`${mapX(p.x)},${mapY(baselineAt(p.x,settings.anchors))}`).join(' ')}/>
-              {settings.anchors.map((p,i)=><circle key={i} aria-label={`基線控制點 ${i+1}`} cx={mapX(p.x)} cy={mapY(p.y)} r="7" fill="#fbbf24" onMouseDown={e=>{e.stopPropagation();setDraggingAnchor(i);setDidDragPeak(false);}}/>)}</g>}
+            {canEditIR&&!isImageSpectrum&&<IRBaselineHandles settings={settings} onChange={onIRDraftChange!} mapPoint={p=>({x:mapX(p.x),y:mapY(p.y)})} unmapPoint={p=>({x:unmapX(p.x),y:unmapY(p.y)})} width={svgWidth} height={svgHeight} bounds={{left:domain.minX,right:domain.maxX,top:domain.minY,bottom:domain.maxY}}/>}
           </svg>
         </div>
       )}

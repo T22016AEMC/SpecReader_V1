@@ -1,17 +1,14 @@
-# SpecReader V1.1 實際變更
+# V1.1 操作與科學資料流修復（工程版本 1.1.1）
 
-V1 基準：`e190a8d347fde24026f40c1b2cd8d5e92209ae04`。開發分支：`v1.1-scientific-core`；保留 `v1-baseline-e190a8d`。V0 原始 ZIP 未修改。
+修復分支 `fix/v11-ir-image-calibration-environments`，起點 `a58db3c`；保留 V1 基準 `v1-baseline-e190a8d` 及先前 V1.1 歷史。未修改 V0 或其他專案。
 
-- `spectrumParser.ts`／`irImageTrace.ts`：IR 直接擷取原圖像素，略過 Gemini 峰值來源；保留原圖與像素曲線，人工波數校正後送入分析。CSV／JCAMP 仍直接處理數值。
-- `irSignalProcessing.ts`／`irManualBaseline.ts`：預設幾何鏡像，保存原始尺度；五點非等距線性基線、端點常數延伸、保留負值。加入 FWHM、面積、相對面積、非對稱性、prominence、訊噪比。
-- `SpectrumViewer.tsx`／`App.tsx`：原有圖形區新增方向、原始／向上／校正視圖、五點選取／拖曳／重設／套用及峰型提示。拖曳只更新局部預覽，套用才更新正式分析來源。既有版面與流程保留。
-- `nmrReferenceDatabase.ts`：移除已知分子對通用 ¹H／¹³C 位移、多重性及 J 的特殊覆寫。參考資料不再改寫通用預測。
-- `globalPeakAssignment.ts`／`evidenceLedger.ts`／`predictionAndValidationFramework.ts`：以全域一對一配對替換貪婪配對；H 位移、多重性、相對積分與可選 J 共同影響排名。交換性缺峰不作固定重大扣分。
-- `deNovoGraphSearch.ts`／`deterministicStructureGenerator.ts`：在每次候選生成中加入原子與鍵的有界枚舉、鍵級增加及環閉合；RDKit MOL block 驗證與 canonical SMILES 去重。資料庫、舊片段組裝與 De novo 分別標示來源。
-- `candidateGenerator.ts`／`graphAssemblyEngine.ts`：只有明確使用者分子式作此層的元素硬限制；推估分子式不是唯一權威答案。
-- `evidenceLedger.ts`：IR 候選預測特徵直接比對實測峰位、寬度、形狀及相對幾何強度；訊噪比、面積、prominence、圖片品質與基線風險調整權重。完整有效掃描內缺少預期強羰基／三鍵區訊號只作弱反證，不適用 OH／NH。
-- MS/MS 匹配改用使用者 ppm／Da 容差；保留既有精確質量、加合、電荷、候選圖碎片與獨立 ToF-SIMS 路徑。未加入完整碰撞能量或表面產率模型。
-- 最後來源核對：IR 像素定位的初始波數範圍標記為待確認預設，不稱 AI 判讀；去重優先採 RDKit canonical SMILES，內建 WL signature 僅在 RDKit 不可用時降級使用。透射率峰表採幾何峰深而非取對數；透射率／圖片的強度只調整實測相對權重，不與預測吸光強度直接混合。
-- 伺服器健康版本更新為 `1.1.0`；公開 IR AI 數位化端點回傳受控提示，前端採本地像素擷取。
+- `SpectrumViewer.tsx`／`IRCalibrationTools.tsx`：移除第 1 頁基線控制；第 2 頁原圖 SVG 預設顯示五點與連線，Pointer Capture 拖曳 X/Y。控制點位於疊加層最上方；懸停座標資訊改為浮層，避免工具列換行移動畫布、導致滑鼠誤點校正。縮放沿用同一圖片座標。
+- `App.tsx`：兩個第 2 頁檢視器均接入草稿與正式設定回呼。草稿跨頁保留，套用才更新正式來源；座標校正、標峰與設定更新經同一版本化流程。第 3 頁顯示設定版本、訊號／特徵變化與候選順序狀態。
+- `irManualBaseline.ts`／`irSignalProcessing.ts`：原圖不翻轉；曲線與五點同時映射物理座標，使用有符號吸收方向差值，不取絕對值。保留原始、基線與校正訊號；停用五點使用原尺度參考背景。圖片無可靠 Y 刻度只作相對強度。
+- `irBandKnowledge.ts`／`irEngine.ts`／`evidenceLedger.ts`：區間、化學環境、峰型／寬度、相對強度與不同伴隨峰共同產生競爭假設；候選分子圖選出同一知識庫可支持的振動特徵，再與實測比較。每原始峰只計一次。IR 假設不再變成 REQUIRED／EXCLUDED 或無覆蓋範圍的羰基 ABSENT 硬限制。
+- 人工 IR 標峰新增尖峰／寬峰／肩峰與寬峰起訖；`workbenchOrchestrator.ts` 修復更新時遺失 shape／width／range／override 的問題，`spectrumParser.ts` 校正時保留標記欄位。
+- `nmrAtomicEnvironmentModel.ts`：原圖環境預測移至明確模組；移除 `nmrEngine.ts` 已知分子完整光譜回退，未知溶劑不再預設 CDCl3。舊 `nmrReferenceDatabase.ts` 只作相容匯出。
+- `atomicChemicalEnvironment.ts`：共用圖描述、¹H／¹³C 訊號競爭局部環境、條件與不確定性；人工多重性、相對積分、可選 J／交換資訊保留。一般 ¹³C 不再預設 CH；預留 2D 關聯約束資料結構。
+- MS 類沿用質量／結構碎片限制，單獨 MS 類有能力提醒但仍可分析。De novo 仍是 RDKit 驗證的有界分子圖搜尋，明示九重原子、組成與資源限制，未盲目擴大。
 
-本輪工程測試不代表科學準確度；沒有新增模擬準確率 Benchmark。
+工程測試不代表科學準確度。先前基線驗收主要使用 CSV，不能證明原圖互動；本次加入原圖真實滑鼠拖曳與套用版本檢查。
