@@ -1,3 +1,7 @@
+import {createReasoningPlan} from './reasoning/hypothesisGenerator';
+import {completeReasoningTrace} from './reasoning/reasoningTrace';
+import type {ReasoningPlan,ReasoningTrace} from './reasoning/types';
+import type {DeNovoSearchResult} from './scientificEngines/deNovoGraphSearch';
 import {measureIRBandMorphology} from './scientificEngines/irSignalProcessing';
 import {generationStatus,type GenerationStatus} from './candidateGeneration/generationStatus';
 import {observationSpectrum} from './scientificEngines/observationSemantics';
@@ -176,6 +180,7 @@ export interface AuxiliaryModalityData {
 }
 
 export interface WorkbenchOrchestrationState {
+  reasoningTrace?:ReasoningTrace;
   generationStatus?:GenerationStatus;
   bundle: IntegratedAnalysisBundle;
   modeAReport: ModeADeductionReport;
@@ -196,15 +201,7 @@ export class WorkbenchOrchestrator {
    * 僅執行：實驗證據解析 → 官能基判定 → 結構限制建立 → 候選結構生成 → 跨光譜驗證與排序。
    * 絕不自動呼叫 Mode B 的反向光譜預測或雙向驗證函式，亦不因 selectedCandidateId 觸發任何預測。
    */
-  static runModeAPipeline(
-    spectra: Partial<
-      Record<SpectrumModality | ExtendedSpectrumModality, ExperimentalSpectrumData>
-    >,
-    extraInput?: ExtraChemicalEvidenceInput
-  ): Omit<
-    WorkbenchOrchestrationState,
-    "selectedCandidate" | "bidirectionalReport" | "modeBReport"
-  > {
+  static prepareModeAEvidence(spectra:Partial<Record<SpectrumModality|ExtendedSpectrumModality,ExperimentalSpectrumData>>,extraInput?:ExtraChemicalEvidenceInput){
     spectra=Object.fromEntries(Object.entries(spectra).map(([key,value])=>[key,observationSpectrum(value)]));
     if(extraInput)extraInput={...extraInput,msmsSpectrum:extraInput.msmsSpectrum?observationSpectrum(extraInput.msmsSpectrum):undefined,tofSimsSpectrum:extraInput.tofSimsSpectrum?observationSpectrum(extraInput.tofSimsSpectrum):undefined};
     const normalizedExtraInput: ExtraChemicalEvidenceInput | undefined =
@@ -220,6 +217,23 @@ export class WorkbenchOrchestrator {
     const { bundle, spectrumEvidenceList } =
       SpectralEvidenceExtractor.extractAllEvidence(spectra, normalizedExtraInput);
 
+    return {spectra,bundle,spectrumEvidenceList};
+  }
+
+  static runModeAPipeline(
+    spectra: Partial<
+      Record<SpectrumModality | ExtendedSpectrumModality, ExperimentalSpectrumData>
+    >,
+    extraInput?: ExtraChemicalEvidenceInput,
+    options:{prepared?:ReturnType<typeof WorkbenchOrchestrator.prepareModeAEvidence>;plan?:ReasoningPlan;searchResult?:DeNovoSearchResult}={}
+  ): Omit<
+    WorkbenchOrchestrationState,
+    "selectedCandidate" | "bidirectionalReport" | "modeBReport"
+  > {
+    const prepared=options.prepared??this.prepareModeAEvidence(spectra,extraInput);
+    const {bundle,spectrumEvidenceList}=prepared;spectra=prepared.spectra;
+    const plan=options.plan??createReasoningPlan(bundle);
+
     // 2. Unified Candidate Generation / Validation / Ranking Pipeline (全域唯一權威入口)
     const {
       solvedConstraintSpace,
@@ -229,7 +243,8 @@ export class WorkbenchOrchestrator {
       validationMatrix,
     } = CandidateGenerator.executeUnifiedPipelineFromBundle(
       bundle,
-      spectrumEvidenceList
+      spectrumEvidenceList,
+      {searchResult:options.searchResult,localStructures:plan.localStructures}
     );
 
     // 3. ReasoningEngine 作為協調者，直接使用同一批權威 rankedCandidates 與 bundle 建立報告，絕不重複生成候選或呼叫 Mode B
@@ -240,6 +255,7 @@ export class WorkbenchOrchestrator {
     );
 
     return {
+      reasoningTrace:completeReasoningTrace(plan,solvedConstraintSpace.searchResult,rankedCandidates),
       generationStatus:generationStatus(bundle.constraints,rankedCandidates.length,solvedConstraintSpace.solverLog,undefined,solvedConstraintSpace.searchResult?{...solvedConstraintSpace.searchResult,rejectedByComposition:solvedConstraintSpace.searchResult.rejectedByComposition+rejectedCandidates.length}:undefined),
       bundle,
       modeAReport,

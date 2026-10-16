@@ -43,3 +43,19 @@ export function matchesSMARTS(smiles:string,smarts:string):boolean|null {
   try {return mol.get_substruct_match(query)!=='{}';}
   finally {mol.delete();query.delete();}
 }
+
+export interface MolecularDepiction {svg:string;canonicalSmiles:string;formula:string;atomCount:number;bondCount:number;error:string|null}
+/** Draw the actual sanitized molecular graph. No scaffold diagrams or substituent aliases. */
+export function depictMolecule(smiles:string,width=320,height=210,partial=false):MolecularDepiction {
+ const empty={svg:'',canonicalSmiles:smiles,formula:'',atomCount:0,bondCount:0,error:null};
+ if(!rdkit)return {...empty,error:'RDKit/WASM 尚未可用；保留SMILES，未繪製替代示意圖。'};
+ let mol:ReturnType<MainModule['get_mol']>|null=null;
+ try {
+  mol=rdkit.get_mol(smiles);if(!mol||!mol.is_valid())return {...empty,error:'無法解析有效分子圖。'};
+  const json=JSON.parse(mol.get_json()) as {molecules?:{atoms?:{z?:number}[];bonds?:unknown[]}[]};const graph=json.molecules?.[0];
+  if(!partial&&graph?.atoms?.some(a=>a.z===0))return {...empty,error:'包含未知原子／開放連接點，只能作局部結構假設。'};
+  const svg=mol.get_svg_with_highlights(JSON.stringify({width,height,clearBackground:false,addAtomIndices:false,explicitMethyl:true}));
+  if(!svg.includes('<svg')||!svg.includes('bond-')&&Number(graph?.atoms?.length)>1)return {...empty,error:'分子圖繪製失敗；未以R或固定骨架替代。'};
+  return {svg:svg.replace(/<\?xml[^>]*>/g,''),canonicalSmiles:mol.get_smiles(),formula:'',atomCount:graph?.atoms?.length??0,bondCount:graph?.bonds?.length??0,error:null};
+ }catch{return {...empty,error:'分子圖繪製失敗；SMILES已保留。'};}finally{mol?.delete();}
+}

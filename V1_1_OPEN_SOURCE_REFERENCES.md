@@ -25,3 +25,8 @@ nmrglue、matchms、pyOpenMS、pyteomics、SIRIUS、CFM-ID仍未作本版執行�
 工程依據：`tests/v11Engineering.test.ts`（運算／圖片校正／圖有效性／正式呼叫）、既有 NMR／MS 回歸與桌面測試。這些不是獨立科學準確率驗收。教材群頻率與經驗 NMR 參數沿用 V1 的來源與限制，未宣稱逐條新校準。
 
 修復版（2026-10-15）：新增知識為自行整理的群頻率／局部原子環境區間，來源 [MSU IR 教材](https://www2.chemistry.msu.edu/faculty/reusch/VirtTxtJml/Spectrpy/InfraRed/infrared.htm)／[MSU NMR 教材](https://www2.chemistry.msu.edu/faculty/reusch/VirtTxtJml/Spectrpy/nmr/nmr1.htm)，不複製整份教材、分子參考譜或第三方程式。`irBandKnowledge.ts` 記錄各列來源與限制，矽氧烷沿用 Socrates 群頻率教科書依據。`atomicChemicalEnvironment.ts`／`nmrAtomicEnvironmentModel.ts` 自行實作圖環境與經驗參數，未整合量子後端。無新依賴或模型授權變更。`tests/irNmrRepairFlow.test.ts` 及原圖桌面互動案例只驗證運作與資料傳遞。
+# 2026-10-16 六步驟整合補充
+
+沿用已安裝 `@rdkit/rdkit` 2026.9.1（BSD-3-Clause；https://github.com/rdkit/rdkit-js 、https://github.com/rdkit/rdkit）。`rdkitAdapter.depictMolecule`直接使用已整合API生成完整分子SVG；canonical淨化及結構驗證延用原路徑。沒有新依賴、模型權重或第三方原始碼複製。
+
+`hypothesisGenerator`／`localStructureInference`／局部圖接合與協作式搜尋為專案自行實作。化學環境區間來源沿用MSU教學資料（https://www2.chemistry.msu.edu/faculty/reusch/VirtTxtJml/Spectrpy/nmr/nmr1.htm）與既有IR來源；不是量子化學或校準機率模型。nmrglue、matchms、pyOpenMS、pyteomics、SIRIUS、CFM-ID仍未整合，不作相反宣稱。

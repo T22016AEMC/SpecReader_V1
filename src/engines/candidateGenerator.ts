@@ -1,3 +1,4 @@
+import type {StructureGenerationOptions} from './scientificEngines/deterministicStructureGenerator';
 import {
   CandidateConstraintSatisfaction,
   CandidateResult,
@@ -359,7 +360,8 @@ export class CandidateGenerator {
    */
   static executeUnifiedPipelineFromBundle(
     bundle: IntegratedAnalysisBundle,
-    existingEvidenceList: SpectrumEvidence[] = []
+    existingEvidenceList: SpectrumEvidence[] = [],
+    options:StructureGenerationOptions={}
   ): UnifiedCandidatePipelineOutput {
     // 1. Constraint Layer: 求解結構約束空間 (分子式候選、IHD 範圍、必備與禁用子結構)
     const solvedConstraintSpace =
@@ -369,7 +371,8 @@ export class CandidateGenerator {
     const { validatedGraphs, rejectedCandidates } =
       DeterministicStructureGenerator.generateValidatedStructuresWithRejections(
         bundle.constraints,
-        solvedConstraintSpace
+        solvedConstraintSpace,
+        options
       );
 
     // 3. Cross-Spectrum Validation (針對同一批通過圖驗證之候選結構進行多模態交叉評估)

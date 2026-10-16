@@ -2,15 +2,19 @@
 
 只有 `App.handleStartAnalysis` 以已保存輸入快照啟動 Mode A Worker。編輯、標記、校正、峰型覆寫與五點基線不啟動完整推論；結果沿用輸入版本，變更後標示過時。Mode B 仍由獨立按鈕啟動。
 
-六模態獨立觀測 → 共用原子環境／IR 區間競爭假設 → FragmentConstraintSolver（不枚舉推測分子式）→ DeterministicStructureGenerator → searchMolecularGraphs → RDKit 淨化／canonical 去重 → 圖價態、使用者組成硬閘門 → 每候選 Evidence Ledger → 同一份帳本排名與正反／未知理由。
+六模態獨立觀測 → `collectObservedEvidence`（原始ID／條件／未知）→ `generateChemicalHypotheses`（多環境、J與比例）→ `inferLocalStructures`（原子／鍵／端點／取代位置假設）→ `searchMolecularGraphsAsync`（實際局部圖種子、接合與既有原子擴展）→ 原有硬閘門及Evidence Ledger → `completeReasoningTrace`／完整RDKit繪圖。`FragmentConstraintSolver`仍整理約束，不枚舉推測分子式。
 
 - 使用者分子式才是已知組成硬限制。MS 若離子／加合／電荷已確認，使用實測 m/z 換算中性質量與容差；不以枚舉分子式第一名的理論質量取代實測值。
 - 未提供分子式時，圖搜尋直接擴展原子／通用局部片段；不輸入推測分子式、沒有 C2–C4 組成預設清單。總組成不確定時標為代表性圖假設；約束不足保留局部環境，不強迫生成完整分子。
 - 生成圖後由實際原子圖計算分子式。舊 FormulaGenerator／已知骨架組裝器保留相容來源，但不在正式候選路徑。沒有資料庫命中加分。
 - 圖文法：單原子接合、鍵級增長、有限閉環、通用六碳芳環接合。原子價態與指定元素預算即時剪枝；WL 類別縮減等價擴展，最後以 RDKit canonical 去重。不是固定完整化合物清單。
-- 900ms、12000 展開狀態、每尺寸 beam 48／最多四個尺寸、24 輸出是工作預算，不是分子大小合法性門檻。沒有九重原子拒絕條件。截斷、未完成、局部結果及錯誤分別傳遞。
+- 正式Worker為12秒、120000展開狀態、4096前沿、每尺寸beam64／最多四個尺寸、48輸出。每16個狀態讓出執行權，處理取消並回報實際數目；總Worker120秒保護與未回應取消20秒終止仍保留。同步相容入口維持短預算，不是正式UI路徑。沒有重原子數合法性門檻。
 - NMR 位移環境、芳香／羰基假設、相容 q/t + 約2:3相對比例 + 共同J 影響圖搜尋優先順序。候選逐訊號以全域配對比較位移、多重性、J及已配對局部積分比例；不以候選全部氫當部分積分的分母。
 - 相對積分的總和、最簡比單元與使用者分子式均不能校準絕對氫數。未獨立確認絕對積分時，不作總氫數通過／矛盾判定。一般13C積分僅記錄；無 DEPT/APT 不指定 CHn。
 - 帳本每原始峰只計一次。所有已提供模態保留支持、矛盾、未知；未提供模態沒有分數。未標記區不作陰性。只有明確完整數值 IR 覆蓋資料才可形成有限弱缺峰證據。
 
 共用 `atomicChemicalEnvironment.ts` 與 `nmrAtomicEnvironmentModel.ts` 保留原子／訊號 assignment、COSY／HSQC／HMBC等關聯型別；本版未實作2D量測介面或量子後端。
+
+`ReasoningTrace`分開觀測、假設、局部圖、組裝提案及逐候選帳本；相同來源不能再以組裝標籤額外加分。芳香雙重峰模式是軟假設；共J可提高對位搜尋優先程度，不能確認完整分子。連接操作中的原子編號為搜尋時圖索引，不是假稱已完成實測原子歸屬或canonical圖對應。
+
+完整候選使用實際SMILES的RDKit SVG，顯示由圖計算組成；局部圖另列LOCAL_HYPOTHESIS與開放端點，不放入完整候選清單。錯誤不回退固定苯環加R圖。

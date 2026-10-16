@@ -1,3 +1,6 @@
+import type {DeNovoSearchResult} from './deNovoGraphSearch';
+import type {LocalStructureHypothesis} from '../reasoning/types';
+export interface StructureGenerationOptions {searchResult?:DeNovoSearchResult;localStructures?:LocalStructureHypothesis[]}
 import {searchMolecularGraphs,graphSearchHints} from './deNovoGraphSearch';
 import {canonicalizeMolecule} from './rdkitAdapter';
 import {
@@ -54,8 +57,10 @@ export class DeterministicStructureGenerator {
    */
   static generateValidatedStructuresWithRejections(
     constraints: StructuralConstraints,
-    solvedSpace: SolvedConstraintSpace
+    solvedSpace: SolvedConstraintSpace,
+    options:StructureGenerationOptions={}
   ): StructureGenerationOutcome {
+    if(options.searchResult)solvedSpace.searchResult=options.searchResult;
     // Section C8: 若使用者輸入之分子式格式無效、違反價數奇偶或含不支援元素，立即停止結構推論，不回傳任何充數候選
     if (
       constraints.userSuppliedFormulaValidation &&
@@ -78,7 +83,7 @@ export class DeterministicStructureGenerator {
       solvedSpace.solverLog.push('缺少可支持組成的實測約束；保留局部觀測，不生成任意完整分子。');
       return {validatedGraphs:[],rejectedCandidates:[]};
     }
-    const generated=searchMolecularGraphs(authoritativeTargetFormula??undefined,{hints:graphSearchHints(constraints),timeMs:900,maxStates:12000,maxResults:24});
+    const generated=options.searchResult??searchMolecularGraphs(authoritativeTargetFormula??undefined,{hints:{...graphSearchHints(constraints),localStructures:options.localStructures},timeMs:900,maxStates:12000,maxResults:24});
     solvedSpace.searchResult=generated;
     solvedSpace.solverLog.push(generated.note,...generated.partialHypotheses);
     const templateGraphs:AssembledCandidateGraph[]=generated.smiles.map((smiles,index)=>{

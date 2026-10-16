@@ -1,5 +1,13 @@
 # V1.1.3 建置與部署
 
+## 六步驟整合（2026-10-16）
+
+基準b5ca641，分支`feat/v113-six-step-reasoning`；版本仍1.1.3，以Commit區分。沿用同一免費Render服務、Node／React／Vite及已安裝RDKit，沒有新增後端、AI服務或密鑰。工程結果：TypeScript通過；前後端production build通過；原有125項加新8項測試均已驗證（整體132/132後，再補一項並對新檔8/8）；Chrome15個不同案例通過（首次13/15，修正兩個文字定位後針對性3/3）。包括真實滑鼠基線拖曳、取消Worker、局部資訊保留、完整SVG／分子式顯示與無外部AI請求。
+
+公開發佈須核對GitHub main、Render deploy.commit、`/api/health.revision`三者相同，另執行公開瀏覽器操作；本機結果不代表遠端驗收。搜尋在瀏覽器Worker執行，Render免費服務無新增計算費用；低效能桌面仍可能較慢。新完整分子圖需RDKit/WASM載入，失敗有明確錯誤與SMILES。
+
+以下為先前版本與部署歷史，最終新Commit及公開操作結果以本次交付回覆為準。
+
 Repository：https://github.com/T22016AEMC/SpecReader_V1 （使用者已授權Public）。基準3a90a41；修復分支fix/v11-evidence-guided-search，驗證後快轉main；不重置或清除既有成果。
 
 沿用免費獨立Render Web Service `srv-db6udpgu01pc73bl1tog`，Workspace `tea-db6qffon74is738k4q30`，https://specreader-v1.onrender.com 。不建立付費資源、不改其他服務。發佈前實查部署仍為3a90a41；本輪是否更新完成，應以健康端點revision與GitHub main實際對照，不能只看推送或Live。

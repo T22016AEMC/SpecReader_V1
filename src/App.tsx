@@ -1,3 +1,5 @@
+import {ReasoningPanel,CandidateReasoningDetails} from './components/ReasoningPanel';
+import type {AnalysisProgress} from './engines/reasoning/types';
 import {MassExperimentConditions} from './components/MassExperimentConditions';
 import {emptyModeAState,executeAnalysisWorker,type ModeAResult} from './engines/analysisSession';
 import {PeakObservationTable} from './components/PeakObservationTable';
@@ -491,17 +493,20 @@ export default function App() {
   const [analysisBusy,setAnalysisBusy]=useState(false);
   const [analysisError,setAnalysisError]=useState<string|null>(null);
   const analysisLock=useRef(false);
+  const analysisAbort=useRef<AbortController|null>(null);
+  const [analysisProgress,setAnalysisProgress]=useState<AnalysisProgress|null>(null);
+  const [cancelRequested,setCancelRequested]=useState(false);
   const [analysisRuns,setAnalysisRuns]=useState(0);
   const currentInputKey=useMemo(()=>JSON.stringify([spectra,extraChemicalInput]),[spectra,extraChemicalInput]);
   const analysisStale=!!completedAnalysis&&completedAnalysis.key!==currentInputKey;
   const modeAOrchestration=completedAnalysis?.result??emptyModeAState();
   const handleStartAnalysis=async()=>{
     if(analysisLock.current)return;
-    analysisLock.current=true;setAnalysisBusy(true);setAnalysisError(null);setAnalysisRuns(n=>n+1);
+    analysisLock.current=true;setAnalysisBusy(true);setAnalysisError(null);setAnalysisProgress(null);setCancelRequested(false);analysisAbort.current=new AbortController();setAnalysisRuns(n=>n+1);
     const key=currentInputKey,snapshot=structuredClone(spectra),extra=structuredClone(extraChemicalInput);
-    try{const result=await executeAnalysisWorker({spectra:snapshot,extraInput:extra});setCompletedAnalysis({result,key,spectra:result.inputSpectra??snapshot});}
+    try{const result=await executeAnalysisWorker({spectra:snapshot,extraInput:extra},{signal:analysisAbort.current.signal,onProgress:p=>setAnalysisProgress(old=>({...old,...p,localStructures:p.localStructures??old?.localStructures}))});setCompletedAnalysis({result,key,spectra:result.inputSpectra??snapshot});}
     catch(error){setAnalysisError(error instanceof Error?error.message:'分析執行失敗');}
-    finally{analysisLock.current=false;setAnalysisBusy(false);}
+    finally{analysisLock.current=false;setAnalysisBusy(false);analysisAbort.current=null;}
   };
 
   const {
@@ -2485,10 +2490,11 @@ export default function App() {
             {modeAPage === "PAGE_3_INTERPRETATION" && (
               <div className="space-y-5">
                 <div className="rounded border border-cyan-600 p-3 text-sm" data-testid="analysis-control" data-analysis-runs={analysisRuns} data-worker-rdkit={completedAnalysis?.result.runtime?.rdkitAvailable??false} data-result-current={!!completedAnalysis&&!analysisStale}>
-                 <button type="button" disabled={analysisBusy} onClick={handleStartAnalysis} className="rounded bg-cyan-600 px-5 py-2 font-bold disabled:opacity-50">{analysisBusy?'分析中…':'開始分析'}</button>
-                 <span className="ml-3" role="status">{analysisBusy?'正在背景分析，編輯不會重複啟動任務。':analysisError?'分析失敗；輸入已保留，舊結果供參考。':analysisStale?'資料已變更，請重新分析':completedAnalysis?'分析完成（使用已保存輸入快照）':'尚未分析；上傳與編輯不執行科學推論。'}</span>
+                 <button type="button" disabled={analysisBusy} onClick={handleStartAnalysis} className="rounded bg-cyan-600 px-5 py-2 font-bold disabled:opacity-50">{analysisBusy?'分析中…':'開始分析'}</button>{analysisBusy&&<button type="button" data-testid="analysis-cancel" disabled={cancelRequested} className="ml-2 rounded border border-amber-500 px-3 py-2 text-amber-300" onClick={()=>{setCancelRequested(true);analysisAbort.current?.abort();}}>{cancelRequested?'正在取消並保留部分結果…':'取消搜尋'}</button>}
+                 <span className="ml-3" role="status">{analysisBusy?`步驟 ${analysisProgress?.step??1}/6：${analysisProgress?.stage??'初始化本地化學工具'}`:analysisError?'分析失敗；輸入已保留，舊結果供參考。':analysisStale?'資料已變更，請重新分析':completedAnalysis?(completedAnalysis.result.generationStatus?.code==='CANCELLED'?'搜尋已取消，顯示保留的部分結果':'分析完成（使用已保存輸入快照）'):'尚未分析；上傳與編輯不執行科學推論。'}</span>
                  {analysisError&&<p role="alert">{analysisError}</p>}
                 </div>
+                <ReasoningPanel trace={completedAnalysis?.result.reasoningTrace} progress={analysisProgress} busy={analysisBusy}/>
                 {completedAnalysis&&<>
                 <p data-testid="generation-status" data-code={modeAOrchestration.generationStatus?.code}>{modeAOrchestration.generationStatus?.message} {modeAOrchestration.generationStatus?.limits}</p>
                 <p className="text-xs text-slate-400">組成來源：{modeAOrchestration.generationStatus?.userFormula?`使用者指定 ${modeAOrchestration.generationStatus.userFormula}（完整候選硬限制）`:'未指定；不以前置猜測分子式限制搜尋'}；候選卡分子式由各自分子圖計算。</p>
@@ -3061,6 +3067,7 @@ export default function App() {
                               </div>
 
                               <div className="my-3">
+                                <CandidateReasoningDetails record={modeAOrchestration.reasoningTrace?.candidates.find(r=>r.candidateId===cand.id)}/>
                                 <StructureRenderer2D
                                   smiles={cand.smiles}
                                   formula={cand.molecularFormula}
