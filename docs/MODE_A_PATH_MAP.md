@@ -1,6 +1,6 @@
 # Mode A 正式路徑地圖
 
-基準：V1.1.3（commit `1866a29`）之上的 v1.1.4。本文件只描述現況，不代表任何科學邏輯被修改。行號是撰寫當下的位置，之後程式碼變動時以函式名稱為準。
+基準：V1.1.3（commit `1866a29`）之上的 v1.1.4；**P1a（組成推斷層）的變動見第 1.5 節與各處「P1a」註記**。行號是撰寫當下的位置，之後程式碼變動時以函式名稱為準。
 
 ## 如何得出這張地圖
 
@@ -54,11 +54,34 @@
 | `reasoning/sixStepAnalysis.ts` | `planningSearchHints` (:6) | |
 | `scientificEngines/deNovoGraphSearch.ts` | `graphSearchHints` (:25) | 從約束萃取 aromatic／carbonyl／oxygen／nitrogen／observedSignals／coupledEthyl／neutralMass（取自 MS 質量約束）等提示 |
 
+### 1.5 組成推斷層與生成器銜接（P1a）
+
+設計與審核決定見 `docs/P1A_COMPOSITION_DESIGN.md`。程式在 `src/engines/composition/`。
+
+| 位置 | 檔案 | 主要函式 | 說明 |
+|---|---|---|---|
+| ② 之後、③ 之前（屬進度步驟 3，不新增步驟或 trace stage） | `composition/inferComposition.ts` | `inferComposition` | 由 `executeSixStepAnalysis` 在 `createReasoningPlan` 後呼叫，結果放在 `plan.composition` |
+| 同上 | `composition/msComposition.ts` | `extractMsEvidence` | 多個分子離子假設（最多 3 峰 × 依游離方式的離子型式）、EI 不合理丟失、M+1／M+2／M+4、F／I／Si／S 證據 |
+| 同上 | `composition/nmrComposition.ts` | `extractNmrEvidence`、`simplestIntegerRatio` | ¹³C 碳數下限、DEPT 氫數下限、位移線索、¹H 最簡整數比、F（J）與 Si 證據 |
+| 同上 | `composition/functionalGroupBounds.ts` | `functionalGroupFeatures`、`combineBounds` | IR／NMR 官能基 → 元素與 DBE 下限；兩個獨立模態才為硬限制 |
+| 同上 | `composition/formulaEnumerator.ts`、`goldenRules.ts` | `enumerateFormulas`、`hardViolation` | 有界確定性枚舉；DBE、SENIOR、Golden Rules 1/4/5/6 |
+| 同上 | `composition/compositionScoring.ts` | `scoreComposition`、`isotopeRatios` | 對數相容度加總 → softmax 相對信心（未校準）；支持／矛盾／未知理由附觀測 ID |
+| 同上 | `composition/compositionConfig.ts` | `COMPOSITION_CONFIG` | 所有可調常數 |
+| ④ | `composition/structureGenerator.ts` | `StructureGenerator`、`deNovoStructureGenerator`、`generateForCompositions` | 與生成器無關的介面；P1a 用 `searchMolecularGraphsAsync` 實作，P1b 換成完整窮舉器 |
+
+`generateForCompositions` 的三種模式（記錄在 `plan.compositionSearch` 與 `trace.compositionSearch`）：
+
+- `USER_FORMULA`：使用者分子式，一次搜尋、原預算（12 s／120000 狀態），行為與 v1.1.4 相同。
+- `COMPOSITION_HYPOTHESES`：沒有使用者分子式且有生成器支援的組成假設時，依信心取前 3 名，各自搜尋（每個最多 48 個候選，合併最多 144），總狀態與時間不超過原上限，未用完的預算順延。候選以 `formulaSources` 標記來源假設，`ReasoningTrace.candidates[].compositionHypothesisIds` 帶出。此模式下 `DeterministicStructureGenerator` 略過「缺少組成約束就不生成」的閘門（`compositionDriven`）。
+- `NO_FORMULA`：沒有任何組成假設（或全都含生成器不支援的元素）時，沿用原本的無分子式搜尋。
+
+結果欄位：`ReasoningPlan.composition`／`compositionSearch`、`ModeAResult.compositionInference`、`ReasoningTrace.composition`／`compositionSearch`、`CandidateReasoning.compositionHypothesisIds`。前 3 名以外的假設（`searched:false`）仍完整保留。P1a 不把組成信心加進候選分數（跨分子式排名屬於 P1c）。
+
 ### ④ 圖搜尋（deNovoGraphSearch）
 
 | 檔案 | 主要函式 | 備註 |
 |---|---|---|
-| `scientificEngines/deNovoGraphSearch.ts` | `searchMolecularGraphsAsync` (:120) → `iterateGraphSearch` (:37) | 傳入的分子式為 `plan.userFormula`（= `bundle.userSuppliedFormula`）。`executeSixStepAnalysis` 對外只開放 `timeMs`／`maxStates`，其餘寫死：`maxFrontier=4096`、`maxResults=48`、`beamWidth=64` |
+| `scientificEngines/deNovoGraphSearch.ts` | `searchMolecularGraphsAsync` (:120) → `iterateGraphSearch` (:37)；**P1a 起經 `generateForCompositions` 呼叫** | 傳入的分子式為 `plan.userFormula`（= `bundle.userSuppliedFormula`）。`executeSixStepAnalysis` 對外只開放 `timeMs`／`maxStates`，其餘寫死：`maxFrontier=4096`、`maxResults=48`、`beamWidth=64` |
 | 同上 | `searchMolecularGraphs` (:117) | 同步版，**不在正式路徑**：只在 `DeterministicStructureGenerator` 沒收到 `searchResult` 時作為退路（900 ms／12000 狀態／24 筆），測試與相容入口使用 |
 | 支援 | `chemistryEngine.ts`（`parseFormulaCounts`、`calculateDBE`、`parseStructureInput`、`formatFormula`）、`rdkitAdapter.ts`（`canonicalizeMolecule`） | |
 
@@ -102,12 +125,12 @@
 1. **import 閉包大於實際路徑。** `candidateGenerator.ts` import 了 `combinatorialAssembler.ts`，但只為了一個無人使用的匯出物件（`CandidateStructureGenerator.evaluateFormula`，:436）；`DeterministicStructureGenerator`、`ConstraintValidatorAndRanker`、`SpectrumConsistencyEvaluator` 對 `combinatorialAssembler`／`graphAssemblyEngine`／`formulaGenerator` 只有型別引用。這些檔案在實測中沒有任何函式被執行。
 2. **`FragmentLibrary.selectCompatibleFragments` 仍在正式路徑上被呼叫，但結果沒有下游使用。** 它不影響候選生成或排名，只多出一行 `solverLog`。
 3. **三套評分／驗證碼並存。** 名次只由 `evidenceLedger.scoreScientificEvidence` 決定；舊的 `SpectrumConsistencyEvaluator` 與 `ConstraintValidatorAndRanker` 仍逐候選執行（耗時），結果只流向顯示欄位。
-4. **UI 的溶劑峰標記在 Mode A 無效。** `App.tsx` 的 `handleChangeNmrSolvent` 呼叫 `applyNmrSolventTagging`，把落在溶劑參考位移容差內的峰標成 `SOLVENT`，介面並寫「已排除於結構推論」；但 `prepareModeAEvidence` 第一步的 `observationSpectrum` 會把所有峰重設為 `COMPOUND`／`isSolventVerified=false`。實測（CDCl₃，峰 7.26、6.9、7.3）：UI 標記後 7.26 與 7.3 為 SOLVENT，經 `prepareModeAEvidence` 後三個峰全為 COMPOUND，`createReasoningPlan` 的觀測清單包含 7.26。結果：殘餘溶劑峰（以及落在容差內的真實峰）都會被當成分析物觀測。對基準評測的意義：峰表不應包含溶劑峰（見 `BENCHMARK_FORMAT.md`）。
-5. **預測函式與 Mode B 共用。** Mode A 評分使用的 IR／¹H／¹³C／碎片預測函式（`irCandidateBands`、`NMRGraphPredictor`、`graphFragments`）同時是 Mode B 的預測來源（第 4、5 節）。「後續階段會替換預測函式」與「Mode B 不得修改」無法同時成立，需要先決定怎麼切開（例如在 Mode A 新增獨立預測函式、保留舊函式給 Mode B）。
+4. **（P1a 已修正）UI 的溶劑峰標記在 Mode A 無效。** 修正後：只有 `classificationSource='USER'` 的非分析物標記會被排除（記在 `excludedObservations`）；自動標記與沒有來源欄位的舊標記保留為 `optionalObservation`；`applyNmrSolventTagging` 寫入 `classificationSource='AUTO_SOLVENT_REFERENCE'` 且不覆蓋 USER 標記。目前 UI 沒有分類控制項，P1c 才會加入。以下為 v1.1.4 的原始描述： `App.tsx` 的 `handleChangeNmrSolvent` 呼叫 `applyNmrSolventTagging`，把落在溶劑參考位移容差內的峰標成 `SOLVENT`，介面並寫「已排除於結構推論」；但 `prepareModeAEvidence` 第一步的 `observationSpectrum` 會把所有峰重設為 `COMPOUND`／`isSolventVerified=false`。實測（CDCl₃，峰 7.26、6.9、7.3）：UI 標記後 7.26 與 7.3 為 SOLVENT，經 `prepareModeAEvidence` 後三個峰全為 COMPOUND，`createReasoningPlan` 的觀測清單包含 7.26。結果：殘餘溶劑峰（以及落在容差內的真實峰）都會被當成分析物觀測。對基準評測的意義：峰表不應包含溶劑峰（見 `BENCHMARK_FORMAT.md`）。
+5. **預測函式與 Mode B 共用。**（P0 後已決定：預測器 Mode A／B 一起更新，Mode B 測試預期值可隨之更新並列出變動紀錄。） Mode A 評分使用的 IR／¹H／¹³C／碎片預測函式（`irCandidateBands`、`NMRGraphPredictor`、`graphFragments`）同時是 Mode B 的預測來源（第 4、5 節）。「後續階段會替換預測函式」與「Mode B 不得修改」無法同時成立，需要先決定怎麼切開（例如在 Mode A 新增獨立預測函式、保留舊函式給 Mode B）。
 6. **搜尋預算在實測中不是限制。** 兩次探針（乙基苯甲酸酯的四個 ¹H 峰）：無分子式時於 89 個狀態、有分子式時於 955 個狀態即以 `OUTPUT_BUDGET` 結束，遠低於 `maxStates=120000`；實際約束輸出量的是寫死的 `maxResults=48`（以及 `beamWidth=64`、`maxFrontier=4096`），而這些在 `executeSixStepAnalysis` 沒有對外參數。所以「用狀態數取代時間」對可重現性有幫助，但 top-k 的天花板來自這些常數。
 7. **MS 質量已在第 ① 步產生分子式候選與質量約束。** `analyzeExperimentalMS` 在離子歸屬已知時呼叫 `MolecularFormulaCandidateEngine`（`formulaEngine.ts`，與 `candidateGeneration/formulaGenerator.ts` 是不同的兩個模組）。`graphSearchHints` 取 `molecularMassConstraint.exactMass ?? exactMass.exactMass ?? estimatedMolecularWeight` 作為 `neutralMass`（容差預設 1 Da），圖搜尋據此過濾候選。所以即使沒有使用者分子式，提供 MS 仍可能限制搜尋結果；各種 MS 輸入（未確認離子歸屬、低解析）下這個約束是否產生，本文件未逐一驗證，後續做組成推斷時需要先確認。
 8. **孤兒測試碼與無人呼叫的方法。** `tests/legacy/*.ts` 不被 `vitest.config.ts` 的 `include`（`*.test.ts`）收錄，也沒有任何檔案 import 它們；`ReasoningEngine.runModeADeduction`、`WorkbenchOrchestrator.runFullWorkbenchPipeline`、`CandidateGenerator.runUnifiedCandidatePipeline`、`CandidateGenerator.rankCandidates` 的唯一呼叫者就是這些孤兒檔。`CandidateGenerator.generateRankedCandidates` 連孤兒檔也沒有呼叫，只被 `CandidateStructureGenerator` 物件綁定而該物件無人使用。`runFullWorkbenchPipeline` 內的 Mode A 不會傳入 `searchResult`，會退回同步搜尋。
-9. **版本字串寫死。** `server.ts:53` 與 `:460` 的 `/api/health` 與啟動日誌把版本寫死為 `1.1.3`，不會隨 `package.json` 變動。
+9. **（P1a 已修正）版本字串寫死。** 現在由 `src/appVersion.ts` 的 `readAppVersion()` 從 package.json 讀取（開發模式與 `dist/server.mjs` 皆正確）。以下為 v1.1.4 的原始描述： `server.ts:53` 與 `:460` 的 `/api/health` 與啟動日誌把版本寫死為 `1.1.3`，不會隨 `package.json` 變動。
 
 ## 3. 存在但不在 Mode A 正式路徑的檔案
 

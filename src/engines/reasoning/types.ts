@@ -7,6 +7,8 @@ export interface ObservedEvidence {
  uncertainty:number|null;origin:'MANUAL'|'EXTRACTED';userOverride:boolean;
  metadata:{solvent?:NMRSolvent;frequencyMHz?:number;temperatureK?:number;irScale?:string;mass?:MSParameters};
  coverage:'PARTIAL'|'CONFIRMED_COMPLETE';unknown:string[];
+ /** Automatic solvent candidate: kept, but may stay unexplained without penalty (P1a). */
+ optional?:boolean;
 }
 export type HypothesisKind='AROMATIC'|'ALKENE'|'ALKYNE'|'NITRILE'|'ALKYL'|'OXYGENATED'|'NITROGENATED'|'HYDROXYL'|'AMINO'|'CARBONYL'|'ETHYL'|'ARYL_PARA'|'ARYL_META'|'ARYL_ORTHO'|'ION'|'FRAGMENT'|'SURFACE';
 export interface ChemicalHypothesis {
@@ -25,10 +27,16 @@ export interface LocalStructureHypothesis {
  relations:{otherId:string;kind:'SUPPORTED_CONNECTION'|'POSSIBLE_CONNECTION'|'EXCLUDED_BY_VALENCE'|'UNKNOWN';reason:string}[];
 }
 export interface AssemblyDerivation {localStructureIds:string[];operations:string[];observationIds:string[]}
-export interface ReasoningPlan {observations:ObservedEvidence[];hypotheses:ChemicalHypothesis[];localStructures:LocalStructureHypothesis[];userFormula:string|null;unknown:string[]}
+export interface ReasoningPlan {observations:ObservedEvidence[];hypotheses:ChemicalHypothesis[];localStructures:LocalStructureHypothesis[];userFormula:string|null;unknown:string[];
+ /** Competing formula hypotheses (P1a); not a trace stage, so the six-stage contract is unchanged. */
+ composition?:import('../composition/types').CompositionInferenceResult;
+ compositionSearch?:{mode:'USER_FORMULA'|'COMPOSITION_HYPOTHESES'|'NO_FORMULA';note:string|null;runs:import('../composition/structureGenerator').CompositionSearchRun[]};
+}
 export interface CandidateReasoning {
  candidateId:string;smiles:string;formula:string;localStructureIds:string[];
  assembly:AssemblyDerivation|null;hypothesisIds:string[];
+ /** Composition hypotheses whose formula search produced this candidate (P1a). */
+ compositionHypothesisIds?:string[];
  evidence:{observationIds:string[];modality:string;status:'SUPPORT'|'CONTRADICTION'|'UNKNOWN';method:string}[];
  limitations:string[];
 }

@@ -46,6 +46,7 @@
     "@types/supertest": "^6.0.3",
     "autoprefixer": "^10.4.21",
     "esbuild": "^0.25.0",
+    "mf-finder": "3.4.25",
     "playwright": "1.64.0",
     "supertest": "^7.1.4",
     "tailwindcss": "^4.3.3",

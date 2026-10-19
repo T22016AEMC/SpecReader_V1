@@ -159,6 +159,23 @@ describe('benchmark run',()=>{
   }finally{fs.rmSync(dir,{recursive:true,force:true});}
  });
 });
+describe('peak-table classification',()=>{
+ it('maps an explicit classification to a USER mark that Mode A excludes',async()=>{
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'specreader-bench-class-'));
+  try {
+   const caseDir=path.join(dir,'cases','synthetic_class');
+   json(path.join(caseDir,'case.json'),{id:'synthetic_class',answerSmiles:'CCO',spectra:{'1H_NMR':{file:'h1.json',solvent:'CDCl3'}}});
+   json(path.join(caseDir,'h1.json'),[{x:7.26,y:20,classification:'SOLVENT'},{x:3.6,y:80},{x:0,y:10,classification:'REFERENCE_TMS'}]);
+   const built=await buildCaseSpectra(caseDir,loadCases(dir).cases[0].case!);
+   const peaks=built.spectra['1H_NMR']!.peaks;
+   expect(peaks[0]).toMatchObject({userClassification:'SOLVENT',classificationSource:'USER'});
+   expect(peaks[2]).toMatchObject({role:'REFERENCE_TMS',classificationSource:'USER'});
+   expect(built.unmapped.join('')).not.toContain('classification');
+   json(path.join(caseDir,'h1.json'),[{x:7.26,y:20,classification:'solvent?'}]);
+   await expect(buildCaseSpectra(caseDir,loadCases(dir).cases[0].case!)).rejects.toThrow('classification');
+  }finally{fs.rmSync(dir,{recursive:true,force:true});}
+ });
+});
 describe('aggregation',()=>{
  const result=(rank:number|null,formulaRank:number|null,status:ConditionResult['status']='OK'):ConditionResult=>({condition:'noFormula',status,rank,candidateCount:10,formulaRank,termination:'GRAMMAR_EXHAUSTED',visitedStates:1,elapsedMs:1,searchElapsedMs:1,generationCode:null,engineUserFormula:null,error:null,skipReason:null});
  const rec=(id:string,key:string,noFormula:ConditionResult,synthetic=false,status:CaseRecord['status']='EVALUATED'):CaseRecord=>({id,name:id,answerSmiles:'CCO',answerCanonical:'CCO',answerFormula:'C2H6O',caseFormula:'C2H6O',tags:[],synthetic,declaredModalities:[],modalities:[],modalityKey:key,skippedSpectra:[],unmappedFields:[],notes:[],warnings:[],status,error:null,results:{noFormula}});

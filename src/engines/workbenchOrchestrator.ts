@@ -181,6 +181,8 @@ export interface AuxiliaryModalityData {
 
 export interface WorkbenchOrchestrationState {
   reasoningTrace?:ReasoningTrace;
+  /** Competing formula hypotheses (P1a). */
+  compositionInference?:import('./composition/types').CompositionInferenceResult;
   generationStatus?:GenerationStatus;
   bundle: IntegratedAnalysisBundle;
   modeAReport: ModeADeductionReport;
@@ -244,7 +246,7 @@ export class WorkbenchOrchestrator {
     } = CandidateGenerator.executeUnifiedPipelineFromBundle(
       bundle,
       spectrumEvidenceList,
-      {searchResult:options.searchResult,localStructures:plan.localStructures}
+      {searchResult:options.searchResult,localStructures:plan.localStructures,compositionDriven:plan.compositionSearch?.mode==='COMPOSITION_HYPOTHESES'}
     );
 
     // 3. ReasoningEngine 作為協調者，直接使用同一批權威 rankedCandidates 與 bundle 建立報告，絕不重複生成候選或呼叫 Mode B
@@ -255,6 +257,7 @@ export class WorkbenchOrchestrator {
     );
 
     return {
+      compositionInference:plan.composition,
       reasoningTrace:completeReasoningTrace(plan,solvedConstraintSpace.searchResult,rankedCandidates),
       generationStatus:generationStatus(bundle.constraints,rankedCandidates.length,solvedConstraintSpace.solverLog,undefined,solvedConstraintSpace.searchResult?{...solvedConstraintSpace.searchResult,rejectedByComposition:solvedConstraintSpace.searchResult.rejectedByComposition+rejectedCandidates.length}:undefined),
       bundle,
@@ -410,6 +413,8 @@ export class WorkbenchOrchestrator {
     const tolerance = spectrum.modality === "1H_NMR" ? 0.06 : 0.6;
 
     const updatedPeaks = spectrum.peaks.map((pk) => {
+      // An explicit user classification always wins over automatic solvent matching (P1a).
+      if (pk.classificationSource === "USER") return pk;
       const isSolventMatch = targetShifts.some(
         (s) => Math.abs(pk.x - s) <= tolerance
       );
@@ -418,6 +423,7 @@ export class WorkbenchOrchestrator {
           ...pk,
           userClassification: "SOLVENT" as const,
           isSolventVerified: true,
+          classificationSource: "AUTO_SOLVENT_REFERENCE" as const,
           assignment:
             pk.assignment && pk.assignment.includes("溶劑")
               ? pk.assignment
@@ -430,6 +436,7 @@ export class WorkbenchOrchestrator {
           ...pk,
           userClassification: "COMPOUND" as const,
           isSolventVerified: false,
+          classificationSource: undefined,
         };
       }
       return pk;

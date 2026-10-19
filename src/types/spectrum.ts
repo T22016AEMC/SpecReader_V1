@@ -445,6 +445,12 @@ export interface SpectralPeak {
   userClassification?: PeakClassificationTag;
   isSolventVerified?: boolean;
   solventName?: string;
+  /** Who set the non-analyte classification. Only 'USER' excludes the peak from Mode A; missing means automatic (P1a 審核決定 1). */
+  classificationSource?: 'USER' | 'AUTO_SOLVENT_REFERENCE' | 'AUTO_ENGINE';
+  /** Kept as an observation but may stay unexplained without penalty (automatic solvent candidate, P1a 審核決定 6). */
+  optionalObservation?: boolean;
+  /** Original automatic non-analyte label preserved for later display (e.g. 'SOLVENT'). */
+  autoNonAnalyteLabel?: string;
 }
 
 export interface DataValidationIssue {
@@ -796,6 +802,8 @@ export interface ExperimentalSpectrumData {
   irMirroredPoints?: DataPoint[];
   irCorrectedPoints?: DataPoint[];
   observationCoverage?: 'PARTIAL_MARKERS'|'CONTINUOUS_TRACE'|'CONFIRMED_COMPLETE';
+  /** Peaks the user explicitly classified as non-analyte; removed from Mode A observations by observationSpectrum. */
+  excludedObservations?: {peakId:string;x:number;label:string}[];
   quantitativeCarbonExperiment?: boolean;
   nmrCorrelations?: import('../engines/scientificEngines/atomicChemicalEnvironment').NMRCorrelationConstraint[];
   irBaselinePoints?: DataPoint[];
