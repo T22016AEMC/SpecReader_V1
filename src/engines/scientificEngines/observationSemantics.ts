@@ -1,7 +1,27 @@
-import type {ExperimentalSpectrumData,StructuralConstraints} from '../../types/spectrum';
-/** Manual/selected observations are not a complete peak census or chemical assignments. */
+import type {ExperimentalSpectrumData,SpectralPeak,StructuralConstraints} from '../../types/spectrum';
+const NON_ANALYTE_CLASSES=['SOLVENT','IMPURITY','NOISE'];
+const NON_ANALYTE_ROLES=['SOLVENT','IMPURITY','WATER','MOISTURE','REFERENCE_TMS'];
+/** The non-analyte label carried by a peak, from any of the classification fields; null when it is an analyte. */
+export function nonAnalyteLabel(p:SpectralPeak):string|null {
+ for(const v of [p.userClassification,p.classificationTag])if(v&&NON_ANALYTE_CLASSES.includes(v))return v;
+ for(const v of [p.role,p.signalRole])if(v&&NON_ANALYTE_ROLES.includes(v))return v;
+ return p.isSolventVerified?'SOLVENT':null;
+}
+/**
+ * Manual/selected observations are not a complete peak census or chemical assignments.
+ * Only peaks explicitly classified by the user (classificationSource 'USER') leave the Mode A observations;
+ * automatic solvent/reference matches stay in as optional observations with their label preserved (P1a 審核決定 1, 6).
+ */
 export function observationSpectrum(s:ExperimentalSpectrumData):ExperimentalSpectrumData {
- return {...s,observationCoverage:s.observationCoverage??'PARTIAL_MARKERS',peaks:s.peaks.map(p=>p.isPredictedPeak?p:{...p,role:'ANALYTE',signalRole:'ANALYTE',userClassification:'COMPOUND',classificationTag:'COMPOUND',isSolventVerified:false})};
+ const excluded:NonNullable<ExperimentalSpectrumData['excludedObservations']>=[];
+ const peaks:SpectralPeak[]=[];
+ for(const p of s.peaks){
+  if(p.isPredictedPeak){peaks.push(p);continue;}
+  const label=nonAnalyteLabel(p);
+  if(label&&p.classificationSource==='USER'){excluded.push({peakId:p.id,x:p.x,label});continue;}
+  peaks.push({...p,role:'ANALYTE',signalRole:'ANALYTE',userClassification:'COMPOUND',classificationTag:'COMPOUND',isSolventVerified:false,...(label?{optionalObservation:true,autoNonAnalyteLabel:label}:{})});
+ }
+ return {...s,observationCoverage:s.observationCoverage??'PARTIAL_MARKERS',peaks,...(excluded.length?{excludedObservations:[...(s.excludedObservations??[]),...excluded]}:{})};
 }
 export function softenNMRConstraints(c:StructuralConstraints):StructuralConstraints {
  const groups=(c.requiredFunctionalGroups??[]).map(g=>({...g,status:'CANDIDATE' as const,confidence:Math.min(g.confidence,65)}));

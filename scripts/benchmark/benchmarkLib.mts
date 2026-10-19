@@ -38,7 +38,9 @@ const ENTRY_KEYS:Record<BenchModality,readonly string[]>={
  '13C_NMR':['file','solvent','frequencyMHz','dept'],
  MS:['file','ionization','adduct','ionAssignmentConfirmed','highResolution','chargeState'],
 };
-const PEAK_KEYS=['x','y','integration','integral','multiplicity','j','jValues','width','shape','isBroad','irIntensity','assignment','deptType','intensityKnown'];
+const PEAK_KEYS=['x','y','integration','integral','multiplicity','j','jValues','width','shape','isBroad','irIntensity','assignment','deptType','intensityKnown','classification'];
+/** Explicit user classification in a peak table; non-analyte values are excluded from Mode A (P1a). */
+const PEAK_CLASSIFICATIONS=['COMPOUND','SOLVENT','IMPURITY','NOISE','WATER','REFERENCE_TMS'];
 const IMAGE_EXT=['png','jpg','jpeg','webp','gif','bmp','tif','tiff','pdf'];
 const NUMERIC_EXT=['csv','txt','tsv','jdx','dx','jcm','jcamp','xls','xlsx'];
 
@@ -145,6 +147,12 @@ function peakTableSpectrum(modality:BenchModality,fileName:string,rows:unknown,u
   if(row.multiplicity!==undefined)peak.multiplicity=row.multiplicity as SpectralPeak['multiplicity'];
   if(j!==undefined)peak.jValues=j as number[];
   for(const key of ['width','shape','isBroad','irIntensity','assignment','deptType','intensityKnown'] as const)if(row[key]!==undefined)(peak as unknown as Record<string,unknown>)[key]=row[key];
+  if(row.classification!==undefined){
+   if(typeof row.classification!=='string'||!PEAK_CLASSIFICATIONS.includes(row.classification))throw new Error(`${label} 第 ${i+1} 筆 classification 必須是 ${PEAK_CLASSIFICATIONS.join('、')}`);
+   if(row.classification==='WATER'||row.classification==='REFERENCE_TMS')peak.role=row.classification;
+   else peak.userClassification=row.classification as SpectralPeak['userClassification'];
+   peak.classificationSource='USER';
+  }
   return peak;
  });
  for(const key of unknownKeys)unmapped.push(`${label} 峰表欄位「${key}」`);

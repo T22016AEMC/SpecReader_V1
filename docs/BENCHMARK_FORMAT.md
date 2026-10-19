@@ -80,10 +80,11 @@ SpecReader\
 | `multiplicity` | 同名 | `s d t q dd dt dq td tt ddd AA'BB' m br "br s" sept sext quint multiplet unresolved` |
 | `j` 或 `jValues` | `SpectralPeak.jValues` | Hz 陣列 |
 | `width`、`shape`、`isBroad`、`irIntensity`、`assignment`、`deptType`、`intensityKnown` | 同名 | 直接帶入 |
+| `classification` | `SOLVENT`／`IMPURITY`／`NOISE` → `userClassification`；`WATER`／`REFERENCE_TMS` → `role`；`COMPOUND` | 一律加上 `classificationSource: "USER"`（P1a 起）。非分析物值的峰會從 Mode A 觀測中排除；其他值會讓整個案例報錯 |
 
 不在表內的欄位**不會被靜默忽略**，會列在報告的「無法對應」清單。
 
-**峰表請不要包含殘餘溶劑峰與 TMS 參考峰。** Mode A 目前會把所有標記的峰當成分析物（`observationSpectrum` 會重設 UI 的溶劑標記，詳見 `docs/MODE_A_PATH_MAP.md` 第 2 節發現 4）。數值光譜的自動尋峰結果同樣不會排除溶劑峰，這是現況，評測量到的就是這個現況。
+**溶劑峰與 TMS 參考峰**（P1a 起）：要排除就在峰表中加上 `"classification":"SOLVENT"`（或 `REFERENCE_TMS` 等）明確標記，這是目前唯一能做出「使用者明確標記」的方式；沒有標記的峰都當成分析物。設定 `solvent` 時，與溶劑參考位移吻合的峰會被**自動**標成溶劑候選，但自動候選**不會**被排除（避免誤刪 7.26 附近的芳香峰），只會標記為 `optionalObservation`，且不推高 ¹³C 碳數下限、不計入 ¹H 積分最簡比。數值光譜的自動尋峰結果同理。
 
 ## 欄位如何對應到既有解析器／資料結構
 

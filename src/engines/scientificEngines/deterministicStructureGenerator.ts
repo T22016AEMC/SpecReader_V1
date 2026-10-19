@@ -1,6 +1,8 @@
 import type {DeNovoSearchResult} from './deNovoGraphSearch';
 import type {LocalStructureHypothesis} from '../reasoning/types';
-export interface StructureGenerationOptions {searchResult?:DeNovoSearchResult;localStructures?:LocalStructureHypothesis[]}
+export interface StructureGenerationOptions {searchResult?:DeNovoSearchResult;localStructures?:LocalStructureHypothesis[];
+ /** The search ran on composition-hypothesis formulas (P1a); those formulas are the composition basis, so the gate below is skipped. */
+ compositionDriven?:boolean}
 import {searchMolecularGraphs,graphSearchHints} from './deNovoGraphSearch';
 import {canonicalizeMolecule} from './rdkitAdapter';
 import {
@@ -79,7 +81,7 @@ export class DeterministicStructureGenerator {
         ? constraints.userSuppliedFormula.normalizedFormula
         : null;
 
-    if(!authoritativeTargetFormula&&(!(constraints.contributingSources??[]).length||(!constraints.estimatedMolecularWeight&&!(constraints.contributingSources??[]).some(source=>['IR','1H_NMR','13C_NMR'].includes(source))))){
+    if(!authoritativeTargetFormula&&!options.compositionDriven&&(!(constraints.contributingSources??[]).length||(!constraints.estimatedMolecularWeight&&!(constraints.contributingSources??[]).some(source=>['IR','1H_NMR','13C_NMR'].includes(source))))){
       solvedSpace.solverLog.push('缺少可支持組成的實測約束；保留局部觀測，不生成任意完整分子。');
       return {validatedGraphs:[],rejectedCandidates:[]};
     }
