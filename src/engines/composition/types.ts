@@ -52,12 +52,23 @@ export interface CompositionHypothesis {
  searched:boolean;
  sizeConfirmed:boolean;
 }
+/** Element-presence clue from IR/NMR/MS evidence, reported even when no formula can be enumerated. */
+export interface ElementClue {
+ element:CompositionElement;
+ minimum:number;
+ strength:'HARD'|'SOFT';
+ text:string;
+ observationIds:string[];
+ source:CompositionReason['source'];
+}
 export interface CompositionInferenceResult {
  status:'USER_FORMULA'|'INFERRED'|'INSUFFICIENT_DATA'|'INVALID_USER_FORMULA';
  hypotheses:CompositionHypothesis[];
  ionHypotheses:IonHypothesis[];
  elementsConsidered:CompositionElement[];
  elementsExcluded:{element:CompositionElement;reason:string}[];
+ /** Element minima suggested by functional groups and element evidence; present for every status (planner reply 4). */
+ elementClues:ElementClue[];
  bounds:{carbon:[number,number|null]|null;hydrogenMultiples:number[]|null;heteroMinimums:ElementCounts;dbeMin:number;hardBoundsRelaxed:boolean};
  enumeration:{enumeratedNodes:number;passedHardFilters:number;returned:number;truncatedByNodes:boolean;droppedByKeepLimit:number};
  limitations:string[];

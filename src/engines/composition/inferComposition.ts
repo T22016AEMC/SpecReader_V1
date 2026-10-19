@@ -8,7 +8,7 @@ import {combineBounds,functionalGroupFeatures} from './functionalGroupBounds';
 import {dbeOf,formatHill,monoisotopicMass,parseCounts} from './goldenRules';
 import {extractMsEvidence,type MsEvidence} from './msComposition';
 import {extractNmrEvidence} from './nmrComposition';
-import {GENERATOR_ELEMENTS,type CompositionElement,type CompositionHypothesis,type CompositionInferenceResult,type ElementCounts,type IonHypothesis,type MassBasis} from './types';
+import {GENERATOR_ELEMENTS,type ElementClue,type CompositionElement,type CompositionHypothesis,type CompositionInferenceResult,type ElementCounts,type IonHypothesis,type MassBasis} from './types';
 
 export interface CompositionInput {
  bundle:IntegratedAnalysisBundle;
@@ -53,7 +53,11 @@ export function inferComposition(input:CompositionInput):CompositionInferenceRes
  const hasEvidence=(e:CompositionElement)=>elementEvidence.some(x=>x.element===e);
  const limitations=[...(ms?.limitations??[]),...nmr.limitations];
  const hard=combineBounds(features.filter(f=>f.hard));
- const result:CompositionInferenceResult={status:'INFERRED',hypotheses:[],ionHypotheses:ms?.ions??[],elementsConsidered:[],elementsExcluded:[],
+ const elementClues:ElementClue[]=[
+  ...features.flatMap(f=>Object.entries(f.mins).map(([element,minimum])=>({element:element as CompositionElement,minimum:minimum!,strength:(f.hard?'HARD':'SOFT') as ElementClue['strength'],text:`${f.label}（${f.modalities.join('＋')}）`,observationIds:f.observationIds,source:(f.modalities.length===1&&f.modalities[0]==='IR'?'IR':'HYPOTHESIS') as ElementClue['source']}))),
+  ...elementEvidence.map(x=>({element:x.element,minimum:1,strength:'SOFT' as const,text:x.reason.text,observationIds:x.reason.observationIds,source:x.reason.source})),
+ ].sort((a,b)=>a.element.localeCompare(b.element)||b.minimum-a.minimum||a.text.localeCompare(b.text));
+ const result:CompositionInferenceResult={status:'INFERRED',hypotheses:[],ionHypotheses:ms?.ions??[],elementsConsidered:[],elementsExcluded:[],elementClues,
   bounds:{carbon:null,hydrogenMultiples:nmr.h1?.sum?Array.from({length:CFG.h1MaxMultiple},(_,i)=>(i+1)*nmr.h1!.sum!):null,heteroMinimums:hard.mins,dbeMin:hard.dbeMin,hardBoundsRelaxed:false},
   enumeration:{enumeratedNodes:0,passedHardFilters:0,returned:0,truncatedByNodes:false,droppedByKeepLimit:0},limitations,elapsedMs:0};
  const ctx:ScoringContext={nmr,features,elementEvidence,isotopes:ms?.isotopes??{},hardBoundsRelaxed:false};

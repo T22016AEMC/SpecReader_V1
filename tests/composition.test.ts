@@ -13,7 +13,7 @@ import {createReasoningPlan} from '../src/engines/reasoning/hypothesisGenerator'
 import {executeSixStepAnalysis} from '../src/engines/reasoning/sixStepAnalysis';
 import {inferComposition} from '../src/engines/composition/inferComposition';
 import {enumerateFormulas} from '../src/engines/composition/formulaEnumerator';
-import {formatHill,hardViolation,parseCounts,dbeOf} from '../src/engines/composition/goldenRules';
+import {commonRangeViolations,formatHill,hardViolation,parseCounts,dbeOf} from '../src/engines/composition/goldenRules';
 import {simplestIntegerRatio} from '../src/engines/composition/nmrComposition';
 import {combineBounds,functionalGroupFeatures} from '../src/engines/composition/functionalGroupBounds';
 import {generateForCompositions,type StructureGenerator} from '../src/engines/composition/structureGenerator';
@@ -159,6 +159,18 @@ describe('enumeration and filters',()=>{
   expect(hardViolation({C:2,H:5},29)).not.toBeNull();
   expect(hardViolation({C:6,Cl:6},282)).toBeNull();
   expect(hardViolation({C:9,H:10,O:2},150)).toBeNull();
+ });
+ it('uses the Kind & Fiehn 2007 Table 1 caps (larger of DNP/Wiley) and Table 2 ranges',()=>{
+  expect(hardViolation({C:40,H:2},482)).toContain('Golden Rule 1');        // C 39 below 500 Da
+  expect(hardViolation({C:39,H:2},470)).toBeNull();                         // H/C 0.05: hard lower bound 0, soft only
+  expect(hardViolation({C:9,H:36,Si:9},396)).toContain('Golden Rule 1');    // Si 8 below 500 Da (Wiley column)
+  expect(hardViolation({C:8,H:32,Si:8},352)).toBeNull();
+  expect(hardViolation({C:41,H:84},576)).toBeNull();                        // C 78 / H 126 between 500 and 1000 Da
+  expect(hardViolation({C:1,H:1,Cl:3},118)).toContain('Golden Rule 5');     // Cl/C 3 > extended 2
+  expect(hardViolation({C:2,H:3,N:9},159)).toContain('Golden Rule 5');      // N/C 4.5 > extended 4
+  expect(commonRangeViolations({C:6,Cl:6})).toEqual(expect.arrayContaining([expect.stringContaining('H/C')]));
+  expect(commonRangeViolations({C:1,H:2,O:2}).some(v=>v.startsWith('O/C'))).toBe(true);   // O/C 2 > common 1.2
+  expect(commonRangeViolations({C:9,H:10,O:2})).toEqual([]);
   const out=enumerateFormulas({neutralMass:100,toleranceDa:0.5,caps:{C:39,N:20,O:20,S:2},mins:{},carbonRange:[1,39]});
   expect(out.formulas.length).toBeGreaterThan(0);
   expect(out.formulas.every(f=>{const c=f.counts as Record<string,number>;return (c.H??0)/c.C<=6&&Number.isInteger(dbeOf(f.counts))&&dbeOf(f.counts)>=0;})).toBe(true);
@@ -212,6 +224,21 @@ describe('user formula, no-mass marking and element gating',()=>{
   expect(r.limitations.some(l=>l.startsWith('無質量依據，分子大小未確認'))).toBe(true);
   expect(infer({'1H_NMR':mk('1H_NMR',[{x:1.2,integration:3}])}).r.status).toBe('INSUFFICIENT_DATA');
  });
+ it('without mass and 13C reports element clues, enumerates nothing and falls back to the no-formula search',async()=>{
+  const h=mk('1H_NMR',[{x:9.95,integration:1,multiplicity:'s'},{x:7.85,integration:2,multiplicity:'d',jValues:[8]},{x:7.5,integration:2,multiplicity:'d',jValues:[8]}]);
+  const {r}=infer({'1H_NMR':h});
+  expect(r.status).toBe('INSUFFICIENT_DATA');
+  expect(r.hypotheses).toEqual([]);
+  expect(r.enumeration.enumeratedNodes).toBe(0);
+  expect(r.elementClues).toEqual(expect.arrayContaining([
+   expect.objectContaining({element:'C',minimum:6,strength:'SOFT',source:'HYPOTHESIS'}),
+   expect.objectContaining({element:'O',minimum:1,strength:'SOFT'}),
+  ]));
+  expect(r.elementClues.every(c=>c.observationIds.length>0)).toBe(true);
+  const result=await executeSixStepAnalysis({spectra:{'1H_NMR':h},extraInput:{}},{timeMs:3000,maxStates:3000});
+  expect(result.reasoningTrace!.compositionSearch?.mode).toBe('NO_FORMULA');
+  expect(result.compositionInference?.elementClues.length).toBeGreaterThan(0);
+ },30000);
  it('keeps F/I/P/Si out unless specific evidence opens them',()=>{
   const plain=infer({MS:ethylBenzoateLike()}).r;
   expect(plain.elementsExcluded.map(e=>e.element)).toEqual(expect.arrayContaining(['F','I','P','Si']));
@@ -271,7 +298,7 @@ describe('server version',()=>{
 
 describe('generator bridge',()=>{
  const hyp=(formula:string,supported=true):CompositionHypothesis=>({id:`comp-${formula}`,formula,counts:parseCounts(formula)!,dbe:0,monoisotopicMass:0,massBasis:'LOW_RES_MS',ionHypothesisId:null,massErrorDa:null,massErrorPpm:null,relativeConfidence:0.25,calibrated:false,score:0,support:[],contradiction:[],unknown:[],generatorSupported:supported,unsupportedElements:supported?[]:['S'],searched:false,sizeConfirmed:true});
- const composition=(hs:CompositionHypothesis[]):CompositionInferenceResult=>({status:'INFERRED',hypotheses:hs,ionHypotheses:[],elementsConsidered:[],elementsExcluded:[],bounds:{carbon:null,hydrogenMultiples:null,heteroMinimums:{},dbeMin:0,hardBoundsRelaxed:false},enumeration:{enumeratedNodes:0,passedHardFilters:0,returned:hs.length,truncatedByNodes:false,droppedByKeepLimit:0},limitations:[],elapsedMs:0});
+ const composition=(hs:CompositionHypothesis[]):CompositionInferenceResult=>({status:'INFERRED',hypotheses:hs,ionHypotheses:[],elementsConsidered:[],elementsExcluded:[],elementClues:[],bounds:{carbon:null,hydrogenMultiples:null,heteroMinimums:{},dbeMin:0,hardBoundsRelaxed:false},enumeration:{enumeratedNodes:0,passedHardFilters:0,returned:hs.length,truncatedByNodes:false,droppedByKeepLimit:0},limitations:[],elapsedMs:0});
  const budget={timeMs:12000,maxStates:120000,maxResults:48,maxFrontier:4096,beamWidth:64};
  const fake=()=>{
   const calls:{formula:string|undefined;maxStates:number;timeMs:number;maxResults:number}[]=[];

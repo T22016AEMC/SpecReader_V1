@@ -110,19 +110,27 @@ export const COMPOSITION_CONFIG = {
   /** Hypotheses kept after scoring; the rest are counted as dropped (審核決定 8). */
   maxHypotheses: 200,
 
-  // ---------------------------------------------------------------- Seven Golden Rules (Kind & Fiehn 2007, BMC Bioinformatics 8:105)
-  /** Rule 1: element maxima by neutral-mass bracket, the larger of the DNP and Wiley columns of Table 1. To be re-checked against the paper. */
+  // ---------------------------------------------------------------- Seven Golden Rules
+  // Kind T, Fiehn O. "Seven Golden Rules for heuristic filtering of molecular formulas obtained by accurate mass
+  // spectrometry." BMC Bioinformatics 2007;8:105. doi:10.1186/1471-2105-8-105 (PMC1851972). Checked against the PMC text.
+  /** Rule 1 (Table 1): element maxima per neutral-mass bracket. Each value is the larger of the DNP and Wiley columns,
+   * the more permissive choice so synthetic compounds outside natural-product space are not removed. Si comes from the
+   * Wiley column only (the DNP column has no Si value). */
   goldenRule1: [
-    {maxMass: 500, caps: {C: 39, H: 72, N: 20, O: 20, P: 9, S: 10, F: 16, Cl: 10, Br: 5}},
-    {maxMass: 1000, caps: {C: 78, H: 126, N: 25, O: 27, P: 9, S: 14, F: 34, Cl: 12, Br: 8}},
+    {maxMass: 500, caps: {C: 39, H: 72, N: 20, O: 20, P: 9, S: 10, F: 16, Cl: 10, Br: 5, Si: 8}},
+    {maxMass: 1000, caps: {C: 78, H: 126, N: 25, O: 27, P: 9, S: 14, F: 34, Cl: 12, Br: 8, Si: 14}},
+    {maxMass: 2000, caps: {C: 156, H: 236, N: 32, O: 63, P: 9, S: 14, F: 48, Cl: 12, Br: 10, Si: 15}},
   ],
-  /** Rule 4: H/C. Hard range (lower bound 0 instead of 0.1 so perhalogenated compounds survive) and common (soft) range. */
+  /** Rule 4 (Table 2, H/C): hard = extended range 0.1–6 with the lower bound lowered to 0 so perhalogenated compounds
+   * such as C6Cl6 survive (planner decision); common range 0.2–3.1 is a soft penalty only. */
   hcHard: [0, 6] as [number, number],
   hcCommon: [0.2, 3.1] as [number, number],
-  /** Rule 5: heteroatom/C ratio maxima, extended (hard) and common (soft) ranges. */
+  /** Rule 5 (Table 2): heteroatom/C maxima. Extended range (99.99 % of Wiley, 30–1500 Da) is hard; outside the common
+   * range (99.7 %) is a soft penalty only. Note: e.g. CHCl3 (Cl/C = 3) exceeds the extended range and is removed. */
   ratioHard: {N: 4, O: 3, P: 2, S: 3, F: 6, Cl: 2, Br: 2, Si: 1} as Record<string, number>,
   ratioCommon: {N: 1.3, O: 1.2, P: 0.3, S: 0.8, F: 1.5, Cl: 0.8, Br: 0.8, Si: 0.5} as Record<string, number>,
-  /** Rule 6: multi-element probability check. When every listed element exceeds `when`, each must stay below its limit. */
+  /** Rule 6 (Table 3, compounds < 2000 Da): multi-element probability check. When every listed element exceeds `when`,
+   * each must stay below its limit (NOPS > 1; NOP > 3; OPS > 1; PSN > 1; NOS > 6). */
   goldenRule6: [
     {when: {N: 1, O: 1, P: 1, S: 1}, limits: {N: 10, O: 20, P: 4, S: 3}},
     {when: {N: 3, O: 3, P: 3}, limits: {N: 11, O: 22, P: 6}},
