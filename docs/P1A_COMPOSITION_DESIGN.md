@@ -392,4 +392,5 @@ export interface StructureGenerator {generateStructures(req:StructureGenerationR
 - **benchmark 峰表**新增 `classification` 欄位（寫入 `classificationSource='USER'`），是 P1c 之前唯一能做出明確標記的方式。
 - **預算順延的語意**：每次搜尋分到「剩餘預算 / 剩餘個數」，各次上限加總可能超過總額，但**實際消耗**不超過總額（生成器可能在上限外多數一個狀態才停止）。
 - **規劃者第二輪回覆（2026-10-19）**：`binary-search`（CC0-1.0，僅開發）接受；Golden Rules 改用原文核對值（Kind & Fiehn 2007 Table 1 取 DNP／Wiley 較大者，含 Si 與 <2000 Da 區間；Table 2 extended 為硬、common 外為軟；Table 3 為規則 6），已對照 PMC 全文確認與規劃者提供的數值一致；H/C 硬下限 0 同意；無質量也無 ¹³C 時不枚舉，但結果新增 `elementClues`（官能基與元素證據的元素下限線索），搜尋退回無分子式路徑。
+- **小分子例外（v1.1.5）**：碳數 ≤ 2 的分子式，Table 2 的比例規則（H/C 與雜原子/C）只作軟懲罰、不作硬排除（比例範圍來自一般大小分子的統計，不適用於 CHCl₃、CH₂Cl₂、CCl₄、CF₃Br 等 C1–C2 化合物）；碳數 ≥ 3 維持原規則。常數 `smallMoleculeRatioCarbonMax`。
 - **效能**：兩段式評分（先以數值分數排序所有通過篩選的分子式，只為保留的前 200 個組理由），同位素比以「單一元素分布快取 + 卷積」計算（與 `isotopeEnvelope` 同表、同截斷）。質量 580、低解析的合成例：582 ms → 167 ms。

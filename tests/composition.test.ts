@@ -166,11 +166,20 @@ describe('enumeration and filters',()=>{
   expect(hardViolation({C:9,H:36,Si:9},396)).toContain('Golden Rule 1');    // Si 8 below 500 Da (Wiley column)
   expect(hardViolation({C:8,H:32,Si:8},352)).toBeNull();
   expect(hardViolation({C:41,H:84},576)).toBeNull();                        // C 78 / H 126 between 500 and 1000 Da
-  expect(hardViolation({C:1,H:1,Cl:3},118)).toContain('Golden Rule 5');     // Cl/C 3 > extended 2
-  expect(hardViolation({C:2,H:3,N:9},159)).toContain('Golden Rule 5');      // N/C 4.5 > extended 4
+  expect(hardViolation({C:3,H:1,Cl:7},282)).toContain('Golden Rule 5');     // Cl/C 2.33 > extended 2 (C ≥ 3)
+  expect(hardViolation({C:12,H:52,Si:13},560)).toContain('Golden Rule 5');  // C10+: Table 2 still hard (Si/C 1.08 > 1)
+  expect(hardViolation({C:3,H:1,N:13},223)).toContain('Golden Rule 5');     // N/C 4.33 > extended 4
   expect(commonRangeViolations({C:6,Cl:6})).toEqual(expect.arrayContaining([expect.stringContaining('H/C')]));
   expect(commonRangeViolations({C:1,H:2,O:2}).some(v=>v.startsWith('O/C'))).toBe(true);   // O/C 2 > common 1.2
   expect(commonRangeViolations({C:9,H:10,O:2})).toEqual([]);
+ });
+ it('treats Table 2 ratios as soft penalties for C1–C2 formulas (CHCl3, CH2Cl2, CCl4, CF3Br)',()=>{
+  for(const [counts,mass] of [[{C:1,H:1,Cl:3},117.91],[{C:1,H:2,Cl:2},83.95],[{C:1,Cl:4},151.88],[{C:1,F:3,Br:1},147.91]] as const)expect(hardViolation(counts,mass)).toBeNull();
+  // CHCl3 (Cl/C 3) and CCl4 (Cl/C 4) exceed the extended range: kept, but penalized.
+  for(const counts of [{C:1,H:1,Cl:3},{C:1,Cl:4}])expect(commonRangeViolations(counts).some(v=>v.includes('只作軟懲罰'))).toBe(true);
+  expect(hardViolation({C:3,H:1,Cl:7},282)).not.toBeNull();
+  const ccl4=infer({MS:ei([{x:152,y:60},{x:154,y:78},{x:156,y:38},{x:117,y:100}])}).r;
+  expect(formulas(ccl4)).toContain('CCl4');
   const out=enumerateFormulas({neutralMass:100,toleranceDa:0.5,caps:{C:39,N:20,O:20,S:2},mins:{},carbonRange:[1,39]});
   expect(out.formulas.length).toBeGreaterThan(0);
   expect(out.formulas.every(f=>{const c=f.counts as Record<string,number>;return (c.H??0)/c.C<=6&&Number.isInteger(dbeOf(f.counts))&&dbeOf(f.counts)>=0;})).toBe(true);

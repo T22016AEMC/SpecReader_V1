@@ -42,9 +42,12 @@ export function hardViolation(c:ElementCounts,mass:number):string|null {
  if(bracket)for(const [e,max] of Object.entries(bracket.caps))if(n(c,e as CompositionElement)>max)return `Golden Rule 1：${e}>${max}（質量<${bracket.maxMass}）`;
  const C=n(c,'C');
  if(C<1)return '不含碳';
- const hc=n(c,'H')/C;
- if(hc<CFG.hcHard[0]||hc>CFG.hcHard[1])return `Golden Rule 4：H/C=${hc.toFixed(2)} 超出 ${CFG.hcHard.join('–')}`;
- for(const [e,max] of Object.entries(CFG.ratioHard))if(n(c,e as CompositionElement)/C>max)return `Golden Rule 5：${e}/C>${max}`;
+ // Table 2 ratios are hard only above the small-molecule limit; C1–C2 violations become soft penalties (commonRangeViolations).
+ if(C>CFG.smallMoleculeRatioCarbonMax){
+  const hc=n(c,'H')/C;
+  if(hc<CFG.hcHard[0]||hc>CFG.hcHard[1])return `Golden Rule 4：H/C=${hc.toFixed(2)} 超出 ${CFG.hcHard.join('–')}`;
+  for(const [e,max] of Object.entries(CFG.ratioHard))if(n(c,e as CompositionElement)/C>max)return `Golden Rule 5：${e}/C>${max}`;
+ }
  for(const rule of CFG.goldenRule6){
   if(Object.entries(rule.when).every(([e,v])=>n(c,e as CompositionElement)>v)&&Object.entries(rule.limits).some(([e,v])=>n(c,e as CompositionElement)>=v))return 'Golden Rule 6：多元素組合機率檢查不通過';
  }
@@ -57,5 +60,10 @@ export function commonRangeViolations(c:ElementCounts):string[] {
  const hc=n(c,'H')/C;
  if(hc<CFG.hcCommon[0]||hc>CFG.hcCommon[1])out.push(`H/C=${hc.toFixed(2)} 不在常見範圍 ${CFG.hcCommon.join('–')}`);
  for(const [e,max] of Object.entries(CFG.ratioCommon))if(n(c,e as CompositionElement)/C>max)out.push(`${e}/C=${(n(c,e as CompositionElement)/C).toFixed(2)} 超過常見上限 ${max}`);
+ if(C<=CFG.smallMoleculeRatioCarbonMax){
+  // Extended-range violations of C1–C2 formulas are penalized here instead of being hard exclusions.
+  if(hc<CFG.hcHard[0]||hc>CFG.hcHard[1])out.push(`H/C=${hc.toFixed(2)} 超出延伸範圍 ${CFG.hcHard.join('–')}（C≤${CFG.smallMoleculeRatioCarbonMax}，只作軟懲罰）`);
+  for(const [e,max] of Object.entries(CFG.ratioHard))if(n(c,e as CompositionElement)/C>max)out.push(`${e}/C=${(n(c,e as CompositionElement)/C).toFixed(2)} 超出延伸上限 ${max}（C≤${CFG.smallMoleculeRatioCarbonMax}，只作軟懲罰）`);
+ }
  return out;
 }

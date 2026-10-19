@@ -129,6 +129,9 @@ export const COMPOSITION_CONFIG = {
    * range (99.7 %) is a soft penalty only. Note: e.g. CHCl3 (Cl/C = 3) exceeds the extended range and is removed. */
   ratioHard: {N: 4, O: 3, P: 2, S: 3, F: 6, Cl: 2, Br: 2, Si: 1} as Record<string, number>,
   ratioCommon: {N: 1.3, O: 1.2, P: 0.3, S: 0.8, F: 1.5, Cl: 0.8, Br: 0.8, Si: 0.5} as Record<string, number>,
+  /** Formulas with at most this many carbons get Table 2 ratio rules (H/C and heteroatom/C) as soft penalties only:
+   * the ranges are statistics of ordinary-sized molecules and do not fit C1–C2 compounds such as CHCl3, CH2Cl2, CCl4, CF3Br. */
+  smallMoleculeRatioCarbonMax: 2,
   /** Rule 6 (Table 3, compounds < 2000 Da): multi-element probability check. When every listed element exceeds `when`,
    * each must stay below its limit (NOPS > 1; NOP > 3; OPS > 1; PSN > 1; NOS > 6). */
   goldenRule6: [
