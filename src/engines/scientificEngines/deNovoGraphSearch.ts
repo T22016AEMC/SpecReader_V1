@@ -3,7 +3,9 @@ import {ChemistryEngine} from '../chemistryEngine';
 import {canonicalizeMolecule,rdkitStatus} from './rdkitAdapter';
 import type {StructuralConstraints} from '../../types/spectrum';
 export type SearchTermination='OUTPUT_BUDGET'|'TIME_BUDGET'|'STATE_BUDGET'|'BEAM_PRUNED'|'GRAMMAR_EXHAUSTED'|'INSUFFICIENT_CONSTRAINTS'|'UNSUPPORTED_CHEMISTRY'|'INVALID_COMPOSITION'|'UNAVAILABLE'|'EXECUTION_ERROR'|'CANCELLED';
-export interface GraphSearchHints {aromatic?:boolean;carbonyl?:boolean;oxygen?:boolean;nitrogen?:boolean;observedSignals?:number;coupledEthyl?:boolean;couplingNotes?:string[];neutralMass?:number;massTolerance?:number;localStructures?:LocalStructureHypothesis[]}
+export interface GraphSearchHints {aromatic?:boolean;carbonyl?:boolean;oxygen?:boolean;nitrogen?:boolean;
+ /** v1.1.6: no N-specific evidence; N is not added to the atom alphabet (a target formula still decides its own elements). */
+ nitrogenForbidden?:boolean;observedSignals?:number;coupledEthyl?:boolean;couplingNotes?:string[];neutralMass?:number;massTolerance?:number;localStructures?:LocalStructureHypothesis[]}
 export interface DeNovoSearchResult {smiles:string[];status:'BOUNDED'|'UNSUPPORTED'|'UNAVAILABLE';visited:number;note:string;termination:SearchTermination;complete:boolean;partialHypotheses:string[];rejectedByComposition:number;error?:string;derivations?:Record<string,AssemblyDerivation>;elapsedMs?:number;frontierPeak?:number;formulaSources?:Record<string,string[]>}
 export interface GraphSearchOptions {maxResults?:number;maxStates?:number;timeMs?:number;beamWidth?:number;hints?:GraphSearchHints;maxFrontier?:number;shouldCancel?:()=>boolean;onProgress?:(p:GraphSearchProgress)=>void}
 export interface GraphSearchProgress {visited:number;candidateCount:number;elapsedMs:number;frontier:number}
@@ -48,7 +50,7 @@ function* iterateGraphSearch(formula:string|undefined,options:GraphSearchOptions
  const maxFrontier=options.maxFrontier??4096,maxStates=options.maxStates??12000,maxResults=options.maxResults??24,beamWidth=options.beamWidth??48,deadline=performance.now()+(options.timeMs??500);
  // Depth is an explicit search budget when composition is unknown, not an inferred formula.
  const depth=heavy??Math.max(hints.aromatic?7:3,Math.max((hints.observedSignals??0)*2+2,hints.neutralMass?Math.floor(hints.neutralMass/12):0));
- const allowed=target?Object.keys(target).filter(e=>e!=='H'):['C',...(hints.oxygen||hints.carbonyl||hints.neutralMass?['O']:[]),...(hints.nitrogen||hints.neutralMass?['N']:[])];
+ const allowed=target?Object.keys(target).filter(e=>e!=='H'):['C',...(hints.oxygen||hints.carbonyl||hints.neutralMass?['O']:[]),...((hints.nitrogen||hints.neutralMass)&&!hints.nitrogenForbidden?['N']:[])];
  const locals=hints.localStructures??[];
  const seen=new Set<string>(),canonicalSeen=new Set<string>();let pruned=false;
  const feasible=(g:Graph)=>{const c=counts(g),d=unsaturation(g);return g.atoms.length<=depth&&g.atoms.every((a,i)=>degree(g,i)<=valence[a])&&(!target||Object.entries(c).every(([e,n])=>n<=(target[e]??0))&&d<=targetDBE!);};

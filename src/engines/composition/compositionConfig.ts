@@ -96,6 +96,31 @@ export const COMPOSITION_CONFIG = {
   /** m/z window for these diagnostic ions and losses (Da). */
   diagnosticWindow: 0.4,
 
+  // ---------------------------------------------------------------- nitrogen gating (v1.1.6)
+  // N is used only with N-specific evidence. Ambiguous O/N signals default to O and are only annotated.
+  /** IR primary-amine N–H stretch doublet: two marked bands in this window (cm⁻¹)… */
+  irAmineDoubletRange: [3300, 3550] as [number, number],
+  /** …separated by this many cm⁻¹ (asymmetric/symmetric N–H stretch, typically ~70–100). */
+  irAmineDoubletSeparation: [50, 120] as [number, number],
+  /** IR C≡N stretch window (cm⁻¹); also required before a 13C 105–125 ppm signal counts as a nitrile carbon. */
+  irNitrileRange: [2210, 2260] as [number, number],
+  /** IR nitro asymmetric and symmetric stretches; both bands must be marked (cm⁻¹). */
+  irNitroAsymRange: [1500, 1570] as [number, number],
+  irNitroSymRange: [1300, 1390] as [number, number],
+  /** IR amide I and amide II bands; both must be marked (cm⁻¹). */
+  irAmideIRange: [1630, 1695] as [number, number],
+  irAmideIIRange: [1510, 1580] as [number, number],
+  /** 13C nitrile carbon window (ppm), counted only together with the IR nitrile band. */
+  c13NitrileEvidenceRange: [105, 125] as [number, number],
+  /** IR O–H/N–H broad stretch window (cm⁻¹) used for the O-default exchangeable feature. */
+  irBroadXHRange: [3200, 3600] as [number, number],
+
+  // ---------------------------------------------------------------- 1H + IR composition without mass or 13C (v1.1.6)
+  /** Multiples k for H = k·S (+ missing exchangeable H) and C = k·V + q when only 1H (and IR) is available. */
+  h1OnlyMaxMultiple: 3,
+  /** q: carbons invisible in 1H (quaternary C, C=O, …) added on top of k·V. */
+  h1OnlyInvisibleCarbonMax: 4,
+
   // ---------------------------------------------------------------- element caps
   /** Default caps for elements allowed without specific evidence. */
   defaultCaps: {S: 2, Cl: 1, Br: 1},
@@ -180,6 +205,8 @@ export const COMPOSITION_CONFIG = {
     rareElement: 1.0,
     /** Penalty per N atom when nothing suggests nitrogen (mild Occam prior). */
     nitrogenNoEvidence: 0.2,
+    /** Penalty per N atom when MS is present but its molecular ion is even (N possible only in pairs) and there is no N-specific evidence (v1.1.6). */
+    nitrogenEvenIonOnly: 1.5,
   },
 } as const;
 export type CompositionConfig = typeof COMPOSITION_CONFIG;

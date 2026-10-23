@@ -13,6 +13,8 @@ export interface ScoringContext {
  isotopes:Record<string,IonIsotopes>;
  /** Whether the hard feature bounds were relaxed to soft because they removed every hypothesis (審核決定 4). */
  hardBoundsRelaxed:boolean;
+ /** N gating mode (v1.1.6). */
+ nitrogenMode:'EVIDENCE'|'EVEN_ION_ONLY'|'NONE';
 }
 export interface ScoredComposition {score:number;support:CompositionReason[];contradiction:CompositionReason[];unknown:CompositionReason[]}
 
@@ -109,7 +111,8 @@ export function scoreComposition(counts:ElementCounts,mass:number,ion:IonHypothe
   else {out.score-=w.softBoundViolation;reason(out.contradiction,`${f.label}（${f.modalities.join('＋')}）要求 ${need}，不符合`,f.observationIds,src,'SOFT');}
  }
  const nFeature=ctx.features.some(f=>(f.mins.N??0)>0);
- if(n(counts,'N')&&!nFeature){out.score-=w.nitrogenNoEvidence*n(counts,'N');reason(out.unknown,`含 ${n(counts,'N')} 個 N，但沒有官能基證據指向 N`,[],'RULE');}
+ if(n(counts,'N')&&ctx.nitrogenMode==='EVEN_ION_ONLY'){out.score-=w.nitrogenEvenIonOnly*n(counts,'N');reason(out.unknown,`含 ${n(counts,'N')} 個 N：MS 分子離子為偶數名義質量，沒有其他 N 專屬證據，信心降低`,[],'RULE');}
+ else if(n(counts,'N')&&!nFeature&&ctx.nitrogenMode!=='EVIDENCE'){out.score-=w.nitrogenNoEvidence*n(counts,'N');reason(out.unknown,`含 ${n(counts,'N')} 個 N，但沒有官能基證據指向 N`,[],'RULE');}
  // Golden Rules common ranges.
  for(const v of commonRangeViolations(counts)){out.score-=w.goldenCommon;reason(out.contradiction,`Golden Rules 常見範圍：${v}`,[],'RULE');}
  // Element priors.

@@ -39,7 +39,7 @@ export function describeAtomicEnvironments(smiles:string,conditions:{solvent?:NM
  if(cache.size>=128)cache.delete(cache.keys().next().value!);cache.set(key,output);return output;
 }
 const SOURCE='https://www2.chemistry.msu.edu/faculty/reusch/VirtTxtJml/Spectrpy/nmr/nmr1.htm';
-type EnvironmentRule={id:string;label:string;range:[number,number];hybridization:string;neighborElements:string[];exchange?:boolean};
+type EnvironmentRule={id:string;label:string;range:[number,number];hybridization:string;neighborElements:string[];exchange?:boolean;nitrogenAmbiguous?:boolean};
 const hRules:EnvironmentRule[]=[
  {id:'alkyl',label:'飽和脂肪族 C–H',range:[.5,2],hybridization:'sp3',neighborElements:['C','H']},
  {id:'allyl-benzyl',label:'烯丙／苄位／羰基鄰位 C–H',range:[1.6,3.2],hybridization:'sp3',neighborElements:['C']},
@@ -65,10 +65,21 @@ const cRules:EnvironmentRule[]=[
  {id:'acid-derivative-c',label:'羧酸／酯／醯胺羰基競爭環境',range:[160,185],hybridization:'sp2',neighborElements:['O','N']},
  {id:'aldehyde-ketone-c',label:'醛／酮羰基競爭環境',range:[185,225],hybridization:'sp2',neighborElements:['O','C']},
 ];
-export function inferSignalEnvironments(modality:'1H_NMR'|'13C_NMR',p:SpectralPeak,solvent:NMRSolvent='Unknown'):SignalEnvironmentHypothesis[]{
- const rules=modality==='1H_NMR'?hRules:cRules,base=modality==='1H_NMR'?.35:6;
+/**
+ * Without N-specific evidence (v1.1.6, options.nitrogenAllowed=false) N is removed from every rule:
+ * the 13C nitrile rule is dropped (a 105–125 ppm carbon is a nitrile only with the IR C≡N band) and
+ * other O/N or N/S neighbours default to O, with a note that N stays possible but unsupported.
+ * The default (true) keeps the original rules for nmrEngine and Mode B.
+ */
+function nitrogenGated(rules:EnvironmentRule[]):EnvironmentRule[] {
+ return rules.filter(r=>r.id!=='nitrile-c').map(r=>r.neighborElements.includes('N')?{...r,neighborElements:[...new Set(r.neighborElements.map(e=>e==='N'?'O':e))],nitrogenAmbiguous:true}:r);
+}
+export function inferSignalEnvironments(modality:'1H_NMR'|'13C_NMR',p:SpectralPeak,solvent:NMRSolvent='Unknown',options:{nitrogenAllowed?:boolean}={}):SignalEnvironmentHypothesis[]{
+ const all=modality==='1H_NMR'?hRules:cRules,base=modality==='1H_NMR'?.35:6;
+ const rules=options.nitrogenAllowed===false?nitrogenGated(all):all;
  return rules.map(r=>{const d=Math.max(r.range[0]-p.x,0,p.x-r.range[1]);let score=Math.exp(-.5*(d/base)**2);
   const support=[`實測 δ ${p.x} ppm；區間 ${r.range.join('–')}`];
+  if(r.nitrogenAmbiguous)support.push('也可能是 N，但無 N 專屬證據；預設歸 O');
   if(p.multiplicity){support.push(`已提供 ${p.multiplicity}；只作局部耦合約束，不直接指定分子`);if(r.exchange&&!['br s','s','m','unresolved'].includes(p.multiplicity))score*=.55;}
   if(p.integration!=null||p.integral!=null)support.push('相對積分已提供；只能形成訊號比例，非絕對氫數');
   if(p.jValues?.length)support.push(`J=${p.jValues.join(',')} Hz；可比較共同耦合，未求解二階系統`);

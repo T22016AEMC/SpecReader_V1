@@ -30,6 +30,8 @@ export interface AssemblyDerivation {localStructureIds:string[];operations:strin
 export interface ReasoningPlan {observations:ObservedEvidence[];hypotheses:ChemicalHypothesis[];localStructures:LocalStructureHypothesis[];userFormula:string|null;unknown:string[];
  /** Competing formula hypotheses (P1a); not a trace stage, so the six-stage contract is unchanged. */
  composition?:import('../composition/types').CompositionInferenceResult;
+ /** N-specific evidence (v1.1.6); 'NONE' removes N from hypotheses, fragments, formulas and the search alphabet. */
+ nitrogenEvidence?:import('../composition/nitrogenEvidence').NitrogenEvidence;
  compositionSearch?:{mode:'USER_FORMULA'|'COMPOSITION_HYPOTHESES'|'NO_FORMULA';note:string|null;runs:import('../composition/structureGenerator').CompositionSearchRun[]};
 }
 export interface CandidateReasoning {

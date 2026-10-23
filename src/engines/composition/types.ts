@@ -51,6 +51,8 @@ export interface CompositionHypothesis {
  unsupportedElements:CompositionElement[];
  searched:boolean;
  sizeConfirmed:boolean;
+ /** k of the symmetric-unit hypothesis: total H ≈ k·S (simplest 1H ratio); null without 1H integrals (v1.1.6). */
+ symmetryMultiple:number|null;
 }
 /** Element-presence clue from IR/NMR/MS evidence, reported even when no formula can be enumerated. */
 export interface ElementClue {
@@ -69,6 +71,8 @@ export interface CompositionInferenceResult {
  elementsExcluded:{element:CompositionElement;reason:string}[];
  /** Element minima suggested by functional groups and element evidence; present for every status (planner reply 4). */
  elementClues:ElementClue[];
+ /** N-specific evidence used for gating (v1.1.6). */
+ nitrogenEvidence:import('./nitrogenEvidence').NitrogenEvidence;
  bounds:{carbon:[number,number|null]|null;hydrogenMultiples:number[]|null;heteroMinimums:ElementCounts;dbeMin:number;hardBoundsRelaxed:boolean};
  enumeration:{enumeratedNodes:number;passedHardFilters:number;returned:number;truncatedByNodes:boolean;droppedByKeepLimit:number};
  limitations:string[];

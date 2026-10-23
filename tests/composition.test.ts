@@ -231,10 +231,12 @@ describe('user formula, no-mass marking and element gating',()=>{
   expect(r.hypotheses.length).toBeGreaterThan(0);
   expect(r.hypotheses.every(h=>h.massBasis==='NONE'&&!h.sizeConfirmed&&h.unknown.some(u=>u.text==='無質量依據，分子大小未確認'))).toBe(true);
   expect(r.limitations.some(l=>l.startsWith('無質量依據，分子大小未確認'))).toBe(true);
-  expect(infer({'1H_NMR':mk('1H_NMR',[{x:1.2,integration:3}])}).r.status).toBe('INSUFFICIENT_DATA');
+  // v1.1.6: 1H with integrals now enumerates (H = k·S, C = k·V + q); only 1H without integrals stays INSUFFICIENT_DATA.
+  expect(infer({'1H_NMR':mk('1H_NMR',[{x:1.2}])}).r.status).toBe('INSUFFICIENT_DATA');
  });
- it('without mass and 13C reports element clues, enumerates nothing and falls back to the no-formula search',async()=>{
-  const h=mk('1H_NMR',[{x:9.95,integration:1,multiplicity:'s'},{x:7.85,integration:2,multiplicity:'d',jValues:[8]},{x:7.5,integration:2,multiplicity:'d',jValues:[8]}]);
+ it('without mass, 13C and 1H integrals reports element clues, enumerates nothing and falls back to the no-formula search',async()=>{
+  // v1.1.6: the same signals WITH integrals now enumerate formulas (tests/v116Nitrogen.test.ts), so integrals are omitted here.
+  const h=mk('1H_NMR',[{x:9.95,multiplicity:'s'},{x:7.85,multiplicity:'d',jValues:[8]},{x:7.5,multiplicity:'d',jValues:[8]}]);
   const {r}=infer({'1H_NMR':h});
   expect(r.status).toBe('INSUFFICIENT_DATA');
   expect(r.hypotheses).toEqual([]);
@@ -306,8 +308,8 @@ describe('server version',()=>{
 });
 
 describe('generator bridge',()=>{
- const hyp=(formula:string,supported=true):CompositionHypothesis=>({id:`comp-${formula}`,formula,counts:parseCounts(formula)!,dbe:0,monoisotopicMass:0,massBasis:'LOW_RES_MS',ionHypothesisId:null,massErrorDa:null,massErrorPpm:null,relativeConfidence:0.25,calibrated:false,score:0,support:[],contradiction:[],unknown:[],generatorSupported:supported,unsupportedElements:supported?[]:['S'],searched:false,sizeConfirmed:true});
- const composition=(hs:CompositionHypothesis[]):CompositionInferenceResult=>({status:'INFERRED',hypotheses:hs,ionHypotheses:[],elementsConsidered:[],elementsExcluded:[],elementClues:[],bounds:{carbon:null,hydrogenMultiples:null,heteroMinimums:{},dbeMin:0,hardBoundsRelaxed:false},enumeration:{enumeratedNodes:0,passedHardFilters:0,returned:hs.length,truncatedByNodes:false,droppedByKeepLimit:0},limitations:[],elapsedMs:0});
+ const hyp=(formula:string,supported=true):CompositionHypothesis=>({id:`comp-${formula}`,formula,counts:parseCounts(formula)!,dbe:0,monoisotopicMass:0,massBasis:'LOW_RES_MS',ionHypothesisId:null,massErrorDa:null,massErrorPpm:null,relativeConfidence:0.25,calibrated:false,score:0,support:[],contradiction:[],unknown:[],generatorSupported:supported,unsupportedElements:supported?[]:['S'],searched:false,sizeConfirmed:true,symmetryMultiple:null});
+ const composition=(hs:CompositionHypothesis[]):CompositionInferenceResult=>({status:'INFERRED',hypotheses:hs,ionHypotheses:[],elementsConsidered:[],elementsExcluded:[],elementClues:[],nitrogenEvidence:{mode:'EVIDENCE',allowed:true,reasons:[],note:''},bounds:{carbon:null,hydrogenMultiples:null,heteroMinimums:{},dbeMin:0,hardBoundsRelaxed:false},enumeration:{enumeratedNodes:0,passedHardFilters:0,returned:hs.length,truncatedByNodes:false,droppedByKeepLimit:0},limitations:[],elapsedMs:0});
  const budget={timeMs:12000,maxStates:120000,maxResults:48,maxFrontier:4096,beamWidth:64};
  const fake=()=>{
   const calls:{formula:string|undefined;maxStates:number;timeMs:number;maxResults:number}[]=[];

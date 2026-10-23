@@ -6,7 +6,9 @@ import {generateForCompositions} from '../composition/structureGenerator';
 import type {AnalysisInput,ModeAResult} from '../analysisSession';
 import type {AnalysisProgress,ReasoningPlan} from './types';
 export function planningSearchHints(plan:ReasoningPlan,base:ReturnType<typeof graphSearchHints>):ReturnType<typeof graphSearchHints>{
- return {...base,localStructures:plan.localStructures,observedSignals:plan.localStructures.length?Math.max(base.observedSignals??0,plan.observations.filter(o=>['IR','1H_NMR','13C_NMR'].includes(o.modality)).length):base.observedSignals,aromatic:base.aromatic||plan.localStructures.some(l=>l.kind.startsWith('ARYL')||l.kind==='AROMATIC'),oxygen:base.oxygen||plan.localStructures.some(l=>l.atoms.some(a=>a.element==='O')),nitrogen:base.nitrogen||plan.localStructures.some(l=>l.atoms.some(a=>a.element==='N'))};
+ const hints={...base,localStructures:plan.localStructures,observedSignals:plan.localStructures.length?Math.max(base.observedSignals??0,plan.observations.filter(o=>['IR','1H_NMR','13C_NMR'].includes(o.modality)).length):base.observedSignals,aromatic:base.aromatic||plan.localStructures.some(l=>l.kind.startsWith('ARYL')||l.kind==='AROMATIC'),oxygen:base.oxygen||plan.localStructures.some(l=>l.atoms.some(a=>a.element==='O')),nitrogen:base.nitrogen||plan.localStructures.some(l=>l.atoms.some(a=>a.element==='N'))};
+ // v1.1.6: without N-specific evidence the search alphabet excludes N (a mass alone no longer opens it).
+ return plan.nitrogenEvidence?.mode==='NONE'?{...hints,nitrogen:false,nitrogenForbidden:true}:hints;
 }
 export async function executeSixStepAnalysis(input:AnalysisInput,options:{shouldCancel?:()=>boolean;onProgress?:(p:AnalysisProgress)=>void;timeMs?:number;maxStates?:number}={}):Promise<ModeAResult>{
  const tick=()=>new Promise<void>(resolve=>setTimeout(resolve,0));
@@ -14,7 +16,7 @@ export async function executeSixStepAnalysis(input:AnalysisInput,options:{should
  const prepared=WorkbenchOrchestrator.prepareModeAEvidence(input.spectra,input.extraInput);
  options.onProgress?.({step:2,stage:'建立競爭性化學環境假設'});await tick();
  const plan=createReasoningPlan(prepared.bundle);
- plan.composition=inferComposition({bundle:prepared.bundle,observations:plan.observations,userFormula:plan.userFormula});
+ plan.composition=inferComposition({bundle:prepared.bundle,observations:plan.observations,userFormula:plan.userFormula,nitrogen:plan.nitrogenEvidence});
  options.onProgress?.({step:3,stage:'建立原子／鍵／連接點與局部關係',localStructures:plan.localStructures});await tick();
  const hints=planningSearchHints(plan,graphSearchHints(prepared.bundle.constraints));
  options.onProgress?.({step:4,stage:'局部結構引導的增量分子圖搜尋',localStructures:plan.localStructures});
