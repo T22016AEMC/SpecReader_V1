@@ -246,7 +246,7 @@ export class WorkbenchOrchestrator {
     } = CandidateGenerator.executeUnifiedPipelineFromBundle(
       bundle,
       spectrumEvidenceList,
-      {searchResult:options.searchResult,localStructures:plan.localStructures,compositionDriven:plan.compositionSearch?.mode==='COMPOSITION_HYPOTHESES'}
+      {searchResult:options.searchResult,localStructures:plan.localStructures,compositionDriven:plan.compositionSearch?.mode==='COMPOSITION_HYPOTHESES',nitrogenEvidence:plan.nitrogenEvidence}
     );
 
     // 3. ReasoningEngine 作為協調者，直接使用同一批權威 rankedCandidates 與 bundle 建立報告，絕不重複生成候選或呼叫 Mode B

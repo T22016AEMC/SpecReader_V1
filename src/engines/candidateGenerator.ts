@@ -363,6 +363,8 @@ export class CandidateGenerator {
     existingEvidenceList: SpectrumEvidence[] = [],
     options:StructureGenerationOptions={}
   ): UnifiedCandidatePipelineOutput {
+    // N-specific evidence for every generation path (v1.1.7-hotfix.1): computed from the bundle when the caller has none.
+    if(!options.nitrogenEvidence)options={...options,nitrogenEvidence:assessNitrogenEvidence({observations:collectObservedEvidence(bundle),spectra:sourceSpectra(bundle),userFormula:bundle.userSuppliedFormula??null})};
     // 1. Constraint Layer: 求解結構約束空間 (分子式候選、IHD 範圍、必備與禁用子結構)
     const solvedConstraintSpace =
       FragmentConstraintSolver.solveConstraintSpace(bundle.constraints);
@@ -444,4 +446,6 @@ export const CandidateStructureGenerator = {
     ),
   rankCandidates,
 };
-import {scoreScientificEvidence} from './scientificEngines/evidenceLedger';
+import {scoreScientificEvidence,sourceSpectra} from './scientificEngines/evidenceLedger';
+import {assessNitrogenEvidence} from './composition/nitrogenEvidence';
+import {collectObservedEvidence} from './reasoning/hypothesisGenerator';
