@@ -77,6 +77,14 @@
 
 結果欄位：`ReasoningPlan.composition`／`compositionSearch`、`ModeAResult.compositionInference`、`ReasoningTrace.composition`／`compositionSearch`、`CandidateReasoning.compositionHypothesisIds`。前 3 名以外的假設（`searched:false`）仍完整保留。P1a 不把組成信心加進候選分數（跨分子式排名屬於 P1c）。
 
+### 1.6 N 關卡、1H＋IR 組成與對稱單元（v1.1.6）
+
+詳見 `V1_1_6_CHANGELOG.md`。
+
+- `createReasoningPlan` 先呼叫 `composition/nitrogenEvidence.ts` 的 `assessNitrogenEvidence`，結果放在 `plan.nitrogenEvidence`（`EVIDENCE`／`EVEN_ION_ONLY`／`NONE`）。`NONE` 時：`generateChemicalHypotheses` 不建立 AMINO／NITROGENATED／NITRILE，並以 `inferSignalEnvironments(...,{nitrogenAllowed:false})` 把模糊 O／N 鄰居改為 O；`planningSearchHints` 設 `nitrogenForbidden`，deNovoGraphSearch 不把 N 放進原子字母表；組成層 N 上限為 0。
+- `inferComposition` 新增「1H（＋IR）、無質量、無 13C」路徑：H = k×S＋0–2、C = k×V＋0–4、k = 1–3。
+- `CompositionHypothesis.symmetryMultiple` → `generateForCompositions` 在 k ≥ 2 時把對稱單元的 k 份局部結構（`symmetricUnit`、`replicateUnit`）傳給生成器，搜尋後檢查並在 `CompositionSearchRun.symmetry`／`diagnostic` 回報。
+
 ### ④ 圖搜尋（deNovoGraphSearch）
 
 | 檔案 | 主要函式 | 備註 |

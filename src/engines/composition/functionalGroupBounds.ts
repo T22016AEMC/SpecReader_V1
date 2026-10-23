@@ -34,9 +34,13 @@ const IR_RULES:[RegExp,FeatureKey[]][]=[
  [/amine|胺/i,['AMINE']],
 ];
 
-export function functionalGroupFeatures(observations:ObservedEvidence[],irFindings:IRFunctionalGroupFinding[],nmr:NmrEvidence):Feature[] {
+/** Without N-specific evidence (v1.1.6) N-implying features default to their O / N-free reading or are dropped. */
+const NITROGEN_FREE:Partial<Record<FeatureKey,FeatureKey|null>>={AMINE:'OXYGEN_SINGLE',AMIDE:'CARBONYL',NITRILE:null,NITRO:null};
+export function functionalGroupFeatures(observations:ObservedEvidence[],irFindings:IRFunctionalGroupFinding[],nmr:NmrEvidence,nitrogenAllowed=true):Feature[] {
  const map=new Map<FeatureKey,{modalities:Set<string>;ids:Set<string>}>();
- const add=(key:FeatureKey,modality:string,ids:string[])=>{const f=map.get(key)??{modalities:new Set(),ids:new Set()};f.modalities.add(modality);ids.forEach(i=>f.ids.add(i));map.set(key,f);};
+ const add=(raw:FeatureKey,modality:string,ids:string[])=>{
+  const key=nitrogenAllowed||!(raw in NITROGEN_FREE)?raw:NITROGEN_FREE[raw];
+  if(!key)return;const f=map.get(key)??{modalities:new Set(),ids:new Set()};f.modalities.add(modality);ids.forEach(i=>f.ids.add(i));map.set(key,f);};
  const ir=observations.filter(o=>o.modality==='IR');
  for(const finding of irFindings){
   if(finding.matchLevel==='Absent / Excluded'||finding.status==='ABSENT'||finding.status==='INSUFFICIENT_DATA')continue;
@@ -51,6 +55,13 @@ export function functionalGroupFeatures(observations:ObservedEvidence[],irFindin
  if(c?.nitrileIds.length&&map.has('NITRILE'))add('NITRILE','13C_NMR',c.nitrileIds);
  if(h&&h.aromaticIds.length>=CFG.h1AromaticMinSignals)add('AROMATIC','1H_NMR',h.aromaticIds);
  if(h?.aldehydeIds.length)add('CARBONYL','1H_NMR',h.aldehydeIds);
+ if(!nitrogenAllowed){
+  // Broad X–H stretch and broad exchangeable 1H default to O–H when nothing is N-specific (v1.1.6).
+  const broadIR=ir.filter(o=>o.shape==='BROAD'&&o.value>=CFG.irBroadXHRange[0]&&o.value<=CFG.irBroadXHRange[1]);
+  const exchange=observations.filter(o=>o.modality==='1H_NMR'&&!o.optional&&(o.shape==='BROAD'||o.multiplicity==='br'||o.multiplicity==='br s'));
+  if(broadIR.length)add('OXYGEN_SINGLE','IR',broadIR.map(o=>o.id));
+  if(exchange.length)add('OXYGEN_SINGLE','1H_NMR',exchange.map(o=>o.id));
+ }
  return [...map].sort(([a],[b])=>a.localeCompare(b)).map(([key,f])=>({key,...FEATURE_BOUNDS[key],modalities:[...f.modalities].sort(),observationIds:[...f.ids].sort(),hard:f.modalities.size>=2}));
 }
 /** Element minima and DBE minimum from a feature subset (max over features, never a sum, since features overlap). */

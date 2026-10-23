@@ -4,6 +4,7 @@ import {prepareIR} from '../scientificEngines/irSignalProcessing';
 import {inferSignalEnvironments} from '../scientificEngines/atomicChemicalEnvironment';
 import type {ObservedEvidence,ChemicalHypothesis,HypothesisKind,ReasoningPlan} from './types';
 import {inferLocalStructures} from './localStructureInference';
+import {assessNitrogenEvidence,NITROGEN_AMBIGUITY_NOTE,type NitrogenEvidence} from '../composition/nitrogenEvidence';
 
 /** Observations remain separate from all chemical assignments. No absent-peak inference. */
 export function collectObservedEvidence(bundle:IntegratedAnalysisBundle):ObservedEvidence[]{
@@ -18,7 +19,9 @@ export function collectObservedEvidence(bundle:IntegratedAnalysisBundle):Observe
  }
  return result;
 }
-export function generateChemicalHypotheses(bundle:IntegratedAnalysisBundle,obs:ObservedEvidence[]):ChemicalHypothesis[]{
+export function generateChemicalHypotheses(bundle:IntegratedAnalysisBundle,obs:ObservedEvidence[],nitrogen:NitrogenEvidence={mode:'EVIDENCE',allowed:true,reasons:[],note:''}):ChemicalHypothesis[]{
+ // v1.1.6: without N-specific evidence, ambiguous O/N assignments default to O and N branches are not generated.
+ const nAllowed=nitrogen.allowed;
  const hypotheses:ChemicalHypothesis[]=[];
  const add=(kind:HypothesisKind,description:string,roots:ObservedEvidence[],support:string[],constraints:ChemicalHypothesis['constraints'],level:ChemicalHypothesis['level']='POSSIBLE')=>{
   const h:ChemicalHypothesis={id:`hyp-${hypotheses.length}`,kind,description,observationIds:[...new Set(roots.map(o=>o.id))],support,uncertainties:['經驗環境假設，不是完整分子確認','未標記訊號為未知；無2D資料時連接不是直接觀測'],level,alternativeIds:[],compatibleIds:[],conflictIds:[],constraints};hypotheses.push(h);return h;
@@ -27,15 +30,21 @@ export function generateChemicalHypotheses(bundle:IntegratedAnalysisBundle,obs:O
   if(o.modality==='IR'){
    for(const f of bundle.irFindings.filter(f=>Math.abs(f.observedPeak-o.value)<2)){
     const family=f.family.toLowerCase();const kind:HypothesisKind|null=/alcohol|phenol|carboxylic acid/.test(family)&&o.value>2400?'HYDROXYL':/amine/.test(family)?'AMINO':/amide|ketone|aldehyde|ester|anhydride|acid|acyl/.test(family)&&o.value<1900&&o.value>1600?'CARBONYL':/aromatic/.test(family)?'AROMATIC':/alkene/.test(family)?'ALKENE':/alkyne/.test(family)?'ALKYNE':/nitrile/.test(family)?'NITRILE':/ether|c-o/.test(family)?'OXYGENATED':/amide/.test(family)&&o.value>3000?'AMINO':null;
-    if(!kind)continue;const companions=obs.filter(q=>q.modality==='IR'&&q.id!==o.id&&f.companionPeaksObserved.some(r=>{const nums=r.match(/\d+/g)?.map(Number);return nums&&q.value>=nums[0]&&q.value<=nums[1];}));
+    if(!kind)continue;
+    if(!nAllowed&&(kind==='AMINO'||kind==='NITRILE')){
+     // A broad 3300 band or a generic amine family is not N-specific; keep it as O–H with a note. A nitrile family without the C≡N band is dropped.
+     if(kind==='AMINO'&&o.value>3000)add('HYDROXYL',`${f.functionalGroup}（${NITROGEN_AMBIGUITY_NOTE}；預設歸 O–H）`,[o],[f.reasoning,NITROGEN_AMBIGUITY_NOTE],{elementPossibilities:['O'],bondOrders:[1]},'POSSIBLE');
+     continue;
+    }
+    const companions=obs.filter(q=>q.modality==='IR'&&q.id!==o.id&&f.companionPeaksObserved.some(r=>{const nums=r.match(/\d+/g)?.map(Number);return nums&&q.value>=nums[0]&&q.value<=nums[1];}));
     add(kind,f.functionalGroup,[o,...companions],[f.reasoning],{elementPossibilities:kind==='HYDROXYL'||kind==='OXYGENATED'?['O']:kind==='AMINO'?['N']:kind==='CARBONYL'?['C','O']:['C'],bondOrders:kind==='CARBONYL'||kind==='ALKENE'?[2]:kind==='AROMATIC'?[1,2]:[1],aromatic:kind==='AROMATIC'},f.matchLevel==='Strong'?'SUPPORTED':'POSSIBLE');
    }
   }else if(o.modality==='1H_NMR'||o.modality==='13C_NMR'){
    const p={id:o.signalId,x:o.value,y:o.relativeIntensity??0,integration:o.relativeIntegral,multiplicity:o.multiplicity as import('../../types/spectrum').SpectralPeak['multiplicity'],jValues:o.jHz,isBroad:o.shape==='BROAD'};
-   for(const e of inferSignalEnvironments(o.modality,p,o.metadata.solvent??'Unknown')){
+   for(const e of inferSignalEnvironments(o.modality,p,o.metadata.solvent??'Unknown',{nitrogenAllowed:nAllowed})){
     const key=e.id;const kind:HypothesisKind=/aromatic/.test(key)?'AROMATIC':/nitrile/.test(key)?'NITRILE':/alkyne|^sp-c$/.test(key)?'ALKYNE':/vinyl|alkene/.test(key)?'ALKENE':/acid-derivative|aldehyde-ketone|aldehyde-h/.test(key)?'CARBONYL':/exchange|acid-h/.test(key)?'HYDROXYL':e.neighborElements.includes('O')?'OXYGENATED':e.neighborElements.includes('N')?'NITROGENATED':'ALKYL';
     add(kind,e.label,[o],e.support,{elementPossibilities:e.neighborElements,bondOrders:e.hybridization==='sp2'?[1,2]:e.hybridization==='sp'?[1,3]:[1]},'POSSIBLE');
-    if(e.neighborElements.includes('N')&&!['AROMATIC','NITROGENATED','NITRILE','CARBONYL'].includes(kind))add(kind==='HYDROXYL'?'AMINO':'NITROGENATED',e.label+'：含N競爭解釋',[o],e.support,{elementPossibilities:['C','N'],bondOrders:[1]},'POSSIBLE');
+    if(nAllowed&&e.neighborElements.includes('N')&&!['AROMATIC','NITROGENATED','NITRILE','CARBONYL'].includes(kind))add(kind==='HYDROXYL'?'AMINO':'NITROGENATED',e.label+'：含N競爭解釋',[o],e.support,{elementPossibilities:['C','N'],bondOrders:[1]},'POSSIBLE');
    }
   }else{
    const kind=o.modality==='MS'?'ION':o.modality==='MS/MS'?'FRAGMENT':'SURFACE';
@@ -56,6 +65,8 @@ export function generateChemicalHypotheses(bundle:IntegratedAnalysisBundle,obs:O
  return hypotheses;
 }
 export function createReasoningPlan(bundle:IntegratedAnalysisBundle):ReasoningPlan {
- const observations=collectObservedEvidence(bundle),hypotheses=generateChemicalHypotheses(bundle,observations);
- return {observations,hypotheses,localStructures:inferLocalStructures(hypotheses),userFormula:bundle.userSuppliedFormula??null,unknown:['部分人工峰表不表示其餘區域無訊號','無獨立絕對積分校準；無2D直接連接資料']};
+ const observations=collectObservedEvidence(bundle),userFormula=bundle.userSuppliedFormula??null;
+ const nitrogenEvidence=assessNitrogenEvidence({observations,spectra:sourceSpectra(bundle),userFormula});
+ const hypotheses=generateChemicalHypotheses(bundle,observations,nitrogenEvidence);
+ return {observations,hypotheses,localStructures:inferLocalStructures(hypotheses),userFormula,nitrogenEvidence,unknown:['部分人工峰表不表示其餘區域無訊號','無獨立絕對積分校準；無2D直接連接資料',...(nitrogenEvidence.allowed?[]:[nitrogenEvidence.note])]};
 }
