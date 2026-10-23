@@ -5,7 +5,7 @@ import {COMPOSITION_CONFIG as CFG} from './compositionConfig';
 import {scoreComposition,type ScoringContext} from './compositionScoring';
 import {enumerateFormulas,type EnumerationSpec} from './formulaEnumerator';
 import {combineBounds,functionalGroupFeatures} from './functionalGroupBounds';
-import {dbeOf,formatHill,monoisotopicMass,parseCounts} from './goldenRules';
+import {commonRangeViolations,dbeOf,formatHill,monoisotopicMass,parseCounts} from './goldenRules';
 import {extractMsEvidence,type MsEvidence} from './msComposition';
 import {extractNmrEvidence} from './nmrComposition';
 import {assessNitrogenEvidence,type NitrogenEvidence} from './nitrogenEvidence';
@@ -159,14 +159,32 @@ export function inferComposition(input:CompositionInput):CompositionInferenceRes
    excluded.set('Cl','沒有質量／同位素資料，無法判斷 Cl');excluded.set('Br','沒有質量／同位素資料，無法判斷 Br');
    if(!excluded.has('I'))excluded.set('I','沒有質量資料時不枚舉 I');
    const cs:number[]=[];
+   // Per-signal carbon estimate (v1.1.7-hotfix.1): h = k·a_i H on ≥ ceil(h/3) and ≤ h carbons; exchangeable signals carry no C.
+   const ratioById=new Map((nmr.h1?.integralIds??[]).map((id,i)=>[id,nmr.h1!.ratio![i]]));
+   const visibleSignals=observations.filter(o=>o.modality==='1H_NMR'&&!o.optional&&o.shape!=='BROAD'&&o.multiplicity!=='br'&&o.multiplicity!=='br s');
    for(let k=1;k<=CFG.h1OnlyMaxMultiple;k++){
-    const cLo=Math.max(1,k*visibleCarbonEnvironments),cHi=k*visibleCarbonEnvironments+CFG.h1OnlyInvisibleCarbonMax;cs.push(cLo,cHi);
+    let cLo=0,cHi=0;
+    for(const o of visibleSignals){
+     const a=ratioById.get(o.id);
+     if(a===undefined){cLo+=CFG.h1OnlyUnintegratedSignalCarbons[0];cHi+=CFG.h1OnlyUnintegratedSignalCarbons[1];}
+     else {cLo+=Math.ceil(k*a/3);cHi+=k*a;}
+    }
+    cLo=Math.max(1,cLo);cHi+=CFG.h1OnlyInvisibleCarbonMax;cs.push(cLo,cHi);
     const hs=Array.from({length:CFG.maxExchangeableMissing+1},(_,e)=>k*S!+e);
     push({caps:{...caps,C:cHi},mins:hetero,carbonRange:[cLo,cHi],hydrogenSet:hs,hydrogenMin:hMin,dbeMin:bounds.dbeMin},null,'NONE',k);
    }
+   // Cap the enumerated formulas; rank by prior plausibility (Golden Rules common-range violations, then DBE excess).
+   if(best.size>CFG.h1OnlyMaxCandidateFormulas){
+    const prior=(c:Candidate)=>{const C=c.counts.C??0,dbe=dbeOf(c.counts);return commonRangeViolations(c.counts).length+Math.max(0,dbe-(C/2+1))*0.25;};
+    const ranked=[...best.values()].sort((a,b)=>prior(a)-prior(b)||a.formula.localeCompare(b.formula));
+    const cut=ranked.length-CFG.h1OnlyMaxCandidateFormulas;
+    for(const c of ranked.slice(CFG.h1OnlyMaxCandidateFormulas))best.delete(c.formula);
+    result.enumeration.droppedByKeepLimit+=cut;
+    limitations.push(`¹H-only 列舉出 ${ranked.length} 個分子式，超過上限 ${CFG.h1OnlyMaxCandidateFormulas}；依先驗合理性（Golden Rules 常見範圍、DBE）保留 ${CFG.h1OnlyMaxCandidateFormulas} 個，截斷 ${cut} 個。`);
+   }
    result.bounds.carbon=[Math.min(...cs),Math.max(...cs)];
    result.bounds.hydrogenMultiples=Array.from({length:CFG.h1OnlyMaxMultiple},(_,i)=>(i+1)*S!);
-   limitations.push(`無質量依據，分子大小未確認：只有 ¹H${observations.some(o=>o.modality==='IR')?'與 IR':''}，分子式由 H = k×${S}（＋最多 ${CFG.maxExchangeableMissing} 個可能缺失的可交換氫）、C = k×${visibleCarbonEnvironments}（可見帶 H 碳環境）＋0–${CFG.h1OnlyInvisibleCarbonMax} 個不可見碳列舉，k=1–${CFG.h1OnlyMaxMultiple}；雜原子下限來自 IR／¹H 證據。`);
+   limitations.push(`無質量依據，分子大小未確認：只有 ¹H${observations.some(o=>o.modality==='IR')?'與 IR':''}，分子式由 H = k×${S}（＋最多 ${CFG.maxExchangeableMissing} 個可能缺失的可交換氫）、C = 各非交換訊號估計的帶 H 碳數（每訊號 ceil(h/3)～h，共 ${visibleCarbonEnvironments} 個訊號）＋0–${CFG.h1OnlyInvisibleCarbonMax} 個不可見碳列舉，k=1–${CFG.h1OnlyMaxMultiple}；雜原子下限來自 IR／¹H 證據。`);
   }else{
    const cMax=c13Count*CFG.noMassCarbonFactor+CFG.noMassCarbonOffset;
    const caps:ElementCounts={C:cMax,N:nitrogen.allowed?(bounds.mins.N??0)+CFG.noMassExtra.N:0,O:(bounds.mins.O??0)+CFG.noMassExtra.O,S:(bounds.mins.S??0)+CFG.noMassExtra.S,...Object.fromEntries(Object.entries(rareCaps).filter(([e])=>e==='F'||e==='Si'))};
@@ -189,7 +207,7 @@ export function inferComposition(input:CompositionInput):CompositionInferenceRes
   list=run(true);
  }
  list.sort(order);
- result.enumeration.droppedByKeepLimit=Math.max(0,list.length-CFG.maxHypotheses);
+ result.enumeration.droppedByKeepLimit+=Math.max(0,list.length-CFG.maxHypotheses);
  const kept=list.slice(0,CFG.maxHypotheses).map(c=>hypothesis(c.counts,c.mass,c.ion,c.basis,scoreComposition(c.counts,c.mass,c.ion,ctx),c.k));
  softmax(kept);
  result.hypotheses=kept;result.enumeration.returned=kept.length;

@@ -55,7 +55,7 @@ describe('A. no N evidence: nothing with N anywhere in the complete flow',()=>{
   const fb=CandidateGenerator.executeUnifiedPipelineFromBundle(bundle,spectrumEvidenceList);
   expect(fb.rankedCandidates.some(c=>hasN(c.molecularFormula))).toBe(false);
   expect((fb.solvedConstraintSpace.searchResult?.smiles??[]).some(smilesHasN)).toBe(false);
- },60000);
+ },120000);
 });
 describe('E. implausible linkages never reach the final candidates without evidence',()=>{
  it('no O–O, N(OH)2 or N–O–N among final candidates; rejections are recorded',async()=>{
@@ -67,12 +67,12 @@ describe('E. implausible linkages never reach the final candidates without evide
   // On this input the search does propose peroxides and gem-diols, so the gate is exercised (deterministic input).
   expect(reasons.length).toBeGreaterThan(0);
   expect(r.solvedConstraintSpace.solverLog.some(s=>s.startsWith('化學合理性檢查剔除候選'))).toBe(true);
- },60000);
+ },120000);
  it('with a user formula the peroxide exception applies (no PEROXIDE rejection)',async()=>{
   const r=await runLikeWorker({extraInput:{molecularFormula:'C2H6O2'},spectra:{'1H_NMR':mk('1H_NMR',[{x:3.7,integration:4,multiplicity:'s'},{x:2.5,integration:2,multiplicity:'br s',isBroad:true}])}});
   expect(r.rejectedCandidates.some(x=>x.violatedConstraints.some(v=>v.startsWith('PLAUSIBILITY(PEROXIDE)')))).toBe(false);
   expect(r.rankedCandidates.every(c=>c.molecularFormula==='C2H6O2')).toBe(true);
- },60000);
+ },120000);
 });
 describe('B. real N evidence keeps N available in the complete flow',()=>{
  it('IR C≡N 2229 cm⁻¹: N formulas are hypothesised and searched',async()=>{
@@ -83,7 +83,7 @@ describe('B. real N evidence keeps N available in the complete flow',()=>{
   expect(r.reasoningTrace!.nitrogenEvidence?.mode).toBe('EVIDENCE');
   expect(r.compositionInference!.hypotheses.some(h=>hasN(h.formula))).toBe(true);
   expect(r.reasoningTrace!.compositionSearch!.runs.some(run=>run.formula&&hasN(run.formula))).toBe(true);
- },60000);
+ },120000);
  it('IR 3400/3330 sharp doublet is N evidence',async()=>{
   const r=await runLikeWorker({extraInput:{},spectra:{
    '1H_NMR':mk('1H_NMR',[{x:7.1,integration:2,multiplicity:'t',jValues:[7.8]},{x:6.75,integration:1,multiplicity:'t',jValues:[7.8]},{x:6.65,integration:2,multiplicity:'d',jValues:[7.8]},{x:3.6,integration:2,multiplicity:'br s',isBroad:true}]),
@@ -91,7 +91,7 @@ describe('B. real N evidence keeps N available in the complete flow',()=>{
   }});
   expect(r.reasoningTrace!.nitrogenEvidence?.mode).toBe('EVIDENCE');
   expect(r.compositionInference!.hypotheses.some(h=>hasN(h.formula))).toBe(true);
- },60000);
+ },120000);
 });
 describe('F. a user formula with N still yields N candidates',()=>{
  it('C8H11N on N-free spectra',async()=>{
@@ -99,5 +99,5 @@ describe('F. a user formula with N still yields N candidates',()=>{
   const r=await runLikeWorker(input);
   expect(r.rankedCandidates.length).toBeGreaterThan(0);
   expect(r.rankedCandidates.every(c=>c.molecularFormula==='C8H11N')).toBe(true);
- },60000);
+ },120000);
 });

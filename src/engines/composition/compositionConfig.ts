@@ -129,8 +129,14 @@ export const COMPOSITION_CONFIG = {
   // ---------------------------------------------------------------- 1H + IR composition without mass or 13C (v1.1.6)
   /** Multiples k for H = k·S (+ missing exchangeable H) and C = k·V + q when only 1H (and IR) is available. */
   h1OnlyMaxMultiple: 3,
-  /** q: carbons invisible in 1H (quaternary C, C=O, …) added on top of k·V. */
+  /** q: carbons invisible in 1H (quaternary C, C=O, …) added on top of the carbons carrying the observed H. */
   h1OnlyInvisibleCarbonMax: 4,
+  // Carbon estimate per non-exchangeable 1H signal with h = k × (its simplest-ratio H count) (v1.1.7-hotfix.1):
+  // at least ceil(h / 3) carbons (equivalent CH3 groups, e.g. a 9H singlet = 3 CH3), at most h (every H on its own carbon).
+  /** Carbon range assumed for a visible 1H signal without an integral. */
+  h1OnlyUnintegratedSignalCarbons: [1, 3] as [number, number],
+  /** Cap on enumerated formulas in the 1H-only route; beyond it formulas are ranked by prior plausibility and cut (reported). */
+  h1OnlyMaxCandidateFormulas: 300,
 
   // ---------------------------------------------------------------- element caps
   /** Default caps for elements allowed without specific evidence. */
