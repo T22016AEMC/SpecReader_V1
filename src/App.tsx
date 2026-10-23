@@ -39,6 +39,10 @@ import { SpectrumViewer } from "./components/SpectrumViewer";
 import { StructureRenderer2D } from "./components/StructureRenderer2D";
 import { StructureSpectrumValidationPage } from "./components/StructureSpectrumValidationPage";
 import { SpectrumParser } from "./engines/spectrumParser";
+import {PiecewiseCalibrationControls,type CalibPixelPoint,type ExtraKey} from './components/PiecewiseCalibrationControls';
+import {CalibrationCheckTable} from './components/CalibrationCheckTable';
+import {buildCalibrationCheck,threePointFailureMessage,type PanelPoint} from './engines/scientificEngines/axisCalibrationPanel';
+import {AXIS_CALIBRATION_CONFIG} from './engines/scientificEngines/axisCalibrationConfig';
 import {
   NMR_SOLVENT_REFERENCE_SHIFTS,
   WorkbenchOrchestrationState,
@@ -240,7 +244,7 @@ export default function App() {
   // 5. Mode A 第 2 頁：座標校正狀態（預設兩點校正，三點校正置於進階選項）
   // ============================================================================
   const [calibrationMode, setCalibrationMode] = useState<
-    "TWO_POINT" | "THREE_POINT"
+    "TWO_POINT" | "THREE_POINT" | "PIECEWISE"
   >("TWO_POINT");
   const [showAdvancedCalibration, setShowAdvancedCalibration] =
     useState<boolean>(false);
@@ -262,7 +266,28 @@ export default function App() {
     realX: 1700,
     realY: 50,
   });
-  const [nextCalibTarget, setNextCalibTarget] = useState<"A" | "B" | "C">("A");
+  // v1.1.7-hotfix.2：分段線性校正（僅 IR）。C 沿用上方 3 點的 C；D、E 另設；C/D/E 勾選後才納入。
+  const [showPiecewiseCalibration, setShowPiecewiseCalibration] =
+    useState<boolean>(false);
+  const [calibPointD, setCalibPointD] = useState<CalibPixelPoint>({
+    pixelX: 600,
+    pixelY: 200,
+    realX: 2000,
+    realY: 50,
+  });
+  const [calibPointE, setCalibPointE] = useState<CalibPixelPoint>({
+    pixelX: 700,
+    pixelY: 200,
+    realX: 1000,
+    realY: 50,
+  });
+  const [piecewiseIncluded, setPiecewiseIncluded] = useState<
+    Record<ExtraKey, boolean>
+  >({ C: false, D: false, E: false });
+  const [piecewisePresetOn, setPiecewisePresetOn] = useState<boolean>(false);
+  const [nextCalibTarget, setNextCalibTarget] = useState<
+    "A" | "B" | "C" | "D" | "E"
+  >("A");
   const [calibrationMessage, setCalibrationMessage] = useState<{
     type: "SUCCESS" | "ERROR" | "INFO";
     text: string;
@@ -384,7 +409,7 @@ export default function App() {
   // ============================================================================
   // 6. 即時校正預覽計算 (僅於第 2 頁座標校正預覽使用，未點擊套用前不寫入正式證據)
   // ============================================================================
-  const liveCalibrationPreview = useMemo<
+  const linearCalibrationPreview = useMemo<
     ImageSpectrumCalibration | undefined
   >(() => {
     if (!currentSpectrum) return undefined;
@@ -434,6 +459,86 @@ export default function App() {
       source: "USER_CALIBRATED",
     };
   }, [currentSpectrum, calibPointA, calibPointB, calibrationMode]);
+
+  // 分段線性（僅 IR）：目前模式、各校正點的檢查結果（輸入值／換算值／差值）與預覽用校正物件
+  const piecewiseActive =
+    calibrationMode === "PIECEWISE" &&
+    showPiecewiseCalibration &&
+    focusedModality === "IR";
+  const panelCalibrationMode: "TWO_POINT" | "THREE_POINT" | "PIECEWISE" =
+    piecewiseActive
+      ? "PIECEWISE"
+      : calibrationMode === "THREE_POINT" && showAdvancedCalibration
+      ? "THREE_POINT"
+      : "TWO_POINT";
+  const calibrationCheck = useMemo(() => {
+    const pts: PanelPoint[] = [
+      { label: "A", pixelX: calibPointA.pixelX, physicalX: calibPointA.realX },
+      { label: "B", pixelX: calibPointB.pixelX, physicalX: calibPointB.realX },
+    ];
+    if (panelCalibrationMode === "THREE_POINT") {
+      pts.push({ label: "C", pixelX: calibPointC.pixelX, physicalX: calibPointC.realX });
+    }
+    if (panelCalibrationMode === "PIECEWISE") {
+      if (piecewiseIncluded.C) pts.push({ label: "C", pixelX: calibPointC.pixelX, physicalX: calibPointC.realX });
+      if (piecewiseIncluded.D) pts.push({ label: "D", pixelX: calibPointD.pixelX, physicalX: calibPointD.realX });
+      if (piecewiseIncluded.E) pts.push({ label: "E", pixelX: calibPointE.pixelX, physicalX: calibPointE.realX });
+    }
+    return buildCalibrationCheck(
+      panelCalibrationMode,
+      pts,
+      panelCalibrationMode === "PIECEWISE" && piecewisePresetOn
+        ? "IR_SCALE_BREAK_2000"
+        : null
+    );
+  }, [
+    panelCalibrationMode,
+    calibPointA,
+    calibPointB,
+    calibPointC,
+    calibPointD,
+    calibPointE,
+    piecewiseIncluded,
+    piecewisePresetOn,
+  ]);
+  const liveCalibrationPreview = useMemo<
+    ImageSpectrumCalibration | undefined
+  >(() => {
+    if (!piecewiseActive) return linearCalibrationPreview;
+    const knots = calibrationCheck.knots;
+    if (!knots || !currentSpectrum) return undefined;
+    const first = knots[0];
+    const last = knots[knots.length - 1];
+    const left = SpectrumParser.pixelToPhysicalX(first.pixelX, {
+      piecewiseKnots: knots,
+    } as ImageSpectrumCalibration);
+    const right = SpectrumParser.pixelToPhysicalX(last.pixelX, {
+      piecewiseKnots: knots,
+    } as ImageSpectrumCalibration);
+    return {
+      plotLeftPx: first.pixelX,
+      plotRightPx: last.pixelX,
+      plotTopPx: Math.min(calibPointA.pixelY, calibPointB.pixelY),
+      plotBottomPx: Math.max(calibPointA.pixelY, calibPointB.pixelY),
+      xAxisStart: left,
+      xAxisEnd: right,
+      xAxisDirection: right < left ? "DESCENDING" : "ASCENDING",
+      confidence: 0.98,
+      calibrationMode: "PIECEWISE",
+      source: "USER_CORRECTED",
+      piecewiseKnots: knots.map((k) => ({
+        pixelX: k.pixelX,
+        physicalX: k.physicalX,
+      })),
+    };
+  }, [
+    piecewiseActive,
+    linearCalibrationPreview,
+    calibrationCheck,
+    currentSpectrum,
+    calibPointA,
+    calibPointB,
+  ]);
 
   // ============================================================================
   // 7. 核心確定性科學工作台 Orchestration 計算 (Mode A 與 Mode B 狀態反應式更新)
@@ -1007,6 +1112,36 @@ export default function App() {
     const spec = currentSpectrum;
     if (!spec) return;
 
+    if (piecewiseActive) {
+      const pts = [
+        { pixelX: calibPointA.pixelX, realX: calibPointA.realX },
+        { pixelX: calibPointB.pixelX, realX: calibPointB.realX },
+        ...(piecewiseIncluded.C ? [{ pixelX: calibPointC.pixelX, realX: calibPointC.realX }] : []),
+        ...(piecewiseIncluded.D ? [{ pixelX: calibPointD.pixelX, realX: calibPointD.realX }] : []),
+        ...(piecewiseIncluded.E ? [{ pixelX: calibPointE.pixelX, realX: calibPointE.realX }] : []),
+      ];
+      const calibrated = WorkbenchOrchestrator.applyPiecewiseCalibration(spec, {
+        points: pts,
+        presetId: piecewisePresetOn ? "IR_SCALE_BREAK_2000" : null,
+      });
+      if (calibrated.calibrationFailed) {
+        setCalibrationMessage({
+          type: "ERROR",
+          text: `分段線性校正失敗，未套用：${calibrated.digitizationErrorMessage ?? "校正點輸入有誤。"}`,
+        });
+        return;
+      }
+      updateSpectrumForModality(focusedModality, calibrated);
+      const segs = (calibrated.imageCalibration?.piecewiseKnots?.length ?? 2) - 1;
+      setCalibrationMessage({
+        type: "SUCCESS",
+        text: `分段線性校正成功 (${focusedModality})！共 ${segs} 段，已轉換 ${calibrated.peaks.length} 個訊號標記為實際物理座標 (${spec.xUnit})${
+          piecewisePresetOn ? "（含預設推定轉折點 2000 cm⁻¹）" : ""
+        }。原始像素座標已完整保留。`,
+      });
+      return;
+    }
+
     const dxPx = Math.abs(calibPointB.pixelX - calibPointA.pixelX);
     const dxPhys = Math.abs(calibPointB.realX - calibPointA.realX);
 
@@ -1036,6 +1171,17 @@ export default function App() {
         }
       );
       updateSpectrumForModality(focusedModality, calibrated);
+      if (calibrated.calibrationFailed) {
+        const reals = [calibPointA.realX, calibPointB.realX, calibPointC.realX];
+        setCalibrationMessage({
+          type: "ERROR",
+          text: threePointFailureMessage(
+            calibrated,
+            Math.max(...reals) - Math.min(...reals)
+          ),
+        });
+        return;
+      }
       const r2 = calibrated.imageCalibration?.rSquared;
       const grade = calibrated.imageCalibration?.qualityGrade;
       setCalibrationMessage({
@@ -2036,7 +2182,15 @@ export default function App() {
                           }
                           hideModeSwitchButtons
                           calibrationPreviewPoints={
-                            calibrationMode === "THREE_POINT" &&
+                            piecewiseActive
+                              ? [
+                                  { label: "Pt A", pixelX: calibPointA.pixelX, pixelY: calibPointA.pixelY, physicalX: calibPointA.realX, color: "#22d3ee" },
+                                  { label: "Pt B", pixelX: calibPointB.pixelX, pixelY: calibPointB.pixelY, physicalX: calibPointB.realX, color: "#f59e0b" },
+                                  ...(piecewiseIncluded.C ? [{ label: "Pt C", pixelX: calibPointC.pixelX, pixelY: calibPointC.pixelY, physicalX: calibPointC.realX, color: "#c084fc" }] : []),
+                                  ...(piecewiseIncluded.D ? [{ label: "Pt D", pixelX: calibPointD.pixelX, pixelY: calibPointD.pixelY, physicalX: calibPointD.realX, color: "#34d399" }] : []),
+                                  ...(piecewiseIncluded.E ? [{ label: "Pt E", pixelX: calibPointE.pixelX, pixelY: calibPointE.pixelY, physicalX: calibPointE.realX, color: "#f472b6" }] : []),
+                                ]
+                              : calibrationMode === "THREE_POINT" &&
                             showAdvancedCalibration
                               ? [
                                   {
@@ -2097,8 +2251,9 @@ export default function App() {
                                 pixelY: py,
                               }));
                               setNextCalibTarget(
-                                calibrationMode === "THREE_POINT" &&
-                                  showAdvancedCalibration
+                                piecewiseActive ||
+                                  (calibrationMode === "THREE_POINT" &&
+                                    showAdvancedCalibration)
                                   ? "C"
                                   : "A"
                               );
@@ -2106,16 +2261,39 @@ export default function App() {
                                 type: "INFO",
                                 text: `已點選設定「校正點 B」像素座標 (${px}, ${py})。右側已即時預覽所有標記訊號之轉換座標，請點擊「套用座標校正」完成確認！`,
                               });
-                            } else {
+                            } else if (nextCalibTarget === "C") {
                               setCalibPointC((prev) => ({
                                 ...prev,
                                 pixelX: px,
                                 pixelY: py,
                               }));
-                              setNextCalibTarget("A");
+                              if (piecewiseActive) {
+                                setPiecewiseIncluded((prev) => ({ ...prev, C: true }));
+                                setNextCalibTarget("D");
+                              } else {
+                                setNextCalibTarget("A");
+                              }
                               setCalibrationMessage({
                                 type: "INFO",
-                                text: `已點選設定進階「校正點 C」像素座標 (${px}, ${py})，請點擊「套用三點最小平方法校正」。`,
+                                text: piecewiseActive
+                                  ? `已點選設定分段線性「校正點 C」像素座標 (${px}, ${py})，請輸入對應刻度值，可繼續點選 D、E，或直接套用。`
+                                  : `已點選設定進階「校正點 C」像素座標 (${px}, ${py})，請點擊「套用三點最小平方法校正」。`,
+                              });
+                            } else {
+                              const isD = nextCalibTarget === "D";
+                              (isD ? setCalibPointD : setCalibPointE)((prev) => ({
+                                ...prev,
+                                pixelX: px,
+                                pixelY: py,
+                              }));
+                              setPiecewiseIncluded((prev) => ({
+                                ...prev,
+                                [isD ? "D" : "E"]: true,
+                              }));
+                              setNextCalibTarget(isD ? "E" : "A");
+                              setCalibrationMessage({
+                                type: "INFO",
+                                text: `已點選設定分段線性「校正點 ${isD ? "D" : "E"}」像素座標 (${px}, ${py})，請輸入對應刻度值，再點擊「套用分段線性校正」。`,
                               });
                             }
                           }}
@@ -2290,6 +2468,10 @@ export default function App() {
                               onClick={() => {
                                 const nextOpen = !showAdvancedCalibration;
                                 setShowAdvancedCalibration(nextOpen);
+                                if (nextOpen) setShowPiecewiseCalibration(false);
+                                if (!nextOpen && (nextCalibTarget === "D" || nextCalibTarget === "E")) {
+                                  setNextCalibTarget("A");
+                                }
                                 setCalibrationMode(
                                   nextOpen ? "THREE_POINT" : "TWO_POINT"
                                 );
@@ -2337,7 +2519,8 @@ export default function App() {
                                     <div className="mt-0.5 flex gap-1">
                                       <input
                                         type="number"
-                                        value={calibPointC.pixelX}
+                                        aria-label="校正點 C 像素 X"
+                                      value={calibPointC.pixelX}
                                         onChange={(e) =>
                                           setCalibPointC((p) => ({
                                             ...p,
@@ -2348,7 +2531,8 @@ export default function App() {
                                       />
                                       <input
                                         type="number"
-                                        value={calibPointC.pixelY}
+                                        aria-label="校正點 C 像素 Y"
+                                      value={calibPointC.pixelY}
                                         onChange={(e) =>
                                           setCalibPointC((p) => ({
                                             ...p,
@@ -2366,6 +2550,7 @@ export default function App() {
                                     <input
                                       type="number"
                                       step="any"
+                                      aria-label="校正點 C 物理波數"
                                       value={calibPointC.realX}
                                       onChange={(e) =>
                                         setCalibPointC((p) => ({
@@ -2381,12 +2566,100 @@ export default function App() {
                             )}
                           </div>
 
+                          {focusedModality === "IR" && (
+                            <div className="border-t border-slate-800 pt-2">
+                              <button
+                                type="button"
+                                data-testid="piecewise-toggle"
+                                onClick={() => {
+                                  const nextOpen = !showPiecewiseCalibration;
+                                  setShowPiecewiseCalibration(nextOpen);
+                                  if (nextOpen) {
+                                    setShowAdvancedCalibration(false);
+                                    setCalibrationMode("PIECEWISE");
+                                  } else {
+                                    setCalibrationMode("TWO_POINT");
+                                    if (nextCalibTarget === "C" || nextCalibTarget === "D" || nextCalibTarget === "E") {
+                                      setNextCalibTarget("A");
+                                    }
+                                  }
+                                }}
+                                className="flex w-full items-center justify-between text-left text-[11px] font-semibold text-slate-400 hover:text-slate-200"
+                              >
+                                <span>{AXIS_CALIBRATION_CONFIG.ui.piecewiseToggleText}</span>
+                                {showPiecewiseCalibration ? (
+                                  <ChevronUp className="h-3.5 w-3.5" />
+                                ) : (
+                                  <ChevronDown className="h-3.5 w-3.5" />
+                                )}
+                              </button>
+                              {showPiecewiseCalibration && (
+                                <PiecewiseCalibrationControls
+                                  xUnit={currentSpectrum.xUnit}
+                                  points={{ C: calibPointC, D: calibPointD, E: calibPointE }}
+                                  included={piecewiseIncluded}
+                                  onChange={(key, patch) => {
+                                    (key === "C" ? setCalibPointC : key === "D" ? setCalibPointD : setCalibPointE)(
+                                      (p) => ({ ...p, ...patch })
+                                    );
+                                    if ("realX" in patch || "pixelX" in patch) {
+                                      setPiecewiseIncluded((prev) => ({ ...prev, [key]: true }));
+                                    }
+                                  }}
+                                  onInclude={(key, on) =>
+                                    setPiecewiseIncluded((prev) => ({ ...prev, [key]: on }))
+                                  }
+                                  nextTarget={nextCalibTarget}
+                                  onSelectTarget={(key) => setNextCalibTarget(key)}
+                                  presetChecked={piecewisePresetOn}
+                                  onPresetChange={setPiecewisePresetOn}
+                                  knots={calibrationCheck.knots}
+                                  error={calibrationCheck.error}
+                                />
+                              )}
+                            </div>
+                          )}
+
+                          {panelCalibrationMode === "TWO_POINT" && (
+                            <p
+                              data-testid="two-point-linearity-hint"
+                              className="rounded border border-amber-500/40 bg-amber-950/30 px-2.5 py-1.5 text-[11px] text-amber-200"
+                            >
+                              {AXIS_CALIBRATION_CONFIG.ui.twoPointHintText}
+                            </p>
+                          )}
+                          {panelCalibrationMode === "THREE_POINT" &&
+                            calibrationCheck.warning &&
+                            focusedModality === "IR" && (
+                              <div
+                                data-testid="linearity-warning"
+                                className="flex items-center justify-between gap-2 rounded border border-amber-500/40 bg-amber-950/30 px-2.5 py-1.5 text-[11px] text-amber-200"
+                              >
+                                <span>{calibrationCheck.warning}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setShowAdvancedCalibration(false);
+                                    setShowPiecewiseCalibration(true);
+                                    setCalibrationMode("PIECEWISE");
+                                    setPiecewiseIncluded((prev) => ({ ...prev, C: true }));
+                                  }}
+                                  className="shrink-0 rounded bg-amber-600 px-2 py-0.5 text-[10px] font-semibold text-white"
+                                >
+                                  {AXIS_CALIBRATION_CONFIG.ui.switchToPiecewiseButtonText}
+                                </button>
+                              </div>
+                            )}
+
                           <button
                             type="button"
                             onClick={handleApplyCalibration}
-                            className="w-full rounded-lg bg-amber-500 py-2.5 text-xs font-extrabold text-slate-950 shadow-sm hover:bg-amber-400"
+                            disabled={piecewiseActive && Boolean(calibrationCheck.error)}
+                            className="w-full rounded-lg bg-amber-500 py-2.5 text-xs font-extrabold text-slate-950 shadow-sm hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-50"
                           >
-                            {showAdvancedCalibration &&
+                            {piecewiseActive
+                              ? `套用分段線性校正並轉換 ${currentSpectrum.peaks.length} 個標記訊號`
+                              : showAdvancedCalibration &&
                             calibrationMode === "THREE_POINT"
                               ? `套用三點最小平方法校正並轉換 ${currentSpectrum.peaks.length} 個標記訊號`
                               : `套用兩點線性座標校正並轉換 ${currentSpectrum.peaks.length} 個標記訊號`}
@@ -2405,9 +2678,17 @@ export default function App() {
                                   "DESCENDING"
                                   ? "X軸方向：左高右低"
                                   : "X軸方向：左低右高"
+                                : piecewiseActive && calibrationCheck.error
+                                ? "分段校正點有誤（見左側紅字）"
                                 : "請設定兩個不同刻度點"}
                             </span>
                           </div>
+
+                          <CalibrationCheckTable
+                            check={calibrationCheck}
+                            xUnit={currentSpectrum.xUnit}
+                            digits={focusedModality === "IR" ? 1 : 2}
+                          />
 
                           <div className="mt-2 max-h-48 overflow-y-auto">
                             {currentSpectrum.peaks.length === 0 ? (

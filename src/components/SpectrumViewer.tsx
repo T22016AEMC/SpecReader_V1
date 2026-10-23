@@ -316,7 +316,7 @@ export const SpectrumViewer: React.FC<SpectrumViewerProps> = ({
               }`}
             >
               {isImageCalibrated
-                ? `${spectrum.imageCalibration?.calibrationMode === "THREE_POINT" ? "3-Point OLS" : "2-Point"} 已校正${
+                ? `${spectrum.imageCalibration?.calibrationMode === "THREE_POINT" ? "3-Point OLS" : spectrum.imageCalibration?.calibrationMode === "PIECEWISE" ? "分段線性" : "2-Point"} 已校正${
                     spectrum.imageCalibration?.rSquared !== undefined
                       ? ` (R²=${spectrum.imageCalibration.rSquared.toFixed(4)})`
                       : ""
