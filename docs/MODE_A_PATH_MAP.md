@@ -91,7 +91,7 @@
 |---|---|---|---|---|
 | 1 | `App.tsx:507` → `executeAnalysisWorker` → `modeA.worker.ts` → `executeSixStepAnalysis` → `generateForCompositions` → `deNovoStructureGenerator`（`searchMolecularGraphsAsync`） | **UI 唯一的 Mode A 路徑** | 組成假設的分子式（`COMPOSITION_HYPOTHESES`）、使用者分子式（`USER_FORMULA`）或無分子式（`NO_FORMULA`）的 beam 搜尋 | `planningSearchHints` 設 `nitrogenForbidden`；組成假設不含 N；`DeterministicStructureGenerator` 最終閘門再擋一次 |
 | 2 | `WorkbenchOrchestrator.runModeAPipeline` 未帶 `searchResult` → `CandidateGenerator.executeUnifiedPipelineFromBundle` → `DeterministicStructureGenerator` 的同步退路 `searchMolecularGraphs` | 測試、`runFullWorkbenchPipeline`、`runUnifiedCandidatePipeline`、`generateRankedCandidates`（UI 不會走到；實測完整流程中呼叫次數為 0） | 900 ms／12000 狀態的同步搜尋 | `executeUnifiedPipelineFromBundle` 在呼叫端沒有提供時自行計算 `assessNitrogenEvidence`；退路搜尋的 hints 加 `nitrogenForbidden`；最終閘門剔除含 N 候選並記錄原因 |
-| 3 | `DeterministicStructureGenerator.generateValidatedStructuresWithRejections`（上面兩條路徑的匯合點） | 1、2 | 驗證與去重 | **最終閘門**：沒有使用者分子式且 N 判定為 `NONE` 時，含 N 的候選一律進 `rejectedCandidates`（`HARD_CONSTRAINT: 無 N 專屬證據…`） |
+| 3 | `DeterministicStructureGenerator.generateValidatedStructuresWithRejections`（上面兩條路徑的匯合點） | 1、2 | 驗證與去重 | **最終閘門**：沒有使用者分子式且 N 判定為 `NONE` 時，含 N 的候選一律進 `rejectedCandidates`（`HARD_CONSTRAINT: 無 N 專屬證據…`）；**化學合理性檢查**（`structurePlausibility.ts`）剔除無專屬證據的過氧、N–O 類、疊氮／重氮、偶二醇、非芳香烯醇、烯酮、非環狀胺縮醛（`PLAUSIBILITY(<規則>)`） |
 | 4 | Mode B（`runModeBPrediction`） | UI 的 Mode B 按鈕 | **不產生候選**：使用者自行輸入結構 | 不適用 |
 
 使用者分子式永遠是硬限制：有使用者分子式時，路徑 1、2 都以它為目標，N 關卡不介入（含 N 的使用者分子式本身就是 N 證據）。
