@@ -363,6 +363,11 @@ export class CandidateGenerator {
     existingEvidenceList: SpectrumEvidence[] = [],
     options:StructureGenerationOptions={}
   ): UnifiedCandidatePipelineOutput {
+    // N-specific evidence for every generation path (v1.1.7-hotfix.1): computed from the bundle when the caller has none.
+    const observations=collectObservedEvidence(bundle);
+    if(!options.nitrogenEvidence)options={...options,nitrogenEvidence:assessNitrogenEvidence({observations,spectra:sourceSpectra(bundle),userFormula:bundle.userSuppliedFormula??null})};
+    // Specific evidence for the chemical-plausibility gate (v1.1.7-hotfix.1).
+    if(!options.plausibility)options={...options,plausibility:buildPlausibilityEvidence({observations,userFormula:bundle.userSuppliedFormula??null,nitrogenEvidence:options.nitrogenEvidence!.mode==='EVIDENCE'})};
     // 1. Constraint Layer: 求解結構約束空間 (分子式候選、IHD 範圍、必備與禁用子結構)
     const solvedConstraintSpace =
       FragmentConstraintSolver.solveConstraintSpace(bundle.constraints);
@@ -444,4 +449,7 @@ export const CandidateStructureGenerator = {
     ),
   rankCandidates,
 };
-import {scoreScientificEvidence} from './scientificEngines/evidenceLedger';
+import {scoreScientificEvidence,sourceSpectra} from './scientificEngines/evidenceLedger';
+import {assessNitrogenEvidence} from './composition/nitrogenEvidence';
+import {buildPlausibilityEvidence} from './scientificEngines/structurePlausibility';
+import {collectObservedEvidence} from './reasoning/hypothesisGenerator';

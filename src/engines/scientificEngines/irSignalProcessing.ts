@@ -1,6 +1,7 @@
 import type { DataPoint, ExperimentalSpectrumData, SpectralPeak } from '../../types/spectrum';
 import {asymmetricBaseline} from './whittakerBaseline';
 import {baselineAt,pixelIRX,inferIRDirection,physicalIRInputs,relativeIRSignal,type IRManualSettings} from './irManualBaseline';
+import {IR_PEAK_CONFIG} from './irPeakConfig';
 
 export type IRIntensityScale = 'ABSORBANCE' | 'TRANSMITTANCE' | 'PERCENT_TRANSMITTANCE' | 'NORMALIZED' | 'UNKNOWN';
 export function resolveIRScale(unit: string, explicit?: IRIntensityScale): IRIntensityScale {
@@ -59,6 +60,21 @@ const quantile = (values: number[], q: number): number => {
   const a = values.slice().sort((x,y) => x-y);
   return a[Math.floor((a.length-1)*q)] ?? 0;
 };
+/** Depth from the peak to the higher of the two lowest points reached before a higher point (or the edge) on each side. */
+export function topographicProminence(series:DataPoint[],i:number):number {
+  const y=series[i].y;
+  let left=y,right=y;
+  for(let j=i-1;j>=0&&series[j].y<=y;j--)left=Math.min(left,series[j].y);
+  for(let j=i+1;j<series.length&&series[j].y<=y;j++)right=Math.min(right,series[j].y);
+  return y-Math.max(left,right);
+}
+/** True when the signal range within ±halfWindow (x units) of point i stays below `minRange`. */
+export function isFlatAround(series:DataPoint[],i:number,halfWindow:number,minRange:number):boolean {
+  let lo=Infinity,hi=-Infinity;
+  for(let j=i;j>=0&&series[i].x-series[j].x<=halfWindow;j--){lo=Math.min(lo,series[j].y);hi=Math.max(hi,series[j].y);}
+  for(let j=i;j<series.length&&series[j].x-series[i].x<=halfWindow;j++){lo=Math.min(lo,series[j].y);hi=Math.max(hi,series[j].y);}
+  return hi-lo<minRange;
+}
 export function processIRSeries(points: DataPoint[], scale: IRIntensityScale,settings?:IRManualSettings): {points: DataPoint[]; peaks: SpectralPeak[]; invalidCount: number; mirrored:DataPoint[]; corrected:DataPoint[];baseline:DataPoint[]; uncertain:boolean} {
   const valid = points.flatMap(p => {
     const y = Number.isFinite(p.y)?p.y:null;
@@ -85,11 +101,15 @@ export function processIRSeries(points: DataPoint[], scale: IRIntensityScale,set
   if (max <= 0) return {points:smooth,peaks:[],invalidCount:points.length-valid.length,mirrored,corrected,baseline,uncertain:inferred.uncertain};
   const diffs = smooth.slice(1).map((p,i)=>Math.abs(p.y-smooth[i].y));
   const noise = quantile(diffs,.5)/.67449;
-  const threshold = Math.max(3*noise, max*.02);
+  const threshold = Math.max(IR_PEAK_CONFIG.minHeightNoiseMultiple*noise, max*IR_PEAK_CONFIG.minHeightFractionOfMax);
+  const minProminence = Math.max(IR_PEAK_CONFIG.minProminenceNoiseMultiple*noise, max*IR_PEAK_CONFIG.minProminenceFractionOfMax);
   const peaks: SpectralPeak[] = [];
   for (let i=1;i<smooth.length-1;i++) {
     const p=smooth[i];
     if (p.y < threshold || p.y <= smooth[i-1].y || p.y < smooth[i+1].y) continue;
+    // v1.1.7-hotfix.1: no peaks in flat stretches, and no ripples without real topographic prominence.
+    if (isFlatAround(smooth,i,IR_PEAK_CONFIG.flatHalfWindowCm,IR_PEAK_CONFIG.flatRangeNoiseMultiple*noise)) continue;
+    if (topographicProminence(smooth,i) < minProminence) continue;
     let l=i,r=i;
     while(l>0 && smooth[l].y>p.y/2) l--;
     while(r<smooth.length-1 && smooth[r].y>p.y/2) r++;

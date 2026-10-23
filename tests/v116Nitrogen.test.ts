@@ -104,15 +104,17 @@ describe('C. 1H + IR without mass or 13C',()=>{
   expect(ks.size).toBeGreaterThan(1);
   expect([...ks].every(k=>k!==null&&k>=1&&k<=3)).toBe(true);
   expect(composition.bounds.hydrogenMultiples).toEqual([10,20,30]);
-  // C = k·V + q with V = 3 visible environments (the broad exchangeable signal is not counted), q = 0–4.
-  expect(composition.bounds.carbon).toEqual([3,13]);
+  // v1.1.7-hotfix.1: per-signal carbon estimate. Visible signals 5H, 2H, 2H (the broad exchangeable 1H carries no C):
+  // k=1 → [2+1+1, 9+4] = [4,13]; k=2 → [4+2+2, 18+4] = [8,22]; k=3 → [5+2+2, 27+4] = [9,31]. (v1.1.6 expected [3,13].)
+  expect(composition.bounds.carbon).toEqual([4,31]);
   expect(composition.hypotheses.every(h=>h.massBasis==='NONE'&&!h.sizeConfirmed&&h.unknown.some(u=>u.text==='無質量依據，分子大小未確認'))).toBe(true);
   expect(composition.limitations.some(l=>l.startsWith('無質量依據，分子大小未確認')&&l.includes('k=1–3'))).toBe(true);
   expect(composition.elementClues.length).toBeGreaterThan(0);
   for(const h of composition.hypotheses){
    const k=h.symmetryMultiple!,H=h.counts.H??0,C=h.counts.C??0;
    expect(H-10*k).toBeGreaterThanOrEqual(0);expect(H-10*k).toBeLessThanOrEqual(2);
-   expect(C).toBeGreaterThanOrEqual(3*k);expect(C).toBeLessThanOrEqual(3*k+4);
+   const [lo,hi]=({1:[4,13],2:[8,22],3:[9,31]} as Record<number,[number,number]>)[k];
+   expect(C).toBeGreaterThanOrEqual(lo);expect(C).toBeLessThanOrEqual(hi);
   }
  });
  it('a user formula is the only hypothesis',()=>{
