@@ -2,6 +2,8 @@ import {traceIRPixels} from './scientificEngines/irImageTrace';
 import {processIRSeries, resolveIRScale} from "./scientificEngines/irSignalProcessing";
 import {decodeJcamp} from "./scientificEngines/jcampAdapter";
 import * as XLSX from "xlsx";
+import {buildPiecewiseAxis,physicalFromPixel,pixelFromPhysical} from './scientificEngines/axisCalibration';
+import type {AxisPresetId} from './scientificEngines/axisCalibrationConfig';
 import {
   CalibrationQualityGrade,
   CarbonEnvironmentType,
@@ -1295,6 +1297,9 @@ export class SpectrumParser {
     pixelX: number,
     calibration: ImageSpectrumCalibration
   ): number {
+    if (calibration.piecewiseKnots && calibration.piecewiseKnots.length >= 2) {
+      return Number(physicalFromPixel(calibration.piecewiseKnots, pixelX).toFixed(2));
+    }
     if (
       calibration.slope !== undefined &&
       calibration.intercept !== undefined &&
@@ -1335,6 +1340,9 @@ export class SpectrumParser {
     physicalX: number,
     calibration: ImageSpectrumCalibration
   ): number {
+    if (calibration.piecewiseKnots && calibration.piecewiseKnots.length >= 2) {
+      return Number(pixelFromPhysical(calibration.piecewiseKnots, physicalX).toFixed(1));
+    }
     if (
       calibration.slope !== undefined &&
       calibration.intercept !== undefined &&
@@ -1722,6 +1730,64 @@ export class SpectrumParser {
       };
     }
 
+    return this.recomputeImageSignalsWithCalibration(spectrum, newCalibration, dims);
+  }
+
+  /**
+   * 分段線性 X 軸校正（v1.1.7-hotfix.2）：2–5 個校正點依像素排序，相鄰兩點之間各自線性內插，外推用最近一段的斜率；
+   * 可選預設（例如 IR 在 2000 cm⁻¹ 換比例）推出額外轉折點。輸入錯誤時不套用並回報原因，既有 2 點／3 點模式不受影響。
+   */
+  static calibrateImageFromPiecewise(
+    spectrum: ExperimentalSpectrumData,
+    points: { pixelX: number; physicalX: number }[],
+    options: { presetId?: AxisPresetId | null } = {}
+  ): ExperimentalSpectrumData {
+    const dims = spectrum.imageDimensions || { width: 800, height: 450 };
+    const prevCal =
+      spectrum.imageCalibration || this.buildImageCalibration(spectrum.modality, dims);
+    const built = buildPiecewiseAxis(points, options);
+    if (!built.ok) {
+      return {
+        ...spectrum,
+        calibrationFailed: true,
+        digitizationErrorMessage: built.error,
+        imageCalibration: { ...prevCal, calibrationWarning: built.error },
+      };
+    }
+    const knots = built.knots;
+    const plotLeftPx = prevCal.plotLeftPx;
+    const plotRightPx = Math.max(plotLeftPx + 1, prevCal.plotRightPx);
+    const xAxisStart = Number(physicalFromPixel(knots, plotLeftPx).toFixed(2));
+    const xAxisEnd = Number(physicalFromPixel(knots, plotRightPx).toFixed(2));
+    const sortedUser = [...points].sort((a, b) => a.pixelX - b.pixelX);
+    const calibrationPoints = sortedUser.map((p, i) => ({
+      pixelX: p.pixelX,
+      physicalX: p.physicalX,
+      status: "VALIDATED" as const,
+      residual: Number(built.residuals[i].toFixed(4)),
+    }));
+    const newCalibration: ImageSpectrumCalibration = {
+      plotLeftPx,
+      plotRightPx,
+      plotTopPx: prevCal.plotTopPx,
+      plotBottomPx: prevCal.plotBottomPx,
+      plotBoundaryStatus: prevCal.plotBoundaryStatus ?? "DETECTED",
+      xAxisStart,
+      xAxisEnd,
+      xAxisDirection: xAxisEnd < xAxisStart ? "DESCENDING" : "ASCENDING",
+      confidence: 0.98,
+      source: "USER_CORRECTED",
+      calibrationMode: "PIECEWISE",
+      piecewiseKnots: knots.map((k) => ({ pixelX: k.pixelX, physicalX: k.physicalX, ...(k.inferred ? { inferred: true } : {}) })),
+      piecewisePresetId: built.presetId,
+      calibrationPoints,
+      referencePoint1: calibrationPoints[0],
+      referencePoint2: calibrationPoints[Math.floor(calibrationPoints.length / 2)],
+      referencePoint3: calibrationPoints[calibrationPoints.length - 1],
+      rSquared: 1,
+      rmse: 0,
+      calibrationQuality: "GOOD",
+    };
     return this.recomputeImageSignalsWithCalibration(spectrum, newCalibration, dims);
   }
 
