@@ -98,18 +98,29 @@ export const COMPOSITION_CONFIG = {
 
   // ---------------------------------------------------------------- nitrogen gating (v1.1.6)
   // N is used only with N-specific evidence. Ambiguous O/N signals default to O and are only annotated.
-  /** IR primary-amine N–H stretch doublet: two marked bands in this window (cm⁻¹)… */
-  irAmineDoubletRange: [3300, 3550] as [number, number],
-  /** …separated by this many cm⁻¹ (asymmetric/symmetric N–H stretch, typically ~70–100). */
+  // Ambiguity always resolves to "insufficient", which is handled exactly like "no N evidence" (v1.1.7-hotfix.1).
+  /** IR primary-amine N–H stretch doublet: two sharp (non-broad) bands in this window (cm⁻¹)… */
+  irAmineDoubletRange: [3300, 3500] as [number, number],
+  /** …separated by this many cm⁻¹ (asymmetric/symmetric N–H stretch, typically ~70–100)… */
   irAmineDoubletSeparation: [50, 120] as [number, number],
-  /** IR C≡N stretch window (cm⁻¹); also required before a 13C 105–125 ppm signal counts as a nitrile carbon. */
+  /** …each at least this fraction of the strongest IR band when intensities are known. */
+  irAmineMinRelativeIntensity: 0.1,
+  /** IR C≡N stretch window (cm⁻¹); the band must be a real peak (auto-detected peaks pass irPeakConfig thresholds). */
   irNitrileRange: [2210, 2260] as [number, number],
-  /** IR nitro asymmetric and symmetric stretches; both bands must be marked (cm⁻¹). */
-  irNitroAsymRange: [1500, 1570] as [number, number],
-  irNitroSymRange: [1300, 1390] as [number, number],
-  /** IR amide I and amide II bands; both must be marked (cm⁻¹). */
-  irAmideIRange: [1630, 1695] as [number, number],
-  irAmideIIRange: [1510, 1580] as [number, number],
+  /** IR nitro asymmetric and symmetric stretches (cm⁻¹). Both must be strong and of similar intensity. */
+  irNitroAsymRange: [1475, 1550] as [number, number],
+  irNitroSymRange: [1290, 1360] as [number, number],
+  /** "Strong": at least this fraction of the strongest marked IR band. Missing intensities → insufficient. */
+  irStrongRelativeIntensity: 0.5,
+  /** Nitro band intensity ratio (asym/sym) must lie in this range. */
+  irNitroIntensityRatioRange: [0.5, 2] as [number, number],
+  /** Alkyl-aromatic look-alike excluded from nitro: aromatic ring stretch near 1500–1520 together with CH3 / gem-dimethyl bending 1360–1385. */
+  irAlkylAromaticRingRange: [1500, 1520] as [number, number],
+  irAlkylBendRange: [1360, 1385] as [number, number],
+  /** IR amide I, amide II and N–H stretch; all three are required, and the N–H band must not be broad (a broad X–H band is O/N-ambiguous). */
+  irAmideIRange: [1630, 1690] as [number, number],
+  irAmideIIRange: [1515, 1570] as [number, number],
+  irAmideNHRange: [3150, 3500] as [number, number],
   /** 13C nitrile carbon window (ppm), counted only together with the IR nitrile band. */
   c13NitrileEvidenceRange: [105, 125] as [number, number],
   /** IR O–H/N–H broad stretch window (cm⁻¹) used for the O-default exchangeable feature. */
