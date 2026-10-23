@@ -4,7 +4,10 @@ export interface StructureGenerationOptions {searchResult?:DeNovoSearchResult;lo
  /** The search ran on composition-hypothesis formulas (P1a); those formulas are the composition basis, so the gate below is skipped. */
  compositionDriven?:boolean;
  /** N-specific evidence (v1.1.7-hotfix.1). Applied to every generation path: the fallback search alphabet and the final candidate gate. */
- nitrogenEvidence?:import('../composition/nitrogenEvidence').NitrogenEvidence}
+ nitrogenEvidence?:import('../composition/nitrogenEvidence').NitrogenEvidence;
+ /** Specific evidence for the chemical-plausibility gate (v1.1.7-hotfix.1); without it only the user-formula exception applies. */
+ plausibility?:PlausibilityEvidence}
+import {NO_PLAUSIBILITY_EVIDENCE,plausibilityViolations,type PlausibilityEvidence,type PlausibilityRule} from './structurePlausibility';
 import {searchMolecularGraphs,graphSearchHints} from './deNovoGraphSearch';
 import {canonicalizeMolecule} from './rdkitAdapter';
 import {
@@ -153,6 +156,8 @@ export class DeterministicStructureGenerator {
     // 4. 第一層：Hard Constraints 與 ChemicalHardConstraintValidator + MolecularGraphValidator 驗證閘門
     const validatedGraphs: ValidatedCandidateGraph[] = [];
     const rejectedCandidates: RejectedCandidateGraphRecord[] = [];
+    const plausibility: PlausibilityEvidence = options.plausibility ?? {...NO_PLAUSIBILITY_EVIDENCE, userFormula: Boolean(authoritativeTargetFormula), nitrogenEvidence: options.nitrogenEvidence?.mode === 'EVIDENCE'};
+    const plausibilityCounts = new Map<PlausibilityRule, number>();
 
     for (const {
       graph: candidate,
@@ -260,6 +265,13 @@ export class DeterministicStructureGenerator {
         violatedConstraints.push("HARD_CONSTRAINT: 化學結構解析器檢核未通過");
       }
 
+      // Chemical-plausibility gate: unstable linkages without specific evidence are rejected with the reason recorded.
+      for (const v of plausibilityViolations(candidate.smiles, plausibility)) {
+        const msg = `PLAUSIBILITY(${v.rule}): ${v.text}`;
+        violatedConstraints.push(msg);
+        rejectionReasons.push(msg);
+        plausibilityCounts.set(v.rule, (plausibilityCounts.get(v.rule) ?? 0) + 1);
+      }
       if (nitrogenBlocked && /N(?![a-z])/.test(hardValidation.computedFormula || candidate.molecularFormula)) {
         const msg = "HARD_CONSTRAINT: 無 N 專屬證據（無 MS、無使用者分子式），不接受含 N 的候選";
         violatedConstraints.push(msg);
@@ -313,6 +325,7 @@ export class DeterministicStructureGenerator {
       });
     }
 
+    if (plausibilityCounts.size) solvedSpace.solverLog.push(`化學合理性檢查剔除候選：${[...plausibilityCounts].map(([rule, n]) => `${rule}×${n}`).join('、')}（原因見 rejectedCandidates）。`);
     return {
       validatedGraphs,
       rejectedCandidates,
