@@ -1,0 +1,249 @@
+{
+ "generatedFrom": "ca9066b (v1.1.7-hotfix.1), before the piecewise mode",
+ "twoPoint": {
+  "calibrationFailed": false,
+  "digitizationErrorMessage": null,
+  "calibration": {
+   "slope": -2.535496957403651,
+   "intercept": 3839.2494929006084,
+   "xAxisStart": 3623.73,
+   "xAxisEnd": 375.76,
+   "rSquared": 1,
+   "rmse": 0,
+   "residuals": [
+    0,
+    0,
+    0
+   ],
+   "calibrationQuality": "GOOD",
+   "source": "USER_CORRECTED"
+  },
+  "peaks": [
+   {
+    "id": "IR-img-ann-1",
+    "x": 3312.37,
+    "pixelX": 207.8,
+    "isCalibrated": true
+   },
+   {
+    "id": "IR-img-ann-10",
+    "x": 912.53,
+    "pixelX": 1154.3,
+    "isCalibrated": true
+   },
+   {
+    "id": "IR-img-ann-2",
+    "x": 3031.19,
+    "pixelX": 318.7,
+    "isCalibrated": true
+   },
+   {
+    "id": "IR-img-ann-3",
+    "x": 2974.9,
+    "pixelX": 340.9,
+    "isCalibrated": true
+   },
+   {
+    "id": "IR-img-ann-4",
+    "x": 2918.86,
+    "pixelX": 363,
+    "isCalibrated": true
+   },
+   {
+    "id": "IR-img-ann-5",
+    "x": 1875,
+    "pixelX": 774.7,
+    "isCalibrated": true
+   },
+   {
+    "id": "IR-img-ann-6",
+    "x": 1762.42,
+    "pixelX": 819.1,
+    "isCalibrated": true
+   },
+   {
+    "id": "IR-img-ann-7",
+    "x": 1606.24,
+    "pixelX": 880.7,
+    "isCalibrated": true
+   },
+   {
+    "id": "IR-img-ann-8",
+    "x": 1581.14,
+    "pixelX": 890.6,
+    "isCalibrated": true
+   },
+   {
+    "id": "IR-img-ann-9",
+    "x": 1424.95,
+    "pixelX": 952.2,
+    "isCalibrated": true
+   }
+  ],
+  "pointCount": 0
+ },
+ "threePoint": {
+  "calibrationFailed": true,
+  "digitizationErrorMessage": "校正點可能選取錯誤，或圖片 X 軸存在非線性失真，請重新確認。",
+  "calibration": {
+   "slope": -2.535496957403651,
+   "intercept": 3755.916159567275,
+   "xAxisStart": 3540.4,
+   "xAxisEnd": 292.43,
+   "rSquared": 0.986842,
+   "rmse": 117.8511,
+   "residuals": [
+    83.3333,
+    83.3333,
+    -166.6667
+   ],
+   "calibrationQuality": "POOR",
+   "source": "USER_3PT_CALIBRATED"
+  },
+  "peaks": [
+   {
+    "id": "IR-img-ann-1",
+    "x": 3654.89,
+    "pixelX": 207.8,
+    "isCalibrated": null
+   },
+   {
+    "id": "IR-img-ann-10",
+    "x": 994.94,
+    "pixelX": 1154.3,
+    "isCalibrated": null
+   },
+   {
+    "id": "IR-img-ann-2",
+    "x": 3343.23,
+    "pixelX": 318.7,
+    "isCalibrated": null
+   },
+   {
+    "id": "IR-img-ann-3",
+    "x": 3280.84,
+    "pixelX": 340.9,
+    "isCalibrated": null
+   },
+   {
+    "id": "IR-img-ann-4",
+    "x": 3218.74,
+    "pixelX": 363,
+    "isCalibrated": null
+   },
+   {
+    "id": "IR-img-ann-5",
+    "x": 2061.73,
+    "pixelX": 774.7,
+    "isCalibrated": null
+   },
+   {
+    "id": "IR-img-ann-6",
+    "x": 1936.96,
+    "pixelX": 819.1,
+    "isCalibrated": null
+   },
+   {
+    "id": "IR-img-ann-7",
+    "x": 1763.84,
+    "pixelX": 880.7,
+    "isCalibrated": null
+   },
+   {
+    "id": "IR-img-ann-8",
+    "x": 1736.02,
+    "pixelX": 890.6,
+    "isCalibrated": null
+   },
+   {
+    "id": "IR-img-ann-9",
+    "x": 1562.9,
+    "pixelX": 952.2,
+    "isCalibrated": null
+   }
+  ],
+  "pointCount": 0
+ },
+ "threePointAccepted": {
+  "calibrationFailed": false,
+  "digitizationErrorMessage": null,
+  "calibration": {
+   "slope": -4.056904017796076,
+   "intercept": 4342.9776174608905,
+   "xAxisStart": 3998.14,
+   "xAxisEnd": -1198.75,
+   "rSquared": 1,
+   "rmse": 0.0944,
+   "residuals": [
+    0.047,
+    0.0846,
+    -0.1317
+   ],
+   "calibrationQuality": "GOOD",
+   "source": "USER_3PT_CALIBRATED"
+  },
+  "peaks": [
+   {
+    "id": "IR-img-ann-1",
+    "x": 3499.95,
+    "pixelX": 207.8,
+    "isCalibrated": true
+   },
+   {
+    "id": "IR-img-ann-10",
+    "x": -339.91,
+    "pixelX": 1154.3,
+    "isCalibrated": true
+   },
+   {
+    "id": "IR-img-ann-2",
+    "x": 3050.04,
+    "pixelX": 318.7,
+    "isCalibrated": true
+   },
+   {
+    "id": "IR-img-ann-3",
+    "x": 2959.98,
+    "pixelX": 340.9,
+    "isCalibrated": true
+   },
+   {
+    "id": "IR-img-ann-4",
+    "x": 2870.32,
+    "pixelX": 363,
+    "isCalibrated": true
+   },
+   {
+    "id": "IR-img-ann-5",
+    "x": 1200.09,
+    "pixelX": 774.7,
+    "isCalibrated": true
+   },
+   {
+    "id": "IR-img-ann-6",
+    "x": 1019.97,
+    "pixelX": 819.1,
+    "isCalibrated": true
+   },
+   {
+    "id": "IR-img-ann-7",
+    "x": 770.06,
+    "pixelX": 880.7,
+    "isCalibrated": true
+   },
+   {
+    "id": "IR-img-ann-8",
+    "x": 729.9,
+    "pixelX": 890.6,
+    "isCalibrated": true
+   },
+   {
+    "id": "IR-img-ann-9",
+    "x": 479.99,
+    "pixelX": 952.2,
+    "isCalibrated": true
+   }
+  ],
+  "pointCount": 0
+ }
+}

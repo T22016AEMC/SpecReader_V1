@@ -1,7 +1,10 @@
 import type {DataPoint,ImageSpectrumCalibration,ExperimentalSpectrumData} from '../../types/spectrum';
+import {physicalFromPixel} from './axisCalibration';
 export type IRPeakDirection='UP'|'DOWN'|'AUTO';
 export interface IRManualSettings {direction:IRPeakDirection;anchors:DataPoint[];enabled:boolean;coordinateSpace?:'PIXEL'|'PHYSICAL';intensityScale?:'ABSORBANCE'|'TRANSMITTANCE'|'PERCENT_TRANSMITTANCE'|'NORMALIZED'|'UNKNOWN';yAxisRange?:[number,number];revision?:number}
 export function pixelIRX(x:number,c:ImageSpectrumCalibration):number {
+  // Piecewise-linear calibration (v1.1.7-hotfix.2) must convert the traced curve exactly like the marks.
+  if(c.piecewiseKnots&&c.piecewiseKnots.length>=2)return physicalFromPixel(c.piecewiseKnots,x);
   if(Number.isFinite(c.slope)&&Number.isFinite(c.intercept))return c.intercept!+x*c.slope!;
   if(c.referencePointA&&c.referencePointB){const a=c.referencePointA,b=c.referencePointB;if(b.pixelX!==a.pixelX)return a.physicalX+(x-a.pixelX)*(b.physicalX-a.physicalX)/(b.pixelX-a.pixelX);}
   return c.xAxisStart+(x-c.plotLeftPx)*(c.xAxisEnd-c.xAxisStart)/Math.max(1e-9,c.plotRightPx-c.plotLeftPx);

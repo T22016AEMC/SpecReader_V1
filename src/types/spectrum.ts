@@ -718,6 +718,10 @@ export interface ImageSpectrumCalibration {
   rmse?: number;
   calibrationQuality?: CalibrationQualityGrade;
   calibrationWarning?: string;
+  /** Piecewise-linear mode (v1.1.7-hotfix.2): knots sorted by pixel; when present they take precedence over slope/intercept. */
+  piecewiseKnots?: { pixelX: number; physicalX: number; inferred?: boolean }[];
+  /** Optional preset used to infer extra knots (e.g. "IR_SCALE_BREAK_2000"). */
+  piecewisePresetId?: string | null;
 }
 
 export interface EmptyWorkspaceState {

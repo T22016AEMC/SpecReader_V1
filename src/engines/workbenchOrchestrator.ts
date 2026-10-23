@@ -38,6 +38,9 @@ import {
 } from "./scientificEngines/predictionAndValidationFramework";
 import { SpectralEvidenceExtractor } from "./scientificEngines/spectralEvidenceExtractor";
 import { SpectrumParser } from "./spectrumParser";
+import { checkLinearity, type LinearityCheck } from "./scientificEngines/axisCalibration";
+import type { AxisPresetId } from "./scientificEngines/axisCalibrationConfig";
+import type { ImageSpectrumCalibration } from "../types/spectrum";
 
 export type WorkbenchStageId =
   | "STAGE_1_INPUT"
@@ -793,6 +796,63 @@ export class WorkbenchOrchestrator {
         methodDescription: `3-point OLS calibrated [R²=${(cal?.rSquared ?? 1).toFixed(5)}, RMSE=${(cal?.rmse ?? 0).toFixed(3)}, Grade=${cal?.calibrationQuality || "GOOD"}]`,
       },
     };
+  }
+
+  /**
+   * 分段線性 X 軸校正（v1.1.7-hotfix.2）：只適用於圖片光譜；2–5 個校正點，可選預設（例如 IR 2000 cm⁻¹ 換比例 2:1）。
+   * 所有標記保留原 ID 與像素位置，依分段換算重算物理座標；輸入錯誤時不套用並回報原因。
+   */
+  static applyPiecewiseCalibration(
+    spectrum: ExperimentalSpectrumData,
+    request: { points: { pixelX: number; realX: number }[]; presetId?: AxisPresetId | null }
+  ): ExperimentalSpectrumData {
+    const isImage =
+      spectrum.digitizedFromImage ||
+      spectrum.sourceType === "IMAGE_EXPERIMENTAL" ||
+      spectrum.sourceType === "IMAGE_DIGITIZED" ||
+      ["IMAGE", "PNG", "JPG", "JPEG", "WEBP", "IMAGE_DIGITIZED"].includes(String(spectrum.sourceFormat));
+    if (!isImage) {
+      return { ...spectrum, calibrationFailed: true, digitizationErrorMessage: "分段線性校正只適用於圖片光譜；數值光譜的 X 座標已是實際數值。" };
+    }
+    const recalibrated = SpectrumParser.calibrateImageFromPiecewise(
+      spectrum,
+      request.points.map((p) => ({ pixelX: p.pixelX, physicalX: p.realX })),
+      { presetId: request.presetId ?? null }
+    );
+    if (recalibrated.calibrationFailed) return recalibrated;
+    const cal = recalibrated.imageCalibration;
+    return {
+      ...recalibrated,
+      calibrationFailed: false,
+      digitizationErrorMessage: undefined,
+      points: [],
+      digitizedMetadata: {
+        ...(recalibrated.digitizedMetadata || {
+          rawImageDataUrl: recalibrated.originalImageUrl || recalibrated.imagePreviewUrl || "",
+          imageWidth: recalibrated.imageDimensions?.width || 800,
+          imageHeight: recalibrated.imageDimensions?.height || 450,
+          extractionMethod: recalibrated.digitizationMethod === "Gemini Vision" ? "GEMINI_VISION" : "LOCAL_CANVAS",
+        }),
+        isTwoPointCalibrated: true,
+        calibrationQuality: cal?.calibrationQuality || "GOOD",
+        digitizationConfidence: cal?.confidence ?? 0.98,
+        confidenceScore: cal?.confidence ?? 0.98,
+        methodDescription: `piecewise-linear calibrated [${(cal?.piecewiseKnots ?? []).map((k) => `${k.pixelX.toFixed(1)}px→${k.physicalX}${k.inferred ? "*" : ""}`).join(", ")}${cal?.piecewisePresetId ? `; preset ${cal.piecewisePresetId}` : ""}]`,
+      },
+    };
+  }
+
+  /**
+   * 直線校正（2 點或 3 點 OLS）的線性度檢查（v1.1.7-hotfix.2）：以目前的校正換算每個檢查點，
+   * 殘差超過容許值時回傳警告文字；只作提示，不阻擋使用者，也不改變校正結果。
+   */
+  static checkCalibrationLinearity(
+    calibration: ImageSpectrumCalibration | undefined,
+    checkPoints: { pixelX: number; realX: number }[]
+  ): LinearityCheck {
+    const points = checkPoints.map((p) => ({ pixelX: p.pixelX, physicalX: p.realX }));
+    if (!calibration) return checkLinearity([], () => 0);
+    return checkLinearity(points, (px) => SpectrumParser.pixelToPhysicalX(px, calibration));
   }
 
   /**
