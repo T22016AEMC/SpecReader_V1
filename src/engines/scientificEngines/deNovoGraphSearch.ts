@@ -5,8 +5,12 @@ import type {StructuralConstraints} from '../../types/spectrum';
 export type SearchTermination='OUTPUT_BUDGET'|'TIME_BUDGET'|'STATE_BUDGET'|'BEAM_PRUNED'|'GRAMMAR_EXHAUSTED'|'INSUFFICIENT_CONSTRAINTS'|'UNSUPPORTED_CHEMISTRY'|'INVALID_COMPOSITION'|'UNAVAILABLE'|'EXECUTION_ERROR'|'CANCELLED';
 export interface GraphSearchHints {aromatic?:boolean;carbonyl?:boolean;oxygen?:boolean;nitrogen?:boolean;
  /** v1.1.6: no N-specific evidence; N is not added to the atom alphabet (a target formula still decides its own elements). */
- nitrogenForbidden?:boolean;observedSignals?:number;coupledEthyl?:boolean;couplingNotes?:string[];neutralMass?:number;massTolerance?:number;localStructures?:LocalStructureHypothesis[]}
-export interface DeNovoSearchResult {smiles:string[];status:'BOUNDED'|'UNSUPPORTED'|'UNAVAILABLE';visited:number;note:string;termination:SearchTermination;complete:boolean;partialHypotheses:string[];rejectedByComposition:number;error?:string;derivations?:Record<string,AssemblyDerivation>;elapsedMs?:number;frontierPeak?:number;formulaSources?:Record<string,string[]>}
+ nitrogenForbidden?:boolean;observedSignals?:number;coupledEthyl?:boolean;couplingNotes?:string[];neutralMass?:number;massTolerance?:number;localStructures?:LocalStructureHypothesis[];
+ /** P1b prefilter: number of observed (non-solvent) 1H / 13C signals; null/undefined = not observed. */
+ observedH1Signals?:number|null;observedC13Signals?:number|null}
+export interface DeNovoSearchResult {smiles:string[];status:'BOUNDED'|'UNSUPPORTED'|'UNAVAILABLE';visited:number;note:string;termination:SearchTermination;complete:boolean;partialHypotheses:string[];rejectedByComposition:number;error?:string;derivations?:Record<string,AssemblyDerivation>;elapsedMs?:number;frontierPeak?:number;formulaSources?:Record<string,string[]>;
+ /** P1b: how the structures were produced (exhaustive enumerator or legacy fallback), completeness and scoring cap. */
+ enumeration?:import('../enumeration/types').EnumerationDiagnostics}
 export interface GraphSearchOptions {maxResults?:number;maxStates?:number;timeMs?:number;beamWidth?:number;hints?:GraphSearchHints;maxFrontier?:number;shouldCancel?:()=>boolean;onProgress?:(p:GraphSearchProgress)=>void}
 export interface GraphSearchProgress {visited:number;candidateCount:number;elapsedMs:number;frontier:number}
 type Edge={a:number;b:number;order:number};

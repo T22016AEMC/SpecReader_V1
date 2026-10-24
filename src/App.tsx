@@ -3,6 +3,8 @@ import type {AnalysisProgress} from './engines/reasoning/types';
 import {MassExperimentConditions} from './components/MassExperimentConditions';
 import {emptyModeAState,executeAnalysisWorker,type ModeAResult} from './engines/analysisSession';
 import {PeakObservationTable} from './components/PeakObservationTable';
+import {CompositionPanel} from './components/CompositionPanel';
+import {candidateSourceTag} from './engines/enumeration/compositionPanelModel';
 import type {IRManualSettings} from './engines/scientificEngines/irManualBaseline';
 import type {ExtendedSpectrumModality} from './types/spectrum';
 import React, { useMemo, useRef, useState } from "react";
@@ -604,6 +606,7 @@ export default function App() {
   const [analysisRuns,setAnalysisRuns]=useState(0);
   const currentInputKey=useMemo(()=>JSON.stringify([spectra,extraChemicalInput]),[spectra,extraChemicalInput]);
   const analysisStale=!!completedAnalysis&&completedAnalysis.key!==currentInputKey;
+  const candidateOrigins=completedAnalysis?.result.solvedConstraintSpace?.searchResult?.enumeration?.origins;
   const modeAOrchestration=completedAnalysis?.result??emptyModeAState();
   const handleStartAnalysis=async()=>{
     if(analysisLock.current)return;
@@ -2780,6 +2783,7 @@ export default function App() {
                 <p data-testid="generation-status" data-code={modeAOrchestration.generationStatus?.code}>{modeAOrchestration.generationStatus?.message} {modeAOrchestration.generationStatus?.limits}</p>
                 <p className="text-xs text-slate-400">組成來源：{modeAOrchestration.generationStatus?.userFormula?`使用者指定 ${modeAOrchestration.generationStatus.userFormula}（完整候選硬限制）`:'未指定；不以前置猜測分子式限制搜尋'}；候選卡分子式由各自分子圖計算。</p>
                 {!!modeAOrchestration.generationStatus?.partialHypotheses?.length&&<ul data-testid="local-structure-hypotheses" className="text-xs text-slate-300">{modeAOrchestration.generationStatus.partialHypotheses.map((h,i)=><li key={i}>{h}</li>)}</ul>}
+                {completedAnalysis&&<CompositionPanel result={completedAnalysis.result} stale={analysisStale}/>}
                 {/* 第 3 頁頂部工作列（與第 1、2 頁標記及校正工具完全分離） */}
                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-500/30 bg-slate-900/90 px-4 py-3">
                   <div>
@@ -3337,7 +3341,7 @@ export default function App() {
                               <h3 className="mt-2 text-sm font-bold text-slate-100">
                                 {cand.name}
                               </h3>
-                              <p className="text-xs text-amber-200">來源：{cand.sourceProvenance || cand.candidateOrigin} · 有界搜尋／未校準相容度，資訊不足不能確認完整結構。</p>
+                              <p className="text-xs text-amber-200" data-testid="candidate-source">來源：{cand.sourceProvenance || cand.candidateOrigin}{candidateSourceTag(candidateOrigins?.[cand.smiles])?`｜候選來源：${candidateSourceTag(candidateOrigins?.[cand.smiles])}`:''} · 有界搜尋／未校準相容度，資訊不足不能確認完整結構。</p>
                               {cand.scientificScoreLedger&&<details className="text-xs text-slate-400"><summary>實測支持與矛盾證據</summary>{cand.scientificScoreLedger.entries.filter(e=>e.compatibility!==null).slice(0,24).map(e=><p key={e.evidenceId}>{e.sourceModality} · {e.evidenceId} · {(e.compatibility??0)>=.6?'支持':(e.compatibility??0)<.3?'矛盾／模型無法解釋':'弱相容'} · {e.method}</p>)}</details>}
                               <div className="font-mono text-xs text-slate-400">
                                 IUPAC: {cand.iupacName} |{" "}

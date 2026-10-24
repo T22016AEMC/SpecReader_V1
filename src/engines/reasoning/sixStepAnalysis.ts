@@ -3,6 +3,8 @@ import {createReasoningPlan} from './hypothesisGenerator';
 import {graphSearchHints} from '../scientificEngines/deNovoGraphSearch';
 import {inferComposition} from '../composition/inferComposition';
 import {generateForCompositions} from '../composition/structureGenerator';
+import {ENUMERATION_CONFIG as ENUM} from '../enumeration/enumerationConfig';
+import {buildPlausibilityEvidence} from '../scientificEngines/structurePlausibility';
 import type {AnalysisInput,ModeAResult} from '../analysisSession';
 import type {AnalysisProgress,ReasoningPlan} from './types';
 export function planningSearchHints(plan:ReasoningPlan,base:ReturnType<typeof graphSearchHints>):ReturnType<typeof graphSearchHints>{
@@ -18,10 +20,17 @@ export async function executeSixStepAnalysis(input:AnalysisInput,options:{should
  const plan=createReasoningPlan(prepared.bundle);
  plan.composition=inferComposition({bundle:prepared.bundle,observations:plan.observations,userFormula:plan.userFormula,nitrogen:plan.nitrogenEvidence});
  options.onProgress?.({step:3,stage:'建立原子／鍵／連接點與局部關係',localStructures:plan.localStructures});await tick();
- const hints=planningSearchHints(plan,graphSearchHints(prepared.bundle.constraints));
+ const baseHints=planningSearchHints(plan,graphSearchHints(prepared.bundle.constraints));
+ // P1b: observed (non-solvent) 1H / 13C signal counts for the pre-ranking before scoring; harmless for the legacy search.
+ const countSignals=(modality:string)=>{const n=plan.observations.filter(o=>o.modality===modality&&!o.optional).length;return n>0?n:null;};
+ const hints={...baseHints,observedH1Signals:countSignals('1H_NMR'),observedC13Signals:countSignals('13C_NMR')};
  options.onProgress?.({step:4,stage:'局部結構引導的增量分子圖搜尋',localStructures:plan.localStructures});
  // Composition inference (P1a) belongs to progress step 3; the generator bridge keeps the original total budget.
- const outcome=await generateForCompositions({userFormula:plan.userFormula,composition:plan.composition??null,hints,budget:{timeMs:options.timeMs??12000,maxStates:options.maxStates??120000,maxFrontier:4096,maxResults:48,beamWidth:64,shouldCancel:options.shouldCancel,onProgress:p=>options.onProgress?.({step:4,stage:'搜尋中；進度為實際已展開狀態，非完成百分比',...p})}});
+ const outcome=await generateForCompositions({userFormula:plan.userFormula,composition:plan.composition??null,hints,
+  plausibility:buildPlausibilityEvidence({observations:plan.observations,userFormula:plan.userFormula,nitrogenEvidence:plan.nitrogenEvidence?.mode==='EVIDENCE'}),
+  sharedPool:options.timeMs!==undefined||options.maxStates!==undefined,
+  enumerationBudget:{timeMs:options.timeMs??ENUM.analysis.timeMs,maxStates:options.maxStates??ENUM.analysis.maxStates,maxCandidates:ENUM.analysis.maxCandidatesPerFormula},
+  budget:{timeMs:options.timeMs??12000,maxStates:options.maxStates??120000,maxFrontier:4096,maxResults:48,beamWidth:64,shouldCancel:options.shouldCancel,onProgress:p=>options.onProgress?.({step:4,stage:'搜尋中；進度為實際已展開狀態，非完成百分比',...p})}});
  const search=outcome.search;plan.compositionSearch={mode:outcome.mode,note:outcome.note,runs:outcome.runs};
  options.onProgress?.({step:5,stage:search.termination==='CANCELLED'?'搜尋取消，驗證已取得的部分候選':'逐候選檢查化學圖與全部已提供光譜',candidateCount:search.smiles.length,termination:search.termination});await tick();
  const result=WorkbenchOrchestrator.runModeAPipeline(input.spectra,input.extraInput,{prepared,plan,searchResult:search});
