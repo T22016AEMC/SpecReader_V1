@@ -85,3 +85,55 @@ describe('flow (iv): cancelling during the analysis', () => {
     expect(r.reasoningTrace!.stages).toHaveLength(6);
   }, 120000);
 });
+
+// Stage 4: candidate origins and panel model on real results.
+import {buildCompositionPanel, candidateSourceTag, summaryBadges} from '../src/engines/enumeration/compositionPanelModel';
+import {createExhaustiveGenerator} from '../src/engines/enumeration/exhaustiveGenerator';
+import {mk} from './helpers/p1bScenarios';
+const panelOf = (r: Awaited<ReturnType<typeof executeSixStepAnalysis>>) => buildCompositionPanel({
+  composition: r.compositionInference, runs: r.reasoningTrace?.compositionSearch?.runs ?? [], mode: r.reasoningTrace?.compositionSearch?.mode,
+  enumeration: r.solvedConstraintSpace.searchResult?.enumeration, localStructures: r.reasoningTrace?.localStructures ?? [],
+})!;
+
+describe('candidate origins and panel on real results', () => {
+  it('enumerator candidates are tagged 窮舉器 (not relaxed); a complete run has no badge', async () => {
+    const r = await executeSixStepAnalysis({spectra: {'1H_NMR': h1Diphenylpropane(), IR: irAromatic()}, extraInput: {molecularFormula: 'C15H16'}}, {});
+    const origins = r.solvedConstraintSpace.searchResult!.enumeration!.origins!;
+    expect(r.rankedCandidates.length).toBeGreaterThan(0);
+    for (const c of r.rankedCandidates) expect(candidateSourceTag(origins[c.smiles])).toBe('窮舉器');
+    const panel = panelOf(r);
+    expect(panel.badges).toEqual([]);
+    expect(panel.enumerationLabel).toBe('完整（COMPLETE）');
+    expect(panel.rows[0].search.text).toMatch(/完整（COMPLETE）/);
+  }, 120000);
+  it('readings that contradict the formula: relaxed to formula-only, tagged 約束已放寬, amber badge in the summary', async () => {
+    const r = await executeSixStepAnalysis({spectra: {IR: mk('IR', [{x: 1715, y: 80}])}, extraInput: {molecularFormula: 'C2H6O'}}, {});
+    const run = r.reasoningTrace!.compositionSearch!.runs[0];
+    expect(run.enumeration?.relaxedToFormulaOnly?.candidates).toBeGreaterThan(0);
+    const origins = r.solvedConstraintSpace.searchResult!.enumeration!.origins!;
+    expect(r.rankedCandidates.length).toBeGreaterThan(0);
+    for (const c of r.rankedCandidates) expect(candidateSourceTag(origins[c.smiles])).toBe('窮舉器｜約束已放寬');
+    expect(panelOf(r).badges.map(b => b.text)).toEqual(['約束已放寬（只依分子式）']);
+  }, 120000);
+  it('a budget-limited enumeration is supplemented by the legacy search: those candidates are tagged, the summary carries both badges', async () => {
+    // Deterministic stand-in for the legacy search; the enumeration is cut by a tiny step budget.
+    const legacy = {generateStructures: async () => ({smiles: ['CCCCO', 'CCOCC'], status: 'BOUNDED' as const, visited: 7, note: '', termination: 'GRAMMAR_EXHAUSTED' as const, complete: false, partialHypotheses: [], rejectedByComposition: 0})};
+    const gen = createExhaustiveGenerator(legacy);
+    const search = await gen.generateStructures({formula: 'C6H14', hints: {}, budget: {timeMs: 5000, maxStates: 1e6, maxResults: 48, maxFrontier: 1, beamWidth: 1}, enumerationBudget: {timeMs: 5000, maxStates: 50}});
+    const e = search.enumeration!;
+    expect(e.runs[0].legacySupplement?.added).toBe(2);
+    expect(e.origins!['CCCCO']).toEqual({source: 'LEGACY_SUPPLEMENT', relaxed: false});
+    expect(Object.values(e.origins!).some(o => o.source === 'ENUMERATOR')).toBe(true);
+    expect(candidateSourceTag(e.origins!['CCOCC'])).toBe('舊 beam 搜尋（補充）');
+    const ids = summaryBadges(e.runs).map(b => b.id);
+    expect(ids).toEqual(['LEGACY_SUPPLEMENT', 'INCOMPLETE']);
+  }, 60000);
+  it('with the flag off no origin information exists, so candidate cards keep their old text', async () => {
+    flag.useExhaustiveEnumerator = false;
+    try {
+      const r = await executeSixStepAnalysis({spectra: {IR: mk('IR', [{x: 1715, y: 80}, {x: 2920, y: 30}])}, extraInput: {molecularFormula: 'C2H6O'}}, {timeMs: 5000, maxStates: 4000});
+      expect(r.solvedConstraintSpace.searchResult?.enumeration).toBeUndefined();
+      expect(panelOf(r).badges).toEqual([]);
+    } finally { flag.useExhaustiveEnumerator = true; }
+  }, 120000);
+});

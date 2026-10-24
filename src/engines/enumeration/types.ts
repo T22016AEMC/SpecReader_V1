@@ -97,7 +97,9 @@ export type IncompleteReason =
   | 'CANDIDATE_LIMIT'
   | 'CANCELLED'
   | 'INVALID_ALTERNATIVE_SET'
-  | 'ALTERNATIVE_SET_NOT_RUN';
+  | 'ALTERNATIVE_SET_NOT_RUN'
+  /** More readings of the evidence than `adapter.maxAlternativeSets`: only the first ones were enumerated. */
+  | 'READINGS_TRUNCATED';
 export interface RejectionStats {
   sanitizeFailed: number;
   duplicatesMerged: number;
@@ -157,6 +159,8 @@ export interface EnumerationRunDiagnostic {
   leaves: number;
   elapsedMs: number;
   rejected: RejectionStats | null;
+  /** Local structures that are in no reading (with the reason). */
+  excludedLocals?: {localId: string; kind: string; reason: string}[];
   /** Every reading was complete but none holds a molecule with the formula: the run was relaxed to formula-only enumeration. */
   relaxedToFormulaOnly?: {candidates: number; complete: boolean};
   /** Candidates the bounded legacy beam search added after a budget-limited enumeration. */
@@ -176,4 +180,12 @@ export interface EnumerationDiagnostics {
   scored: number;
   deferred: {count: number; samples: string[]; prefilter: {h1Required: number | null; c13Required: number | null; passing: number; failing: number} | null};
   maxScoredCandidates: number;
+  /** Where each scored candidate came from (only present when the enumerator was involved). */
+  origins?: Record<string, CandidateOrigin>;
+}
+export interface CandidateOrigin {
+  /** ENUMERATOR: found by the exhaustive enumerator; LEGACY_SUPPLEMENT: added by the bounded legacy search after a budget-limited enumeration; LEGACY: the whole request fell back to the legacy search. */
+  source: 'ENUMERATOR' | 'LEGACY_SUPPLEMENT' | 'LEGACY';
+  /** The fragment readings contradicted the formula and the run was relaxed to formula-only enumeration. */
+  relaxed: boolean;
 }

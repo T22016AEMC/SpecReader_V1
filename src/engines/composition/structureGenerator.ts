@@ -114,7 +114,9 @@ export async function generateForCompositions(args:{userFormula:string|null;comp
  const capSearch=(search:DeNovoSearchResult):DeNovoSearchResult=>{
   if(!search.enumeration?.used)return search;
   const cap=capScored(search.smiles,{h1:args.hints.observedH1Signals,c13:args.hints.observedC13Signals},ENUM.analysis.maxScoredCandidates,args.plausibility);
-  const enumeration:EnumerationDiagnostics={...search.enumeration,enumerated:search.smiles.length,scored:cap.scored.length,deferred:{count:cap.deferred.length,samples:deferredSamples(cap.deferred),prefilter:cap.prefilter}};
+  const og=search.enumeration.origins;
+  const origins=og?Object.fromEntries(cap.scored.filter(s=>og[s]).map(s=>[s,og[s]])):undefined;
+  const enumeration:EnumerationDiagnostics={...search.enumeration,enumerated:search.smiles.length,scored:cap.scored.length,deferred:{count:cap.deferred.length,samples:deferredSamples(cap.deferred),prefilter:cap.prefilter},...(origins?{origins}:{})};
   return {...search,smiles:cap.scored,enumeration,note:search.note+(cap.deferred.length?`；超過評分上限 ${ENUM.analysis.maxScoredCandidates}，${cap.deferred.length} 個候選保留但不進入完整評分`:'')};
  };
  const single=async(formula:string|undefined,h:CompositionHypothesis|null,mode:CompositionSearchOutcome['mode'],note:string|null):Promise<CompositionSearchOutcome>=>{
@@ -138,6 +140,7 @@ export async function generateForCompositions(args:{userFormula:string|null;comp
  const merged:DeNovoSearchResult={smiles:[],status:'BOUNDED',visited:0,note:'',termination:'GRAMMAR_EXHAUSTED',complete:true,partialHypotheses:[],rejectedByComposition:0,derivations:{},formulaSources:{},elapsedMs:0,frontierPeak:0};
  let usedStates=0,usedTime=0,eUsedStates=0,eUsedTime=0;
  const enumRuns:EnumerationRunDiagnostic[]=[];
+ const originsAcc:NonNullable<EnumerationDiagnostics['origins']>={};
  for(let i=0;i<chosen.length;i++){
   const h=chosen[i],left=chosen.length-i;
   const pooled=Boolean(args.sharedPool)&&useExhaustive;
@@ -149,7 +152,7 @@ export async function generateForCompositions(args:{userFormula:string|null;comp
   const search=await generator.generateStructures({formula:h.formula,hints:prepared.hints,budget:{...budget,maxStates,timeMs,maxResults:CFG.maxResultsPerFormula,onProgress:budget.onProgress?p=>budget.onProgress!({...p,visited:offset+p.visited}):undefined},unprepared:args.hints,symmetryMultiple:h.symmetryMultiple,plausibility:args.plausibility,enumerationBudget:{timeMs:eTimeMs,maxStates:eMaxStates,maxCandidates:eBudget.maxCandidates},sharedPool:args.sharedPool});
   h.searched=true;
   const ev=search.enumeration?.runs[0];
-  if(ev){eUsedStates+=ev.visited;eUsedTime+=ev.elapsedMs;enumRuns.push(...search.enumeration!.runs);}
+  if(ev){eUsedStates+=ev.visited;eUsedTime+=ev.elapsedMs;enumRuns.push(...search.enumeration!.runs);Object.assign(originsAcc,search.enumeration!.origins);}
   if(!search.enumeration?.used){usedStates+=Math.min(search.visited,maxStates);usedTime+=Math.min(search.elapsedMs??timeMs,timeMs);}
   else if(ev?.legacySupplement){usedStates+=Math.min(ev.legacySupplement.visited,maxStates);}
   runs.push(finishRun({hypothesisId:h.id,formula:h.formula,maxStates,timeMs,visited:search.visited,elapsedMs:search.elapsedMs??0,termination:search.termination,candidates:search.smiles.length,symmetry:prepared.symmetry,diagnostic:null},search));
@@ -167,7 +170,7 @@ export async function generateForCompositions(args:{userFormula:string|null;comp
   if(search.termination==='CANCELLED')break;
  }
  if(enumRuns.length){
-  const cap=capSearch({...merged,enumeration:{used:enumRuns.some(r=>r.used),complete:enumRuns.every(r=>r.used&&r.complete),runs:enumRuns,enumerated:merged.smiles.length,scored:0,deferred:{count:0,samples:[],prefilter:null},maxScoredCandidates:ENUM.analysis.maxScoredCandidates}});
+  const cap=capSearch({...merged,enumeration:{used:enumRuns.some(r=>r.used),complete:enumRuns.every(r=>r.used&&r.complete),runs:enumRuns,enumerated:merged.smiles.length,scored:0,deferred:{count:0,samples:[],prefilter:null},maxScoredCandidates:ENUM.analysis.maxScoredCandidates,origins:originsAcc}});
   merged.smiles=cap.smiles;
   merged.enumeration=cap.enumeration;
   if(merged.enumeration?.used)merged.complete=merged.enumeration.complete&&merged.complete;

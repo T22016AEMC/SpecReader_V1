@@ -138,12 +138,15 @@ describe('F3 cannot convert → fallback to the legacy search with the reason (n
     expect(r2.ok).toBe(false);
     expect(r2.fallbackReason).toContain('無法判定');
   });
-  it('too many readings', () => {
+  it('too many readings: only the first ones are kept and the result says so (the caller marks INCOMPLETE)', () => {
     const many: LocalStructureHypothesis[] = Array.from({length: 8}, (_, i) => ({...base, id: `x${i}`, observationIds: [`a${i}`, `b${i}`]}));
-    // 8 observations pairs, each explained by two structures → 2^8 readings
+    // 8 observation pairs, each explained by two structures → 2^8 readings
     const crossed = many.flatMap((l, i) => [l, {...l, id: `y${i}`}]);
     const r = adapt(crossed);
-    expect(r.ok).toBe(false);
-    expect(r.fallbackReason).toContain('讀法超過上限');
+    expect(r.ok).toBe(true);
+    expect(r.truncated).toBe(true);
+    expect(r.sets).toHaveLength(ENUMERATION_CONFIG.adapter.maxAlternativeSets);
+    expect(r.notes.some(n => n.includes('READINGS_TRUNCATED'))).toBe(true);
+    expect(r.excluded).toEqual([]);   // nothing is declared "in no reading" when the list was cut
   });
 });

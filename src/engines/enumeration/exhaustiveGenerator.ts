@@ -4,12 +4,12 @@ import {parseFormula} from './problem';
 import {adaptLocalStructures} from './adapter';
 import {ENUMERATION_CONFIG as CFG} from './enumerationConfig';
 import {enumerateStructures} from './enumerate';
-import type {EnumerationDiagnostics, EnumerationResult, EnumerationRunDiagnostic} from './types';
+import type {CandidateOrigin, EnumerationDiagnostics, EnumerationResult, EnumerationRunDiagnostic} from './types';
 
 const FORMULA_INCOMPATIBLE = ['FORMULA_ELEMENT_SHORTAGE', 'FORMULA_HYDROGEN_SHORTAGE', 'FORMULA_HYDROGEN_EXCESS', 'VALENCE_PARITY'];
 
-const emptyDiagnostics = (run: EnumerationRunDiagnostic): EnumerationDiagnostics => ({
-  used: run.used, complete: run.used && run.complete, runs: [run], enumerated: run.candidates, scored: 0, deferred: {count: 0, samples: [], prefilter: null}, maxScoredCandidates: CFG.analysis.maxScoredCandidates,
+const emptyDiagnostics = (run: EnumerationRunDiagnostic, origins?: Record<string, CandidateOrigin>): EnumerationDiagnostics => ({
+  used: run.used, complete: run.used && run.complete, runs: [run], enumerated: run.candidates, scored: 0, deferred: {count: 0, samples: [], prefilter: null}, maxScoredCandidates: CFG.analysis.maxScoredCandidates, ...(origins ? {origins} : {}),
 });
 const legacyRun = (formula: string | undefined, reason: string, notes: string[] = []): EnumerationRunDiagnostic => ({
   used: false, fallbackReason: reason, formula: formula ?? null, status: null, complete: false, incompleteReasons: [], readings: [], incompatibleReadings: 0,
@@ -32,7 +32,9 @@ export function createExhaustiveGenerator(legacy: StructureGenerator): Structure
         const search = await legacy.generateStructures(req);
         const run = legacyRun(formula, reason, notes);
         if (attempt) { run.status = attempt.status; run.incompleteReasons = attempt.incompleteReasons; run.visited = attempt.stats.visited; run.leaves = attempt.stats.leaves; run.elapsedMs = attempt.stats.elapsedMs; }
-        return {...search, enumeration: emptyDiagnostics(run)};
+        const origins: Record<string, CandidateOrigin> = {};
+        for (const s of search.smiles) origins[s] = {source: 'LEGACY', relaxed: false};
+        return {...search, enumeration: emptyDiagnostics(run, origins)};
       };
       if (!formula) return fallback('沒有分子式，維持舊搜尋');
       const parsed = parseFormula(formula);
@@ -63,15 +65,17 @@ export function createExhaustiveGenerator(legacy: StructureGenerator): Structure
       const incompatibleSets = result.sets.filter(s => s.error && FORMULA_INCOMPATIBLE.includes(s.error.code));
       const otherErrors = result.sets.filter(s => s.error && !FORMULA_INCOMPATIBLE.includes(s.error.code));
       const realReasons = result.incompleteReasons.filter(r => r !== 'INVALID_ALTERNATIVE_SET');
-      const complete = realReasons.length === 0 && otherErrors.length === 0;
+      const complete = realReasons.length === 0 && otherErrors.length === 0 && !adapted.truncated;
       const run: EnumerationRunDiagnostic = {
         used: true, fallbackReason: null, formula, status: result.status, complete,
-        incompleteReasons: [...realReasons, ...(otherErrors.length ? ['INVALID_ALTERNATIVE_SET' as const] : [])],
+        incompleteReasons: [...realReasons, ...(otherErrors.length ? ['INVALID_ALTERNATIVE_SET' as const] : []), ...(adapted.truncated ? ['READINGS_TRUNCATED' as const] : [])],
         readings: result.sets.map(s => ({id: s.id, localIds: adapted.setLocalIds[s.id] ?? [], complete: s.complete, error: s.error ? `${s.error.code}：${s.error.message}` : null, newCandidates: s.newCandidates})),
         incompatibleReadings: incompatibleSets.length, candidates: result.candidates.length, visited: result.stats.visited, leaves: result.stats.leaves,
-        elapsedMs: result.stats.elapsedMs, rejected: result.stats.rejected, conversions: adapted.conversions, notes: adapted.notes,
+        elapsedMs: result.stats.elapsedMs, rejected: result.stats.rejected, conversions: adapted.conversions, notes: adapted.notes, excludedLocals: adapted.excluded,
       };
       const smiles = result.candidates.map(c => c.smiles);
+      const origins: Record<string, CandidateOrigin> = {};
+      for (const s of smiles) origins[s] = {source: 'ENUMERATOR', relaxed: false};
       // Every reading finished but none contains a molecule with this formula (e.g. a C=O reading for C2H6O): the evidence-derived
       // fragments contradict the formula. The formula is the stronger constraint, so relax to formula-only enumeration when that is
       // small enough (otherwise the legacy search is used); scoring then judges the candidates against the evidence.
@@ -79,7 +83,7 @@ export function createExhaustiveGenerator(legacy: StructureGenerator): Structure
       if (!smiles.length && complete && realReasons.length === 0) {
         if (heavy > CFG.adapter.maxHeavyAtomsWithoutFragments) return fallback(`所有片段讀法都沒有符合分子式的分子，而且重原子數 ${heavy} 太大，無法放寬成純分子式窮舉`, adapted.notes, result);
         relaxed = await enumerateStructures({formula: parsed.counts, forbid: {strain: CFG.pipelineStrainProfile, ...(request.plausibility && CFG.pipelineEarlyPlausibilityPrune ? {plausibility: request.plausibility, plausibilityLeaf: false} : {})}, budget: {timeMs: eb.timeMs, maxStates: eb.maxStates, maxCandidates: eb.maxCandidates ?? CFG.analysis.maxCandidatesPerFormula, shouldCancel: request.budget.shouldCancel}});
-        for (const c of relaxed.candidates) smiles.push(c.smiles);
+        for (const c of relaxed.candidates) { smiles.push(c.smiles); origins[c.smiles] = {source: 'ENUMERATOR', relaxed: true}; }
         run.relaxedToFormulaOnly = {candidates: relaxed.candidates.length, complete: relaxed.status === 'COMPLETE'};
         run.notes = [...run.notes, `所有片段讀法都沒有符合分子式的分子（片段與分子式矛盾）：放寬成只依分子式窮舉，得到 ${relaxed.candidates.length} 個候選（${relaxed.status === 'COMPLETE' ? 'COMPLETE' : 'INCOMPLETE'}）`];
         run.candidates = smiles.length;
@@ -94,7 +98,7 @@ export function createExhaustiveGenerator(legacy: StructureGenerator): Structure
         supplement = await legacy.generateStructures(req);
         const seen = new Set(smiles);
         let added = 0;
-        for (const s of supplement.smiles) if (!seen.has(s)) { seen.add(s); smiles.push(s); added++; }
+        for (const s of supplement.smiles) if (!seen.has(s)) { seen.add(s); smiles.push(s); origins[s] = {source: 'LEGACY_SUPPLEMENT', relaxed: false}; added++; }
         run.notes = [...run.notes, `窮舉未完成（${run.incompleteReasons.join('、')}）：另以舊 beam 搜尋補充，${supplement.smiles.length} 個候選中 ${added} 個為新（舊搜尋 ${supplement.visited} 步）`];
         run.legacySupplement = {candidates: supplement.smiles.length, added, visited: supplement.visited};
         run.candidates = smiles.length;
@@ -116,7 +120,7 @@ export function createExhaustiveGenerator(legacy: StructureGenerator): Structure
         smiles, status: 'BOUNDED', visited: result.stats.visited + visitedExtra + (supplement?.visited ?? 0), termination, complete: run.complete,
         note: `片段組裝窮舉：${result.stats.visited} 步；${complete ? 'COMPLETE（在目前分子式與片段約束下所有分支走完）' : `INCOMPLETE（${run.incompleteReasons.join('、')}）`}；${smiles.length} 個去重候選；${incompatibleSets.length}/${result.sets.length} 個片段讀法與分子式不相容`,
         partialHypotheses: [...new Set([...(hints.couplingNotes ?? []), ...(supplement?.partialHypotheses ?? [])])], rejectedByComposition: result.stats.rejected.sanitizeFailed + (supplement?.rejectedByComposition ?? 0),
-        derivations: {...(supplement?.derivations ?? {}), ...derivations}, elapsedMs: result.stats.elapsedMs + elapsedExtra + (supplement?.elapsedMs ?? 0), frontierPeak: supplement?.frontierPeak ?? 0, enumeration: emptyDiagnostics(run),
+        derivations: {...(supplement?.derivations ?? {}), ...derivations}, elapsedMs: result.stats.elapsedMs + elapsedExtra + (supplement?.elapsedMs ?? 0), frontierPeak: supplement?.frontierPeak ?? 0, enumeration: emptyDiagnostics(run, origins),
       };
     },
   };

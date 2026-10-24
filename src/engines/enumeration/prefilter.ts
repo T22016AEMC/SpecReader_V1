@@ -38,19 +38,20 @@ export function topologyClasses(smiles: string): {hClasses: number; cClasses: nu
  * Cheap pre-ranking when more candidates were enumerated than may be scored. Candidates whose topological 1H environments are fewer
  * than the observed 1H signals (or whose carbon classes are fewer than the observed 13C signals) cannot reproduce the observed
  * signal count; candidates with a linkage the plausibility gate rejects (when evidence is given) are also ranked after the others;
- * nothing is deleted. Inside the passing part, candidates whose number of environments is closest to the number of observed signals come
+ * nothing is deleted. This is a SCREENING HEURISTIC, NOT A SCORE (rules and weights: ENUMERATION_CONFIG.prefilter). Inside the passing part, candidates whose number of environments is closest to the number of observed signals come
  * first (more environments than observed signals means unobserved or overlapped signals); ties keep the incoming order.
  */
 export function capScored(smiles: string[], observed: {h1: number | null | undefined; c13: number | null | undefined}, maxScored: number, plausibility?: PlausibilityEvidence): {scored: string[]; deferred: string[]; prefilter: NonNullable<EnumerationDiagnostics['deferred']['prefilter']> | null} {
   if (smiles.length <= maxScored) return {scored: smiles, deferred: [], prefilter: null};
+  const P = CFG.prefilter;
   const h1 = observed.h1 && observed.h1 > 0 ? observed.h1 : null, c13 = observed.c13 && observed.c13 > 0 ? observed.c13 : null;
   const passing: {s: string; gap: number; i: number}[] = [], failing: string[] = [];
   smiles.forEach((s, i) => {
     const t = h1 === null && c13 === null ? null : topologyClasses(s);
-    const countsOk = !t || ((h1 === null || t.hClasses >= h1) && (c13 === null || t.cClasses >= c13));
+    const countsOk = !t || ((h1 === null || !P.requireH1Classes || t.hClasses >= h1) && (c13 === null || !P.requireC13Classes || t.cClasses >= c13));
     // Linkages the plausibility gate would reject anyway are ranked last (they stay in the list; the gate records them if scored).
-    const ok = countsOk && (!plausibility || plausibilityViolations(s, plausibility).length === 0);
-    if (ok) passing.push({s, gap: t ? (h1 === null ? 0 : t.hClasses - h1) + (c13 === null ? 0 : t.cClasses - c13) : 0, i}); else failing.push(s);
+    const ok = countsOk && (!P.plausibleFirst || !plausibility || plausibilityViolations(s, plausibility).length === 0);
+    if (ok) passing.push({s, gap: t ? (h1 === null ? 0 : P.closenessWeightH1 * (t.hClasses - h1)) + (c13 === null ? 0 : P.closenessWeightC13 * (t.cClasses - c13)) : 0, i}); else failing.push(s);
   });
   passing.sort((a, b) => a.gap - b.gap || a.i - b.i);
   const ordered = [...passing.map(x => x.s), ...failing];

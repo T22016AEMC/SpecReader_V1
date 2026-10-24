@@ -88,6 +88,37 @@ export const ENUMERATION_CONFIG = {
    * seeing and recording the proposals (docs/P1B_DESIGN.md §9).
    */
   pipelineEarlyPlausibilityPrune: false as boolean,
+  /**
+   * Pre-ranking before the scoring cap. A SCREENING HEURISTIC, NOT A SCORE: it only decides which enumerated candidates enter the
+   * full scoring when there are more than `analysis.maxScoredCandidates`; nothing is deleted and no number here enters any score.
+   */
+  prefilter: {
+    /** Candidates with fewer topological 1H environments than observed 1H signals go after the others. */
+    requireH1Classes: true as boolean,
+    /** Candidates with fewer carbon classes than observed 13C signals go after the others. */
+    requireC13Classes: true as boolean,
+    /** Weight of (environments − observed signals) for 1H / 13C when ordering the candidates that pass; 0 switches the closeness ordering off. */
+    closenessWeightH1: 1,
+    closenessWeightC13: 1,
+    /** Candidates the plausibility gate would reject go last (when evidence is available). */
+    plausibleFirst: true as boolean,
+  },
+  /** Fixed texts of the composition panel (badges, tooltip, notes). */
+  ui: {
+    badges: {
+      RELAXED: '約束已放寬（只依分子式）',
+      LEGACY_SUPPLEMENT: '含舊搜尋補充',
+      INCOMPLETE: '未完整',
+    },
+    confidenceTooltipPrefix: '各假設間的相對比較，不是機率，也沒有以實測準確度校準：',
+    deferredNote: '未評分的候選沒有被排除，只是沒有進入完整評分。',
+    candidateSourceTags: {
+      ENUMERATOR: '窮舉器',
+      LEGACY_SUPPLEMENT: '舊 beam 搜尋（補充）',
+      LEGACY: '舊 beam 搜尋（退回）',
+      RELAXED: '約束已放寬',
+    },
+  },
   /** Strain profile applied by the pipeline (null = none). */
   pipelineStrainProfile: null as 'SURGE_INSPIRED' | null,
   /**
