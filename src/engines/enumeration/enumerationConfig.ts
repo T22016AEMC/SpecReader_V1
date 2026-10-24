@@ -49,9 +49,9 @@ export const ENUMERATION_CONFIG = {
   /** Budgets used by the analysis pipeline when the caller gives none (see docs/P1B_DESIGN.md §9 for how they were chosen). */
   analysis: {
     /** Wall-clock for all enumerations of one analysis (shared by the formulas; unused time carries over). */
-    timeMs: 40000,
+    timeMs: 15000,
     /** Search steps over all formulas. */
-    maxStates: 200_000_000,
+    maxStates: 100_000_000,
     /** Enumeration cap (distinct candidates) per formula. */
     maxCandidatesPerFormula: 20000,
     /** Candidates that enter the full scoring (the rest are kept, listed in the diagnostics and not scored). */
@@ -76,8 +76,18 @@ export const ENUMERATION_CONFIG = {
    * widen what a budget-limited run sees. The result stays marked INCOMPLETE.
    */
   legacySupplementWhenIncomplete: true as boolean,
+  /** Budget of one legacy supplement run (per formula); the legacy search is only a supplement here. */
+  legacySupplement: {timeMsPerRun: 500, maxStatesPerRun: 10000},
   /** When the caller limits time/steps explicitly (one shared pool), the enumerator may use at most this fraction of each formula's share; the rest is left to the legacy supplement. */
   pooledEnumerationFraction: 0.5,
+  /**
+   * true: the enumerator prunes, inside the search, the plausibility rules that can be decided locally (no O–O without a user formula,
+   * no N–O without N–O evidence), so such candidates are never produced. false (default): the existing downstream gate is the single
+   * place that rejects AND records implausible linkages (rejectedCandidates / solver log), as in 1.1.7-hotfix.2; the enumerator only
+   * ranks such candidates last when the scoring cap applies. Default false because the existing hotfix.1 test E relies on the gate
+   * seeing and recording the proposals (docs/P1B_DESIGN.md §9).
+   */
+  pipelineEarlyPlausibilityPrune: false as boolean,
   /** Strain profile applied by the pipeline (null = none). */
   pipelineStrainProfile: null as 'SURGE_INSPIRED' | null,
   /**

@@ -157,6 +157,8 @@ export interface EnumerationRunDiagnostic {
   leaves: number;
   elapsedMs: number;
   rejected: RejectionStats | null;
+  /** Every reading was complete but none holds a molecule with the formula: the run was relaxed to formula-only enumeration. */
+  relaxedToFormulaOnly?: {candidates: number; complete: boolean};
   /** Candidates the bounded legacy beam search added after a budget-limited enumeration. */
   legacySupplement?: {candidates: number; added: number; visited: number};
   conversions: AdaptedConversion[];
