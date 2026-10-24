@@ -1,6 +1,6 @@
 # P1b（v1.1.7）設計：片段組裝式窮舉器
 
-狀態：**階段 1（核心窮舉器）與階段 2（接到既有流程）已完成**，階段 3（組成推斷面板，設計待審）、階段 4 尚未開始；本文件其餘章節會隨各階段補上。
+狀態：階段 1（核心窮舉器）、階段 2（接到既有流程）、階段 3（面板設計，已審核）、階段 4（面板實作與交付，版本 1.1.7）皆已完成。
 事實基礎：`docs/P1B_FACTS.md`。所有可調常數：`src/engines/enumeration/enumerationConfig.ts`。
 
 用語：本文件與程式輸出中的 **COMPLETE 只代表「在這次請求的分子式、片段與禁止規則下，所有分支都走完、沒有碰到任何上限」**。任何地方都不得說成「列出所有可能的結構」。
@@ -188,9 +188,11 @@ RDKit canonical SMILES，不含立體（mol block 的座標全為 0，RDKit 不�
 - `src/engines/enumeration/exhaustiveGenerator.ts`：`createExhaustiveGenerator(legacy)` 實作既有 `StructureGenerator` 介面（`structureGenerator.ts:13`）；`structureGenerator.ts` 匯出 `exhaustiveStructureGenerator = createExhaustiveGenerator(deNovoStructureGenerator)`。`generateForCompositions` 在沒有注入 generator 且 `useExhaustiveEnumerator` 為 true 時使用它；注入 generator 的測試路徑與旗標為 false 時，程式路徑與 1.1.7-hotfix.2 相同（見 9.6 的證明）。
 - 無分子式（`NO_FORMULA` 模式）、無法轉換的局部結構、沒有片段而重原子數 > `adapter.maxHeavyAtomsWithoutFragments`（10）、窮舉器無法表達（所有讀法都不能表達）時：改走舊 beam 搜尋，原因記在 `search.enumeration.runs[].fallbackReason`（也出現在該分子式的 `diagnostic`）。
 - 分子式來源：使用者分子式；或組成假設依相對信心排序，最多 `maxFormulasToEnumerate`（8）個；預算在分子式之間平均分配、沒用完的順延（`generateForCompositions` 的既有做法，窮舉用自己的一組累計值）。每個分子式內，各讀法也平均分配剩餘的時間、步數與候選數（一個讀法用完自己的份額後其他讀法照常執行；只有全域上限、取消或候選總數用滿才會讓後面的讀法「未執行」）。
+- **讀法過多**：讀法數超過 `adapter.maxAlternativeSets`（64）時，只列舉前 64 組，結果標為 INCOMPLETE，原因 `READINGS_TRUNCATED`（診斷與面板都會顯示「讀法過多被截斷（只列舉前 64 組）」）；不再因此退回舊搜尋。
 - 候選上限：窮舉路徑不再使用 48；改為 `analysis.maxCandidatesPerFormula`（20000，列舉上限）與 `analysis.maxScoredCandidates`（300，進入完整評分的數量）。
 
 ### 9.2 評分前的預排序（超過 maxScoredCandidates 時）
+**這是篩選啟發式，不是評分**：它只決定「列舉出來的候選超過上限時，哪些先進入完整評分」；不刪除任何候選，沒有任何數字進入任何分數。規則與權重都在 `ENUMERATION_CONFIG.prefilter`（`requireH1Classes`、`requireC13Classes`、`closenessWeightH1`、`closenessWeightC13`、`plausibleFirst`），可調。
 `prefilter.ts`：
 - 候選的拓樸氫環境數（含氫原子的等價類數）不得少於觀測到的非溶劑 1H 訊號數；碳等價類數不得少於觀測到的 13C 訊號數；不符者排在後面，**不刪除、不評分，並在診斷記錄數量與前 200 個樣本**（`enumeration.deferred`）。
 - 通過者之間，環境數最接近觀測訊號數的排前面（環境數比訊號數多代表有未觀測或重疊的訊號）；其次依列舉順序。這一條是規格之外的細化，原因：只取「不得少於」時，前 300 個會是依字母排序的任意候選，實測中 2,2-二苯基丙烷被排到評分範圍之外。
@@ -249,3 +251,21 @@ RDKit canonical SMILES，不含立體（mol block 的座標全為 0，RDKit 不�
 - 舊：「中性 C/N/O/F/Cl/Br 的有界圖擴展（非稠合芳環／鏈／有限閉環）；正式Worker採12秒／120000狀態、4096前沿、48輸出，可取消；同步相容入口仍採短預算；沒有產品級重原子數拒絕條件，非完整異構物搜尋。」
 - 新（窮舉器有被使用時）：「片段組裝窮舉（中性 C/N/O/S/F/Cl/Br/I，鍵階 1–3，S 僅二價；不含立體化學）：每次分析時間 15 秒、100,000,000 步、每個分子式 20,000 個候選上限，超過 300 個候選時其餘保留但不進入完整評分，可取消。COMPLETE 只代表在目前分子式與片段約束下所有分支都走完，不代表列出所有可能結構；INCOMPLETE 會列出原因。舊 beam 搜尋保留為無法窮舉時的退路。」（數字取自 config）
 `generationStatus.message`（有候選時）新增一段：「在目前約束下的窮舉完整走完（COMPLETE）／未完整（INCOMPLETE：原因；部分分子式改用舊搜尋：原因），共列舉 N 個，M 個超過評分上限而未評分；」。
+
+## 10. 階段 3／4：組成推斷面板與候選來源標籤（版本 1.1.7）
+
+### 10.1 實作
+- `src/engines/enumeration/compositionPanelModel.ts`：純函式模型（輸入分析結果，輸出列、徽章與文字；元件只呈現）。`src/components/CompositionPanel.tsx`：唯讀、可收合的面板，放在第 3 頁 `generation-status` 區塊之後。徽章文字、相對信心的提示文字、補充句、候選來源標籤文字都在 `ENUMERATION_CONFIG.ui`（不寫死在元件裡）。
+- 依審核決定：外層預設收合（分子式假設表與限制預設展開）；相對信心不顯示百分比，只顯示名次與相對長條，數值只在滑鼠停留提示（「各假設間的相對比較，不是機率，也沒有以實測準確度校準：<數值>」）；各讀法點列展開；「未納入任何讀法的局部結構」列在各讀法下方，格式「未納入任何讀法：<id／種類>（原因：<原因>）」；窮舉總覽之後固定加「未評分的候選沒有被排除，只是沒有進入完整評分。」。
+- 三種琥珀色徽章（固定文字）：「約束已放寬（只依分子式）」（`relaxedToFormulaOnly`）、「含舊搜尋補充」（`legacySupplement`）、「未完整」（窮舉結果不是 complete，包含退回舊搜尋與讀法被截斷）。徽章出現在該分子式的窮舉結果格；任一分子式有任一徽章，收合時的摘要列也附上對應徽章，同種只顯示一次，順序固定。
+- 候選來源：窮舉器在結果中記錄每個進入評分的候選的來源（`enumeration.origins`：`ENUMERATOR`、`LEGACY_SUPPLEMENT`、`LEGACY`，以及是否 `relaxed`）。候選卡片的「來源」那一行在有這項資訊時加上「｜候選來源：窮舉器」、「｜候選來源：舊 beam 搜尋（補充）」或（整個請求退回舊搜尋時）「｜候選來源：舊 beam 搜尋（退回）」；約束已放寬時再加「｜約束已放寬」。`useExhaustiveEnumerator = false` 時沒有這項資訊，卡片文字與 1.1.7-hotfix.2 相同。**「退回」是我加的第三個標籤（審核只指定了「窮舉器」與「舊 beam 搜尋（補充）」）。**
+- 未納入任何讀法的局部結構：轉接器回報 `excluded`（元素不足，或其觀測在每個讀法中都已被其他局部結構解釋）；讀法被截斷時不宣稱某個結構「不在任何讀法中」。
+
+### 10.2 審核決定（階段 2 與面板設計）
+- 階段 2 我自行加入的 9 項行為全部接受（早剪枝預設關、預算耗盡補跑 ≤500 ms 舊搜尋、讀法全不相容時放寬為純分子式、每個觀測一種局部結構取聯集、丟棄無鍵單一 flex 原子、預排序、`substitutionSites` 預設不當約束、預算 15 s／1e8 步／每式 20000 候選／評分 300、帶電基團表）。條件：預排序的規則與權重在 `enumerationConfig.ts` 可調並寫明是篩選啟發式（9.2）；「讀法過多被截斷」標 INCOMPLETE 並記錄原因（9.1）。
+- 面板設計五題：預設收合照設計（摘要列要有警示徽章）；相對信心用名次＋長條；各讀法點列展開；列出未納入任何讀法的局部結構；放寬、補跑與未完整用琥珀色徽章。補充 A（候選來源標籤）、補充 B（未評分候選的說明句）。
+
+### 10.3 階段 4 測試
+- vitest：`compositionPanelModel`（相對信心沒有百分比與提示文字、三種徽章的條件與摘要列彙總不重複、未納入讀法的列表、補充 B 的文字、各狀態與窮舉結果文字、候選來源標籤）；預排序規則與權重可由 config 調整；讀法被截斷 → INCOMPLETE 與原因；真實結果上的候選來源與面板（完整、放寬、補跑舊搜尋、旗標關閉）。
+- E2E：面板預設收合、展開後有固定文字（未校準、完整（COMPLETE）、只相對於目前分子式與片段約束、限制、補充 B）、資料變更後標示舊結果；放寬時收合狀態下摘要列可見琥珀色徽章，候選卡片標示「候選來源：窮舉器｜約束已放寬」。
+- 全部：typecheck、vitest 374/374（既有 355 個沒有改動，新增 19）、build、E2E 21/21（既有 19 個沒有改動，新增 2）。
