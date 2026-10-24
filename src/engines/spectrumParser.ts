@@ -2009,7 +2009,21 @@ export class SpectrumParser {
     const tracedPoints=spectrum.irPixelCurve?.map(p=>({x:this.pixelToPhysicalX(p.x,newCalibration),y:100*(newCalibration.plotBottomPx-p.y)/(newCalibration.plotBottomPx-newCalibration.plotTopPx)}))??[];
     if(tracedPoints.length>=5&&this.isImageCalibrationValid(newCalibration)){
       const traced=processIRSeries(tracedPoints,'UNKNOWN',spectrum.irManualSettings);
-      updatedPeaks.push(...traced.peaks.filter(p=>!updatedPeaks.some(q=>Math.abs(p.x-q.x)<3)).map(p=>({...p,isCalibrated:true})));
+      // v1.1.8: peaks the user edited (but that are not backed by a page-1 annotation) are kept and re-converted from their pixel position.
+      const annotationIds=new Set(updatedImageAnnotations.map(ann=>ann.id));
+      const pixelCurve=spectrum.irPixelCurve!;
+      for(const pk of spectrum.peaks||[]){
+        if(annotationIds.has(pk.id)||pk.pixelX===undefined||!(pk.userModified||pk.manualEdited||pk.manualPeak))continue;
+        updatedPeaks.push({...pk,x:Number(this.pixelToPhysicalX(pk.pixelX,newCalibration).toFixed(2)),isCalibrated:true});
+      }
+      // v1.1.8: processIRSeries returns the baseline-corrected absorption height (strong band = high). The traced curve, the page-1 marks
+      // and the numeric-file path all use the curve's own value, so the re-detected peaks take the curve value at their x (as the numeric
+      // path does with rawPoints) and keep their pixel position, so a later calibration change can convert them again from pixels.
+      const curveAt=new Map(tracedPoints.map((q,i)=>[q.x,{y:q.y,px:pixelCurve[i].x,py:pixelCurve[i].y}]));
+      updatedPeaks.push(...traced.peaks.filter(p=>!updatedPeaks.some(q=>Math.abs(p.x-q.x)<3)).map(p=>{
+        const c=curveAt.get(p.x);
+        return c?{...p,id:`ir-auto-px${c.px}`,y:c.y,pixelX:c.px,pixelY:c.py,isCalibrated:true}:{...p,isCalibrated:true};
+      }));
     }
     // 原始圖片是唯一的圖片視覺來源，絕不將圖片訊號合成為 400/450 點假曲線
     const digitizedApproximation: DigitizedSpectrumData = {
