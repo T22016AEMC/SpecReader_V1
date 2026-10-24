@@ -131,20 +131,22 @@ export class Searcher {
       }
       const p = this.p, i = this.pi[p], j = this.pj[p];
       if (this.applied[p] >= 0) { this.undo(p, this.applied[p]); this.applied[p] = -1; }
-      let v = this.nextVal[p];
+      // `nextVal` counts attempts at this position (0 = first attempt); the bond order tried is ascending or descending in the attempt number.
+      let k = this.nextVal[p];
       const maxv = Math.min(CFG.maxBondOrder, cap[i] - d[i], cap[j] - d[j]);
       let advanced = false;
-      while (v <= maxv) {
-        if (steps >= maxSteps) { this.nextVal[p] = v; return 'PAUSED'; }
+      while (k <= maxv) {
+        if (steps >= maxSteps) { this.nextVal[p] = k; return 'PAUSED'; }
+        const v = CFG.bondOrderSearchOrder === 'DESCENDING' ? maxv - k : k;
         steps++; this.visited++;
         if (this.apply(p, v)) {
-          this.applied[p] = v; this.nextVal[p] = v + 1;
+          this.applied[p] = v; this.nextVal[p] = k + 1;
           this.p = p + 1;
           if (this.p < PN) { this.nextVal[this.p] = 0; this.applied[this.p] = -1; }
           advanced = true;
           break;
         }
-        v++;
+        k++;
       }
       if (!advanced) {
         this.nextVal[p] = 0;
@@ -195,9 +197,9 @@ export class Searcher {
   private checkRow(r: number): boolean {
     const P = this.P, n = this.n, d = this.d;
     if (P.forced[r] && d[r] !== P.cap[r]) return false;
-    // Hydrogens already fixed on finished free atoms cannot exceed the formula's free hydrogens.
+    // Hydrogens already implied on finished free/flex atoms cannot exceed the formula's free hydrogens.
     let finishedH = 0;
-    for (let k = 0; k <= r; k++) if (P.isFree[k]) finishedH += P.cap[k] - d[k];
+    for (let k = 0; k <= r; k++) if (P.slack[k]) finishedH += P.cap[k] - d[k];
     if (finishedH > P.hFree) return false;
     // Interchangeable free atoms (r-1, r): the lexicographically smaller image must not be a different leaf (lex-leader).
     for (const [a, b] of P.freePairs) if (b === r && !this.pairOrdered(a, b)) return false;

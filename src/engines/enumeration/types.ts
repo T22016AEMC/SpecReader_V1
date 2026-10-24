@@ -12,6 +12,12 @@ export interface FragmentAtomSpec {
   charge?: number;
   /** Open atoms must be bound to new atoms until valence is full (no implicit H is added); closed atoms receive no new bond. */
   open?: boolean;
+  /**
+   * Flexible atom: its remaining valence (valence − bond-order sum inside the fragment, charge-adjusted) may be filled by
+   * implicit hydrogens or by new bonds; the H count is not fixed (as for a free atom). `fixedH` must be 0/absent; an atom is
+   * at most one of open / flex (neither = closed).
+   */
+  flex?: boolean;
 }
 export interface FragmentBondSpec {
   a: number;
@@ -48,6 +54,11 @@ export interface EnumerationBudget {
 export interface ForbiddenSpec {
   /** Existing plausibility gate (structurePlausibility.ts) with its evidence exceptions. Absent = rules off. */
   plausibility?: PlausibilityEvidence;
+  /**
+   * false: only the early-pruned (monotone) plausibility rules are applied inside the search (no O–O without a user formula, no N–O
+   * without N–O evidence); the remaining rules are left to a downstream gate that records them. Default true (all rules at the leaf).
+   */
+  plausibilityLeaf?: boolean;
   /** Optional ring/bond strain rules: a profile id, an explicit profile, or absent/null = off. */
   strain?: StrainProfileId | StrainProfile | null;
 }
@@ -123,4 +134,44 @@ export interface EnumerationResult {
   errors: EnumerationError[];
   sets: SetOutcome[];
   stats: {visited: number; leaves: number; elapsedMs: number; rejected: RejectionStats};
+}
+
+// ------------------------------------------------------------------------------------------------ stage 2 diagnostics
+import type {AdaptedConversion} from './adapter';
+/** What happened for one formula when the pipeline asked for structures. */
+export interface EnumerationRunDiagnostic {
+  /** false = the legacy beam search produced this run (see fallbackReason). */
+  used: boolean;
+  fallbackReason: string | null;
+  formula: string | null;
+  status: EnumerationResult['status'] | null;
+  /** Complete relative to the constraints: readings that cannot hold the formula do not make a run incomplete. */
+  complete: boolean;
+  incompleteReasons: IncompleteReason[];
+  readings: {id: string; localIds: string[]; complete: boolean | null; error: string | null; newCandidates: number}[];
+  /** Readings (fragment sets) whose fragments cannot be placed in the formula (element/H shortage or parity). */
+  incompatibleReadings: number;
+  /** Distinct candidates before the scoring cap. */
+  candidates: number;
+  visited: number;
+  leaves: number;
+  elapsedMs: number;
+  rejected: RejectionStats | null;
+  /** Candidates the bounded legacy beam search added after a budget-limited enumeration. */
+  legacySupplement?: {candidates: number; added: number; visited: number};
+  conversions: AdaptedConversion[];
+  notes: string[];
+}
+export interface EnumerationDiagnostics {
+  /** At least one run used the enumerator. */
+  used: boolean;
+  /** Every enumerator run is complete (legacy runs never count as complete). */
+  complete: boolean;
+  runs: EnumerationRunDiagnostic[];
+  /** Distinct candidates enumerated over all runs. */
+  enumerated: number;
+  /** Candidates passed on to the full scoring. */
+  scored: number;
+  deferred: {count: number; samples: string[]; prefilter: {h1Required: number | null; c13Required: number | null; passing: number; failing: number} | null};
+  maxScoredCandidates: number;
 }

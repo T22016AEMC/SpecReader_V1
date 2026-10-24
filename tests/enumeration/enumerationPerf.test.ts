@@ -39,3 +39,15 @@ it('T6 RDKit canonicalisation of 10000 SMILES (measure only)', async () => {
   console.log('P1B_PERF ' + JSON.stringify({label: 'RDKit canonicalise 10000 SMILES', distinctInput: pool.length, valid, ms: Math.round(ms), msPerCall: Number((ms / 10000).toFixed(4))}));
   expect(valid).toBe(10000);
 }, 300000);
+
+// F4: flex-atom version of the T4(i) case (phenyl and methyl skeletons with flexible H) versus the open version (fixed H).
+const flexRing = (count: number) => ({id: 'ring', count, atoms: Array.from({length: 6}, () => ({element: 'C', flex: true})), bonds: [[0, 1, 2], [1, 2, 1], [2, 3, 2], [3, 4, 1], [4, 5, 2], [5, 0, 1]].map(([a, b, order]) => ({a, b, order: order as 1 | 2, aromatic: true}))});
+const flexC = (count: number) => ({id: 'c', count, atoms: [{element: 'C', flex: true}], bonds: []});
+it('F4 flex versus open on the T4(i)-class case (measure only)', async () => {
+  const open = await measure('F4 open: 2 phenyl + 2 methyl + free C', 'C15H16', [{id: 'S', fragments: [phenyl(2), methyl(2)]}]);
+  const flexRun = await measure('F4 flex: 2 ring + 2 C(flex) + free C', 'C15H16', [{id: 'S', fragments: [flexRing(2), flexC(2)]}]);
+  const flexOnlyRings = await measure('F4 flex: 2 ring + 3 free C', 'C15H16', [{id: 'S', fragments: [flexRing(2)]}]);
+  expect(open.status).toBe('COMPLETE');
+  expect(flexRun.candidates).toBeGreaterThanOrEqual(open.candidates);
+  expect(flexOnlyRings.candidates).toBeGreaterThanOrEqual(open.candidates);
+}, 600000);

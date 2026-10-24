@@ -3,12 +3,22 @@ import {COMPOSITION_CONFIG as CFG} from './compositionConfig';
 import type {CompositionHypothesis,CompositionInferenceResult} from './types';
 import type {LocalStructureHypothesis} from '../reasoning/types';
 import {parseCounts} from './goldenRules';
+import {ENUMERATION_CONFIG as ENUM} from '../enumeration/enumerationConfig';
+import {createExhaustiveGenerator} from '../enumeration/exhaustiveGenerator';
+import {capScored,deferredSamples} from '../enumeration/prefilter';
+import type {EnumerationDiagnostics,EnumerationRunDiagnostic} from '../enumeration/types';
+import type {PlausibilityEvidence} from '../scientificEngines/structurePlausibility';
 
 export interface StructureGenerationBudget {
  timeMs:number;maxStates:number;maxResults:number;maxFrontier:number;beamWidth:number;
  shouldCancel?:()=>boolean;onProgress?:(p:GraphSearchProgress)=>void;
 }
-export interface StructureGenerationRequest {formula:string|undefined;hints:GraphSearchHints;budget:StructureGenerationBudget}
+export interface StructureGenerationRequest {formula:string|undefined;hints:GraphSearchHints;budget:StructureGenerationBudget;
+ /** P1b (ignored by the legacy generator): hints without symmetric-unit copies, the unit multiple k, plausibility evidence and the enumeration budget. */
+ unprepared?:GraphSearchHints;symmetryMultiple?:number|null;plausibility?:PlausibilityEvidence;
+ enumerationBudget?:{timeMs:number;maxStates:number;maxCandidates?:number};
+ /** The caller limited time/states explicitly: enumeration and any legacy fallback draw on one pool, so total work stays within the caller limit. */
+ sharedPool?:boolean}
 /** Generator-independent contract. P1a: deNovoGraphSearch. P1b swaps in the exhaustive enumerator behind the same interface. */
 export interface StructureGenerator {generateStructures(request:StructureGenerationRequest):Promise<DeNovoSearchResult>}
 
@@ -17,6 +27,9 @@ export const deNovoStructureGenerator:StructureGenerator={
 };
 
 /** Symmetric-unit hypothesis passed to the generator (v1.1.6): the unit's local structures copied k times. */
+/** The exhaustive generator (P1b); falls back to the legacy beam search for requests it cannot express, with the reason recorded. */
+export const exhaustiveStructureGenerator:StructureGenerator=createExhaustiveGenerator(deNovoStructureGenerator);
+
 export interface SymmetryUnitRun {
  k:number;
  unitIds:string[];
@@ -27,7 +40,9 @@ export interface SymmetryUnitRun {
  /** Candidates whose assembly derivation used every required fragment (checked after the search; nothing is filtered). */
  candidatesContainingAllCopies:number;
 }
-export interface CompositionSearchRun {hypothesisId:string|null;formula:string|undefined;maxStates:number;timeMs:number;visited:number;elapsedMs:number;termination:SearchTermination;candidates:number;symmetry:SymmetryUnitRun|null;diagnostic:string|null}
+export interface CompositionSearchRun {hypothesisId:string|null;formula:string|undefined;maxStates:number;timeMs:number;visited:number;elapsedMs:number;termination:SearchTermination;candidates:number;symmetry:SymmetryUnitRun|null;diagnostic:string|null;
+ /** P1b: what the exhaustive enumerator did for this formula (absent for injected/legacy generators). */
+ enumeration?:EnumerationRunDiagnostic}
 
 /** One representative local structure per observation group (competing readings of the same signals share a group). */
 export function symmetricUnit(locals:LocalStructureHypothesis[]):LocalStructureHypothesis[] {
@@ -54,6 +69,15 @@ function prepareSymmetry(h:CompositionHypothesis|null,formula:string|undefined,h
  return {hints:{...hints,localStructures:[...locals,...copies]},symmetry:{k,unitIds:unit.map(l=>l.id),requiredFragmentIds:requiredIds,requiredHeavyAtoms:unitAtoms*k,formulaHeavyAtoms:heavyAtoms(formula),candidatesContainingAllCopies:0}};
 }
 function finishRun(run:CompositionSearchRun,search:DeNovoSearchResult):CompositionSearchRun {
+ const enumRun=search.enumeration?.runs[0];
+ if(enumRun?.used){
+  // The enumerator builds the symmetric unit into every candidate (count = k); nothing is checked after the fact.
+  if(run.symmetry)run.symmetry.candidatesContainingAllCopies=search.smiles.length;
+  const reasons:string[]=[];
+  if(!search.smiles.length)reasons.push(`窮舉${enumRun.complete?'完整走完（COMPLETE）':'未完整（INCOMPLETE）'}，在此分子式與片段約束下沒有任何候選${enumRun.incompatibleReadings?`；${enumRun.incompatibleReadings}/${enumRun.readings.length} 個片段讀法與分子式不相容`:''}`);
+  return {...run,enumeration:enumRun,diagnostic:reasons.length?reasons.join('；'):null};
+ }
+ if(enumRun)run={...run,enumeration:enumRun};
  const sym=run.symmetry;
  if(sym)sym.candidatesContainingAllCopies=search.smiles.filter(s=>sym.requiredFragmentIds.every(id=>search.derivations?.[s]?.localStructureIds.includes(id))).length;
  const reasons:string[]=[];
@@ -62,7 +86,7 @@ function finishRun(run:CompositionSearchRun,search:DeNovoSearchResult):Compositi
   reasons.push(`搜尋在 ${search.visited} 個狀態以 ${search.termination} 結束，沒有產生候選${search.error?`（錯誤：${search.error}）`:''}`);
   if(sym)reasons.push(`已傳入 ${sym.requiredFragmentIds.length} 個必要片段（單元 ${sym.unitIds.length} 個 × ${sym.k}）；舊 beam 搜尋對大分子可能無法完成組裝，完整窮舉留待 v1.1.7（P1b）`);
  }else if(sym&&!sym.candidatesContainingAllCopies)reasons.push(`${search.smiles.length} 個候選都沒有用到全部 ${sym.requiredFragmentIds.length} 個對稱單元片段（只檢查、未過濾）`);
- return {...run,diagnostic:reasons.length?reasons.join('；'):null};
+ return {...run,diagnostic:reasons.length?(enumRun?`${enumRun.fallbackReason}；`:'')+reasons.join('；'):(enumRun?enumRun.fallbackReason:null)};
 }
 export interface CompositionSearchOutcome {
  search:DeNovoSearchResult;
@@ -80,11 +104,22 @@ const SEVERITY:SearchTermination[]=['EXECUTION_ERROR','CANCELLED','UNAVAILABLE',
  *   `maxResultsPerFormula` outputs; total states and time never exceed the original budget, unused budget carries over;
  * - otherwise: the original no-formula run.
  */
-export async function generateForCompositions(args:{userFormula:string|null;composition:CompositionInferenceResult|null;hints:GraphSearchHints;budget:StructureGenerationBudget;generator?:StructureGenerator}):Promise<CompositionSearchOutcome> {
- const generator=args.generator??deNovoStructureGenerator,budget=args.budget;
+export async function generateForCompositions(args:{userFormula:string|null;composition:CompositionInferenceResult|null;hints:GraphSearchHints;budget:StructureGenerationBudget;generator?:StructureGenerator;
+ /** P1b: plausibility evidence and the enumerator's own budget (the legacy `budget` stays the budget of the legacy search). */
+ plausibility?:PlausibilityEvidence;enumerationBudget?:{timeMs:number;maxStates:number;maxCandidates?:number};sharedPool?:boolean}):Promise<CompositionSearchOutcome> {
+ const useExhaustive=!args.generator&&ENUM.useExhaustiveEnumerator;
+ const generator=args.generator??(useExhaustive?exhaustiveStructureGenerator:deNovoStructureGenerator),budget=args.budget;
+ const eBudget=args.enumerationBudget??{timeMs:ENUM.analysis.timeMs,maxStates:ENUM.analysis.maxStates,maxCandidates:ENUM.analysis.maxCandidatesPerFormula};
+ /** Scoring cap (P1b): only for runs the enumerator produced; the rest is kept, listed and not scored. */
+ const capSearch=(search:DeNovoSearchResult):DeNovoSearchResult=>{
+  if(!search.enumeration?.used)return search;
+  const cap=capScored(search.smiles,{h1:args.hints.observedH1Signals,c13:args.hints.observedC13Signals},ENUM.analysis.maxScoredCandidates,args.plausibility);
+  const enumeration:EnumerationDiagnostics={...search.enumeration,enumerated:search.smiles.length,scored:cap.scored.length,deferred:{count:cap.deferred.length,samples:deferredSamples(cap.deferred),prefilter:cap.prefilter}};
+  return {...search,smiles:cap.scored,enumeration,note:search.note+(cap.deferred.length?`；超過評分上限 ${ENUM.analysis.maxScoredCandidates}，${cap.deferred.length} 個候選保留但不進入完整評分`:'')};
+ };
  const single=async(formula:string|undefined,h:CompositionHypothesis|null,mode:CompositionSearchOutcome['mode'],note:string|null):Promise<CompositionSearchOutcome>=>{
   const prepared=prepareSymmetry(h,formula,args.hints);
-  const search=await generator.generateStructures({formula,hints:prepared.hints,budget});
+  const search=capSearch(await generator.generateStructures({formula,hints:prepared.hints,budget,unprepared:args.hints,symmetryMultiple:h?.symmetryMultiple??null,plausibility:args.plausibility,enumerationBudget:eBudget,sharedPool:args.sharedPool}));
   if(h)search.formulaSources=Object.fromEntries(search.smiles.map(s=>[s,[h.id]]));
   const run=finishRun({hypothesisId:h?.id??null,formula,maxStates:budget.maxStates,timeMs:budget.timeMs,visited:search.visited,elapsedMs:search.elapsedMs??0,termination:search.termination,candidates:search.smiles.length,symmetry:prepared.symmetry,diagnostic:null},search);
   return {search,mode,note:[note,run.diagnostic].filter(Boolean).join('；')||null,runs:[run]};
@@ -94,22 +129,29 @@ export async function generateForCompositions(args:{userFormula:string|null;comp
   return single(args.userFormula,h,'USER_FORMULA',null);
  }
  const supported=(args.composition?.status==='INFERRED'?args.composition.hypotheses:[]).filter(h=>h.generatorSupported);
- const chosen=supported.slice(0,CFG.topFormulasToSearch);
+ const chosen=supported.slice(0,useExhaustive?ENUM.maxFormulasToEnumerate:CFG.topFormulasToSearch);
  if(!chosen.length){
   const note=args.composition?.status==='INFERRED'&&args.composition.hypotheses.length?'組成假設都含目前生成器不支援的元素，改用無分子式搜尋。':null;
   return single(undefined,null,'NO_FORMULA',note);
  }
  const runs:CompositionSearchRun[]=[];
  const merged:DeNovoSearchResult={smiles:[],status:'BOUNDED',visited:0,note:'',termination:'GRAMMAR_EXHAUSTED',complete:true,partialHypotheses:[],rejectedByComposition:0,derivations:{},formulaSources:{},elapsedMs:0,frontierPeak:0};
- let usedStates=0,usedTime=0;
+ let usedStates=0,usedTime=0,eUsedStates=0,eUsedTime=0;
+ const enumRuns:EnumerationRunDiagnostic[]=[];
  for(let i=0;i<chosen.length;i++){
   const h=chosen[i],left=chosen.length-i;
-  const maxStates=Math.max(0,Math.floor((budget.maxStates-usedStates)/left)),timeMs=Math.max(0,(budget.timeMs-usedTime)/left);
+  const pooled=Boolean(args.sharedPool)&&useExhaustive;
+  const maxStates=Math.max(0,Math.floor((budget.maxStates-usedStates-(pooled?eUsedStates:0))/left)),timeMs=Math.max(0,(budget.timeMs-usedTime-(pooled?eUsedTime:0))/left);
   const offset=usedStates;
   const prepared=prepareSymmetry(h,h.formula,args.hints);
-  const search=await generator.generateStructures({formula:h.formula,hints:prepared.hints,budget:{...budget,maxStates,timeMs,maxResults:CFG.maxResultsPerFormula,onProgress:budget.onProgress?p=>budget.onProgress!({...p,visited:offset+p.visited}):undefined}});
+  const frac=pooled?ENUM.pooledEnumerationFraction:1;
+  const eMaxStates=Math.max(0,Math.floor(frac*(eBudget.maxStates-eUsedStates-(pooled?usedStates:0))/left)),eTimeMs=Math.max(0,frac*(eBudget.timeMs-eUsedTime-(pooled?usedTime:0))/left);
+  const search=await generator.generateStructures({formula:h.formula,hints:prepared.hints,budget:{...budget,maxStates,timeMs,maxResults:CFG.maxResultsPerFormula,onProgress:budget.onProgress?p=>budget.onProgress!({...p,visited:offset+p.visited}):undefined},unprepared:args.hints,symmetryMultiple:h.symmetryMultiple,plausibility:args.plausibility,enumerationBudget:{timeMs:eTimeMs,maxStates:eMaxStates,maxCandidates:eBudget.maxCandidates},sharedPool:args.sharedPool});
   h.searched=true;
-  usedStates+=Math.min(search.visited,maxStates);usedTime+=Math.min(search.elapsedMs??timeMs,timeMs);
+  const ev=search.enumeration?.runs[0];
+  if(ev){eUsedStates+=ev.visited;eUsedTime+=ev.elapsedMs;enumRuns.push(...search.enumeration!.runs);}
+  if(!search.enumeration?.used){usedStates+=Math.min(search.visited,maxStates);usedTime+=Math.min(search.elapsedMs??timeMs,timeMs);}
+  else if(ev?.legacySupplement){usedStates+=Math.min(ev.legacySupplement.visited,maxStates);}
   runs.push(finishRun({hypothesisId:h.id,formula:h.formula,maxStates,timeMs,visited:search.visited,elapsedMs:search.elapsedMs??0,termination:search.termination,candidates:search.smiles.length,symmetry:prepared.symmetry,diagnostic:null},search));
   for(const s of search.smiles){
    if(!merged.formulaSources![s]){merged.smiles.push(s);merged.formulaSources![s]=[];}
@@ -123,6 +165,12 @@ export async function generateForCompositions(args:{userFormula:string|null;comp
   if(search.status!=='BOUNDED')merged.status=search.status;
   if(search.error&&!merged.error)merged.error=search.error;
   if(search.termination==='CANCELLED')break;
+ }
+ if(enumRuns.length){
+  const cap=capSearch({...merged,enumeration:{used:enumRuns.some(r=>r.used),complete:enumRuns.every(r=>r.used&&r.complete),runs:enumRuns,enumerated:merged.smiles.length,scored:0,deferred:{count:0,samples:[],prefilter:null},maxScoredCandidates:ENUM.analysis.maxScoredCandidates}});
+  merged.smiles=cap.smiles;
+  merged.enumeration=cap.enumeration;
+  if(merged.enumeration?.used)merged.complete=merged.enumeration.complete&&merged.complete;
  }
  merged.note=`組成假設導引搜尋：${runs.map(r=>`${r.formula} ${r.visited} states／${r.termination}／${r.candidates} 個`).join('；')}。合計 ${merged.smiles.length} 個去重候選；總預算 ${budget.maxStates} 狀態／${budget.timeMs} ms 依序分配。`;
  const diagnostics=runs.filter(r=>r.diagnostic).map(r=>`${r.formula}：${r.diagnostic}`);

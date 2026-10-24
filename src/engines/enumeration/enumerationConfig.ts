@@ -31,6 +31,8 @@ export const ENUMERATION_CONFIG = {
     /** Distinct candidates kept; the search stops with CANDIDATE_LIMIT when one more distinct candidate would exceed it. */
     maxCandidates: 100_000,
   },
+  /** Order in which bond orders are tried at each atom pair. Only changes which candidates a budget-limited search finds first; completeness is unaffected. */
+  bondOrderSearchOrder: 'ASCENDING' as 'ASCENDING' | 'DESCENDING',
   /** Search steps between two checks of the clock and of `shouldCancel`. */
   stepsPerCheck: 256,
   /** The event loop is given back (setTimeout 0) when at least this many ms have passed since the last yield. */
@@ -39,6 +41,45 @@ export const ENUMERATION_CONFIG = {
   progressEveryMs: 200,
   /** Rejected canonical SMILES remembered (to count each distinct rejected structure once); beyond this the counts are marked approximate. */
   maxTrackedRejected: 200_000,
+  // ------------------------------------------------------------------------------------------ stage 2: pipeline wiring
+  /** false = the pipeline behaves exactly like 1.1.7-hotfix.2 (legacy beam search only). */
+  useExhaustiveEnumerator: true as boolean,
+  /** Composition hypotheses (by relative confidence) that are enumerated when there is no user formula. */
+  maxFormulasToEnumerate: 8,
+  /** Budgets used by the analysis pipeline when the caller gives none (see docs/P1B_DESIGN.md §9 for how they were chosen). */
+  analysis: {
+    /** Wall-clock for all enumerations of one analysis (shared by the formulas; unused time carries over). */
+    timeMs: 40000,
+    /** Search steps over all formulas. */
+    maxStates: 200_000_000,
+    /** Enumeration cap (distinct candidates) per formula. */
+    maxCandidatesPerFormula: 20000,
+    /** Candidates that enter the full scoring (the rest are kept, listed in the diagnostics and not scored). */
+    maxScoredCandidates: 300,
+  },
+  adapter: {
+    /** Maximum number of alternative fragment sets (readings of the evidence) before falling back to the legacy search. */
+    maxAlternativeSets: 64,
+    /** Without any fragment, formulas with more heavy atoms than this use the legacy search (pure-formula enumeration cost explodes, see T6). */
+    maxHeavyAtomsWithoutFragments: 10,
+    /**
+     * false (default): substitutionSites of aryl hypotheses are NOT used as constraints (all atoms stay flex).
+     * true: the site atoms become open with fixed H = 0 (an aromatic carbon that carries a substituent has no H).
+     */
+    useSubstitutionSitesAsOpen: false as boolean,
+    /** Deferred (unscored) candidates listed in the diagnostics. */
+    maxDeferredListed: 200,
+  },
+  /**
+   * The enumerator ended INCOMPLETE because of time/step budget: a bounded legacy beam search also runs and its candidates are added
+   * (de-duplicated), so a budget-limited enumeration never yields fewer candidates than 1.1.7-hotfix.2 and two different heuristics
+   * widen what a budget-limited run sees. The result stays marked INCOMPLETE.
+   */
+  legacySupplementWhenIncomplete: true as boolean,
+  /** When the caller limits time/steps explicitly (one shared pool), the enumerator may use at most this fraction of each formula's share; the rest is left to the legacy supplement. */
+  pooledEnumerationFraction: 0.5,
+  /** Strain profile applied by the pipeline (null = none). */
+  pipelineStrainProfile: null as 'SURGE_INSPIRED' | null,
   /**
    * Optional ring/bond strain profiles. They are NOT applied by default. SURGE_INSPIRED is this project's own
    * implementation of three avoid-rules named in the Surge paper/README (J Cheminform 2022); it is not equivalent to Surge's

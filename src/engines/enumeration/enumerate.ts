@@ -45,18 +45,25 @@ export async function enumerateStructures(req: EnumerationRequest): Promise<Enum
   let visited = 0, leaves = 0, lastYield = now(), lastProgress = 0;
   let stopAll = false;
 
+  // Fair share: every runnable set gets an equal part of what is left (time and steps); unused budget carries over.
+  const prebuilt = alternatives.map(set => buildProblem(formula, set));
+  const runnable = prebuilt.map(b => b.ok);
   for (let si = 0; si < alternatives.length; si++) {
     const set = alternatives[si];
     const outcome: SetOutcome = {id: set.id, complete: null, error: null, visited: 0, leaves: 0, newCandidates: 0, incompleteReasons: []};
     result.sets.push(outcome);
     if (stopAll) { outcome.incompleteReasons.push('ALTERNATIVE_SET_NOT_RUN'); reasons.add('ALTERNATIVE_SET_NOT_RUN'); continue; }
-    const built = buildProblem(formula, set);
+    const built = prebuilt[si];
     if (!built.ok) {
       outcome.error = built.error; result.errors.push(built.error);
       reasons.add('INVALID_ALTERNATIVE_SET');
       continue;
     }
     const problem: Problem = built.problem;
+    const leftSets = runnable.slice(si).filter(Boolean).length;
+    const setDeadline = now() + Math.max(0, timeMs - (now() - started)) / leftSets;
+    const setStateEnd = visited + Math.max(0, Math.floor((maxStates - visited) / leftSets));
+    const setCandidateEnd = found.size + Math.max(1, Math.floor((maxCandidates - found.size) / leftSets));
     let stopReason: IncompleteReason | null = null;
     const searcher: Searcher = new Searcher(problem, rules, (newBonds: NewBond[]) => {
       const c = canonicalizeMolecule(buildMolBlock(problem, newBonds));
@@ -71,11 +78,11 @@ export async function enumerateStructures(req: EnumerationRequest): Promise<Enum
         const v = strainViolations(problem.n, [...problem.fixedBonds, ...newBonds], strain);
         if (v.length) { for (const rule of v) rejected.strainByRule[rule] = (rejected.strainByRule[rule] ?? 0) + 1; remember(); return; }
       }
-      if (plaus) {
+      if (plaus && req.forbid?.plausibilityLeaf !== false) {
         const v = plausibilityViolations(smiles, plaus);
         if (v.length) { for (const x of v) rejected.forbiddenByRule[x.rule] = (rejected.forbiddenByRule[x.rule] ?? 0) + 1; remember(); return; }
       }
-      if (found.size >= maxCandidates) { stopReason = 'CANDIDATE_LIMIT'; searcher.requestStop(); return; }
+      if (found.size >= setCandidateEnd) { stopReason = 'CANDIDATE_LIMIT'; searcher.requestStop(); return; }
       found.set(smiles, [set.id]);
       outcome.newCandidates++;
     });
@@ -84,12 +91,12 @@ export async function enumerateStructures(req: EnumerationRequest): Promise<Enum
     while (status === 'PAUSED') {
       if (budget.shouldCancel?.()) { stopReason = 'CANCELLED'; break; }
       const t = now();
-      if (t - started >= timeMs) { stopReason = 'TIME_BUDGET'; break; }
-      const left = maxStates - visited;
+      if (t - started >= timeMs || t >= setDeadline) { stopReason = 'TIME_BUDGET'; break; }
+      const left = setStateEnd - visited;
       const before = searcher.visited;
       status = searcher.run(Math.max(0, Math.min(CFG.stepsPerCheck, left)));
       visited += searcher.visited - before;
-      if (status === 'PAUSED' && maxStates - visited <= 0) { stopReason = 'STATE_BUDGET'; break; }
+      if (status === 'PAUSED' && setStateEnd - visited <= 0) { stopReason = 'STATE_BUDGET'; break; }
       const t2 = now();
       if (budget.onProgress && t2 - lastProgress >= CFG.progressEveryMs) { lastProgress = t2; budget.onProgress({visited, candidates: found.size, elapsedMs: t2 - started, alternativeSetId: set.id}); }
       if (t2 - lastYield >= CFG.yieldEveryMs) { await yieldToEventLoop(); lastYield = now(); }
@@ -97,7 +104,12 @@ export async function enumerateStructures(req: EnumerationRequest): Promise<Enum
     if (status === 'STOPPED' && !stopReason) stopReason = 'CANDIDATE_LIMIT';
     leaves += searcher.leaves;
     outcome.visited = searcher.visited; outcome.leaves = searcher.leaves;
-    if (stopReason) { outcome.complete = false; outcome.incompleteReasons.push(stopReason); reasons.add(stopReason); stopAll = true; }
+    if (stopReason) {
+      outcome.complete = false; outcome.incompleteReasons.push(stopReason); reasons.add(stopReason);
+      // Only a global limit (or cancel / candidate cap) ends the whole request; a set that used up its own share lets the others run.
+      const globalSpent = now() - started >= timeMs || maxStates - visited <= 0;
+      if (stopReason === 'CANCELLED' || globalSpent || (stopReason === 'CANDIDATE_LIMIT' && found.size >= maxCandidates)) stopAll = true;
+    }
     else outcome.complete = true;
   }
   result.stats.visited = visited; result.stats.leaves = leaves;

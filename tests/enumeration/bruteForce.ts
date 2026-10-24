@@ -5,7 +5,7 @@ import {canonicalizeMolecule} from '../../src/engines/scientificEngines/rdkitAda
  * it expands atoms itself, tries EVERY bond-order matrix over the atoms that can still take bonds (no symmetry breaking, no
  * pruning beyond per-atom capacity), keeps the connected ones with the right hydrogen total, and de-duplicates with RDKit.
  */
-export interface BFAtom {element: string; fixedH?: number; charge?: number; open?: boolean}
+export interface BFAtom {element: string; fixedH?: number; charge?: number; open?: boolean; flex?: boolean}
 export interface BFFragment {atoms: BFAtom[]; bonds: {a: number; b: number; order: number}[]; count?: number}
 
 const VALENCE: Record<string, number> = {C: 4, N: 3, O: 2, F: 1, Cl: 1, Br: 1, I: 1, S: 2};
@@ -25,7 +25,7 @@ export function bruteForce(formula: Record<string, number>, fragments: BFFragmen
       f.atoms.forEach((a, i) => {
         const q = a.charge ?? 0, val = q === 0 ? VALENCE[a.element] : CHARGED[a.element][q];
         el.push(a.element); charge.push(q); fixedH.push(a.fixedH ?? 0);
-        room.push(a.open ? val - sum[i] - (a.fixedH ?? 0) : 0); must.push(Boolean(a.open)); free.push(false);
+        room.push(a.flex ? val - sum[i] : a.open ? val - sum[i] - (a.fixedH ?? 0) : 0); must.push(Boolean(a.open)); free.push(Boolean(a.flex));
         used[a.element] = (used[a.element] ?? 0) + 1; hUsed += a.fixedH ?? 0;
       });
       for (const b of f.bonds) fixedBonds.push([base + b.a, base + b.b, b.order]);
