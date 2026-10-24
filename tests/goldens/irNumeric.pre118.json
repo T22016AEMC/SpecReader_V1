@@ -1,0 +1,95 @@
+{
+ "n": 1700,
+ "peaks": [
+  {
+   "x": 830,
+   "y": 55,
+   "prominence": 38.781211,
+   "width": 32,
+   "area": 978.615591,
+   "rel": null,
+   "norm": null
+  },
+  {
+   "x": 1240,
+   "y": 35,
+   "prominence": 52.410688,
+   "width": 44,
+   "area": 2101.45505,
+   "rel": null,
+   "norm": null
+  },
+  {
+   "x": 1366,
+   "y": 71.198,
+   "prominence": 19.644269,
+   "width": 20,
+   "area": 342.365457,
+   "rel": null,
+   "norm": null
+  },
+  {
+   "x": 1384,
+   "y": 75.116,
+   "prominence": 18.988129,
+   "width": 38,
+   "area": 612.325278,
+   "rel": null,
+   "norm": null
+  },
+  {
+   "x": 1510,
+   "y": 45,
+   "prominence": 41.909098,
+   "width": 24,
+   "area": 956.890192,
+   "rel": null,
+   "norm": null
+  },
+  {
+   "x": 1600,
+   "y": 50,
+   "prominence": 37.718441,
+   "width": 24,
+   "area": 861.23368,
+   "rel": null,
+   "norm": null
+  },
+  {
+   "x": 2870,
+   "y": 67,
+   "prominence": 27.14236,
+   "width": 32,
+   "area": 683.229353,
+   "rel": null,
+   "norm": null
+  },
+  {
+   "x": 2960,
+   "y": 54.999,
+   "prominence": 37.178508,
+   "width": 36,
+   "area": 1117.956455,
+   "rel": null,
+   "norm": null
+  },
+  {
+   "x": 3050,
+   "y": 79.969,
+   "prominence": 12.706212,
+   "width": 36,
+   "area": 430.346186,
+   "rel": null,
+   "norm": null
+  },
+  {
+   "x": 3500,
+   "y": 60,
+   "prominence": 29.452729,
+   "width": 284,
+   "area": 7995.046749,
+   "rel": null,
+   "norm": null
+  }
+ ]
+}
