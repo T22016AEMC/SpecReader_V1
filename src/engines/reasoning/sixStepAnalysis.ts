@@ -5,6 +5,9 @@ import {inferComposition} from '../composition/inferComposition';
 import {generateForCompositions} from '../composition/structureGenerator';
 import {ENUMERATION_CONFIG as ENUM} from '../enumeration/enumerationConfig';
 import {buildPlausibilityEvidence} from '../scientificEngines/structurePlausibility';
+import {V12_CONFIG} from '../constraints/v12Config';
+import {irRangeCovered} from '../scientificEngines/irSignalProcessing';
+import {sourceSpectra} from '../scientificEngines/evidenceLedger';
 import type {AnalysisInput,ModeAResult} from '../analysisSession';
 import type {AnalysisProgress,ReasoningPlan} from './types';
 export function planningSearchHints(plan:ReasoningPlan,base:ReturnType<typeof graphSearchHints>):ReturnType<typeof graphSearchHints>{
@@ -26,7 +29,10 @@ export async function executeSixStepAnalysis(input:AnalysisInput,options:{should
  const hints={...baseHints,observedH1Signals:countSignals('1H_NMR'),observedC13Signals:countSignals('13C_NMR')};
  options.onProgress?.({step:4,stage:'局部結構引導的增量分子圖搜尋',localStructures:plan.localStructures});
  // Composition inference (P1a) belongs to progress step 3; the generator bridge keeps the original total budget.
- const outcome=await generateForCompositions({userFormula:plan.userFormula,composition:plan.composition??null,hints,
+ // v1.2: only built when the flag is on (with the flag off nothing below differs from v1.1.8).
+ const ir=V12_CONFIG.useV12Constraints?sourceSpectra(prepared.bundle).IR:undefined;
+ const constraintEvidence=V12_CONFIG.useV12Constraints?{observations:plan.observations,irCoversAldehydeRegion:Boolean(ir)&&irRangeCovered(ir!,V12_CONFIG.aldehydeIr.rangeCm1[0],V12_CONFIG.aldehydeIr.rangeCm1[1]),nitrogenAllowed:plan.nitrogenEvidence?.mode==='EVIDENCE'}:undefined;
+ const outcome=await generateForCompositions({userFormula:plan.userFormula,composition:plan.composition??null,hints,constraintEvidence,
   plausibility:buildPlausibilityEvidence({observations:plan.observations,userFormula:plan.userFormula,nitrogenEvidence:plan.nitrogenEvidence?.mode==='EVIDENCE'}),
   sharedPool:options.timeMs!==undefined||options.maxStates!==undefined,
   enumerationBudget:{timeMs:options.timeMs??ENUM.analysis.timeMs,maxStates:options.maxStates??ENUM.analysis.maxStates,maxCandidates:ENUM.analysis.maxCandidatesPerFormula},

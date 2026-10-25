@@ -48,6 +48,8 @@ export class Searcher {
   private readonly dsuSize: number[];
   private readonly dsuStack: number[] = [];
   private comps: number;
+  private readonly elIndex: number[];
+  private readonly hasNoHC: boolean;
   constructor(problem: Problem, rules: EarlyRules, private readonly onLeaf: (bonds: NewBond[]) => void) {
     const P = (this.P = problem);
     const n = (this.n = P.n);
@@ -57,6 +59,9 @@ export class Searcher {
     this.dsuParent = Array.from({length: n}, (_, i) => i);
     this.dsuSize = new Array(n).fill(1);
     this.comps = n;
+    const elNames = [...new Set(P.el)];
+    this.elIndex = P.el.map(e => elNames.indexOf(e));
+    this.hasNoHC = P.noHC.some(Boolean);
     for (const b of P.fixedBonds) this.dsuUnion(b.a, b.b, false);
     // Early rules on the fixed fragment bonds.
     let rejection: string | null = null;
@@ -70,6 +75,8 @@ export class Searcher {
       if (P.cap[i] === 0 || P.cap[j] === 0 || P.fixedOrder[i][j] > 0) continue;
       if (rules.noPeroxide && P.el[i] === 'O' && P.el[j] === 'O') continue;
       if (rules.noNitrogenOxygen && ((P.el[i] === 'N' && P.el[j] === 'O') || (P.el[i] === 'O' && P.el[j] === 'N'))) continue;
+      // v1.2 singlet rule: a no-H-carbon-neighbour atom is never bound to a carbon that carries a fixed hydrogen.
+      if ((P.noHC[i] && P.el[j] === 'C' && P.fixedH[j] > 0) || (P.noHC[j] && P.el[i] === 'C' && P.fixedH[i] > 0)) continue;
       this.pi.push(i); this.pj.push(j);
     }
     const PN = this.pi.length;
@@ -203,6 +210,14 @@ export class Searcher {
     if (finishedH > P.hFree) return false;
     // Interchangeable free atoms (r-1, r): the lexicographically smaller image must not be a different leaf (lex-leader).
     for (const [a, b] of P.freePairs) if (b === r && !this.pairOrdered(a, b)) return false;
+    // v1.2: interchangeable single atoms of identical signature (same lex-leader check).
+    for (const [a, b] of P.symPairs) if (b === r && !this.pairOrdered(a, b)) return false;
+    // v1.2: members of one equivalence group need the same bonded elements and bond orders (both rows are final).
+    if (P.eqFirst[r] >= 0 && this.bondKey(r) !== this.bondKey(P.eqFirst[r])) return false;
+    // v1.2 singlet rule for carbons whose hydrogens are not fixed (flex / free): a carbon next to a no-H-neighbour atom may not keep an implicit H.
+    if (this.hasNoHC && P.slack[r] && P.el[r] === 'C' && P.cap[r] - d[r] > 0) {
+      for (let y = 0; y < n; y++) if (P.noHC[y] && this.M[r * n + y] > 0) return false;
+    }
     // A component made only of finished atoms can never be joined to the rest.
     if (n > 1) {
       const uf = this.uf;
@@ -215,6 +230,13 @@ export class Searcher {
       for (let k = 0; k < n; k++) if (find(k) === k && size[k] < n && maxIdx[k] <= r) return false;
     }
     return true;
+  }
+
+  /** Sorted multiset of (element, bond order) over all bonds of atom x (fixed and new): equal for atoms of one orbit. */
+  private bondKey(x: number): string {
+    const n = this.n, P = this.P, out: number[] = [];
+    for (let y = 0; y < n; y++) { const o = P.fixedOrder[x][y] + this.M[x * n + y]; if (o > 0) out.push(this.elIndex[y] * 4 + o); }
+    return out.sort((a, b) => a - b).join(',');
   }
 
   /** key(x) <= key(swap(a,b) x) with key = (degree vector, upper-triangle matrix). Needs rows a and b final. */

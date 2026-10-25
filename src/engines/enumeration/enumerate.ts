@@ -1,6 +1,7 @@
-import {canonicalizeMolecule, rdkitStatus} from '../scientificEngines/rdkitAdapter';
+import {canonicalizeMolecule, compileLeafQueries, rdkitStatus, type LeafQueries} from '../scientificEngines/rdkitAdapter';
 import {plausibilityViolations} from '../scientificEngines/structurePlausibility';
 import {ENUMERATION_CONFIG as CFG, type StrainProfile, type StrainProfileId} from './enumerationConfig';
+import {analyseLeaf, emptyLeafCost} from './leafChecks';
 import {buildMolBlock} from './molBlock';
 import {buildProblem, parseFormula, type Problem} from './problem';
 import {Searcher, type NewBond} from './search';
@@ -46,7 +47,17 @@ export async function enumerateStructures(req: EnumerationRequest): Promise<Enum
   let stopAll = false;
 
   // Fair share: every runnable set gets an equal part of what is left (time and steps); unused budget carries over.
-  const prebuilt = alternatives.map(set => buildProblem(formula, set));
+  const prebuilt = alternatives.map(set => buildProblem(formula, set, {symmetryPruning: req.symmetryPruning}));
+  // v1.2: the required-substructure queries and the aromaticity queries are parsed once per alternative set.
+  const queriesOf = new Map<number, LeafQueries>();
+  const leafCost = emptyLeafCost();
+  prebuilt.forEach((b, si) => {
+    if (!b.ok || !b.problem.leafChecks) return;
+    const q = compileLeafQueries(b.problem.required.map(r => r.smarts));
+    if (!q) return;
+    if (q.failed.length) { q.delete(); prebuilt[si] = {ok: false, error: {code: 'INVALID_FRAGMENT', message: `必含子結構的 SMARTS 無法解析：${q.failed.join('、')}`, alternativeSetId: alternatives[si].id}}; return; }
+    queriesOf.set(si, q);
+  });
   const runnable = prebuilt.map(b => b.ok);
   for (let si = 0; si < alternatives.length; si++) {
     const set = alternatives[si];
@@ -65,15 +76,33 @@ export async function enumerateStructures(req: EnumerationRequest): Promise<Enum
     const setStateEnd = visited + Math.max(0, Math.floor((maxStates - visited) / leftSets));
     const setCandidateEnd = found.size + Math.max(1, Math.floor((maxCandidates - found.size) / leftSets));
     let stopReason: IncompleteReason | null = null;
+    const queries = queriesOf.get(si) ?? null;
+    const lookup = (smiles: string): 'known' | 'seenRejected' | 'new' => (found.has(smiles) ? 'known' : rejectedSeen.has(smiles) ? 'seenRejected' : 'new');
     const searcher: Searcher = new Searcher(problem, rules, (newBonds: NewBond[]) => {
-      const c = canonicalizeMolecule(buildMolBlock(problem, newBonds));
-      if (!c.valid) { rejected.sanitizeFailed++; return; }
-      // Safety net: constitution only. Zero coordinates already prevent stereo perception; strip any marker that still appears.
-      const smiles = /[\\/@]/.test(c.canonical) ? canonicalizeMolecule(c.canonical.replace(/[\\/]/g, '').replace(/@+/g, '')).canonical : c.canonical;
-      const sources = found.get(smiles);
-      if (sources) { rejected.duplicatesMerged++; if (!sources.includes(set.id)) sources.push(set.id); return; }
-      if (rejectedSeen.has(smiles)) return;
+      let smiles: string;
       const remember = () => { if (rejectedSeen.size < CFG.maxTrackedRejected) rejectedSeen.add(smiles); else rejected.approximate = true; };
+      if (queries) {
+        // v1.2 leaf: one parse, then known? → required → aromatic → equivalence (see leafChecks.ts)
+        const verdict = analyseLeaf(problem, newBonds, queries, lookup, leafCost);
+        if (verdict.kind === 'invalid') { rejected.sanitizeFailed++; return; }
+        if (verdict.kind === 'known') { rejected.duplicatesMerged++; const sources = found.get(verdict.smiles)!; if (!sources.includes(set.id)) sources.push(set.id); return; }
+        if (verdict.kind === 'seenRejected') return;
+        smiles = verdict.smiles;
+        if (verdict.kind === 'rejected') {
+          const v12 = (rejected.v12 ??= {aromaticFailed: 0, requiredFailed: 0, equivalenceFailed: 0});
+          if (verdict.stage === 'aromatic') v12.aromaticFailed++; else if (verdict.stage === 'required') v12.requiredFailed++; else v12.equivalenceFailed++;
+          if (verdict.remember) remember();
+          return;
+        }
+      } else {
+        const c = canonicalizeMolecule(buildMolBlock(problem, newBonds));
+        if (!c.valid) { rejected.sanitizeFailed++; return; }
+        // Safety net: constitution only. Zero coordinates already prevent stereo perception; strip any marker that still appears.
+        smiles = /[\\/@]/.test(c.canonical) ? canonicalizeMolecule(c.canonical.replace(/[\\/]/g, '').replace(/@+/g, '')).canonical : c.canonical;
+        const sources = found.get(smiles);
+        if (sources) { rejected.duplicatesMerged++; if (!sources.includes(set.id)) sources.push(set.id); return; }
+        if (rejectedSeen.has(smiles)) return;
+      }
       if (strain) {
         const v = strainViolations(problem.n, [...problem.fixedBonds, ...newBonds], strain);
         if (v.length) { for (const rule of v) rejected.strainByRule[rule] = (rejected.strainByRule[rule] ?? 0) + 1; remember(); return; }
@@ -112,6 +141,8 @@ export async function enumerateStructures(req: EnumerationRequest): Promise<Enum
     }
     else outcome.complete = true;
   }
+  for (const q of queriesOf.values()) q.delete();
+  if (queriesOf.size) result.stats.leafCost = leafCost;
   result.stats.visited = visited; result.stats.leaves = leaves;
   result.candidates = [...found.entries()].map(([smiles, alternativeSetIds]) => ({smiles, alternativeSetIds})).sort((a, b) => (a.smiles < b.smiles ? -1 : a.smiles > b.smiles ? 1 : 0));
   result.incompleteReasons = [...reasons];

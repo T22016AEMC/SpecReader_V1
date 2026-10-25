@@ -9,6 +9,8 @@ export interface ObservedEvidence {
  coverage:'PARTIAL'|'CONFIRMED_COMPLETE';unknown:string[];
  /** Automatic solvent candidate: kept, but may stay unexplained without penalty (P1a). */
  optional?:boolean;
+ /** v1.2: the user (or the existing classification) marked this 1H signal as exchangeable (OH/NH). */
+ exchangeable?:boolean;
 }
 export type HypothesisKind='AROMATIC'|'ALKENE'|'ALKYNE'|'NITRILE'|'ALKYL'|'OXYGENATED'|'NITROGENATED'|'HYDROXYL'|'AMINO'|'CARBONYL'|'ETHYL'|'ARYL_PARA'|'ARYL_META'|'ARYL_ORTHO'|'ION'|'FRAGMENT'|'SURFACE';
 export interface ChemicalHypothesis {

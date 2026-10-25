@@ -18,6 +18,15 @@ export interface FragmentAtomSpec {
    * at most one of open / flex (neither = closed).
    */
   flex?: boolean;
+  /**
+   * v1.2: label of the signal group this atom belongs to. Atoms with the same label that are listed in `equivalentGroups` of the set
+   * must be topologically equivalent in every output; atoms with the same group label and flags are interchangeable.
+   */
+  group?: string;
+  /** v1.2: the atom must be aromatic in the sanitized RDKit molecule (checked at the leaf). */
+  aromatic?: boolean;
+  /** v1.2: none of the carbon atoms bound to this atom by a NEW bond may carry hydrogen (singlet rule). Pairs with such carbons are never generated. */
+  noHCarbonNeighbors?: boolean;
 }
 export interface FragmentBondSpec {
   a: number;
@@ -37,7 +46,21 @@ export interface FragmentSpec {
 export interface FragmentAlternativeSet {
   id: string;
   fragments: FragmentSpec[];
+  /** v1.2: groups (FragmentAtomSpec.group) whose atoms must all lie in ONE automorphism orbit of the output molecule (exact check at the leaf). */
+  equivalentGroups?: string[];
+  /**
+   * v1.2: substructures every output must contain at least `minMatches` times. Matches may overlap each other and the fragment atoms
+   * (RDKit substructure matching has no "each atom once" rule).
+   */
+  required?: RequiredSubstructureSpec[];
+  /**
+   * v1.2: atoms of one pool (all atoms with this `group` label) whose hydrogens belong to several signals, not known per atom (aromatic CH of
+   * the ring templates). Each demand is one signal that must be placed entirely inside ONE automorphism orbit of the pool; the remaining
+   * atoms go to signals that need no equivalence. Satisfiable (exactly checked at the leaf) iff the demands can be packed into the orbits.
+   */
+  equivalencePools?: {group: string; demands: number[]}[];
 }
+export interface RequiredSubstructureSpec {id: string; smarts: string; minMatches?: number}
 export interface EnumerationProgress {
   visited: number;
   candidates: number;
@@ -64,6 +87,11 @@ export interface ForbiddenSpec {
 }
 export interface EnumerationRequest {
   formula: FormulaInput;
+  /**
+   * v1.2: lex-leader pruning between interchangeable single-atom fragments of identical signature (default true when the request uses
+   * v1.2 features, off otherwise so the v1.1.8 search is unchanged). Never changes the output set, only the work.
+   */
+  symmetryPruning?: boolean;
   /** No alternative sets = pure formula enumeration (a single empty set). */
   alternatives?: FragmentAlternativeSet[];
   forbid?: ForbiddenSpec;
@@ -99,7 +127,13 @@ export type IncompleteReason =
   | 'INVALID_ALTERNATIVE_SET'
   | 'ALTERNATIVE_SET_NOT_RUN'
   /** More readings of the evidence than `adapter.maxAlternativeSets`: only the first ones were enumerated. */
-  | 'READINGS_TRUNCATED';
+  | 'READINGS_TRUNCATED'
+  /** v1.2: more 1H-inventory readings (or ring-pattern combinations) than the configured cap: only the best ones were enumerated. */
+  | 'INVENTORY_ALTERNATIVES_TRUNCATED'
+  /** v1.2: the aromatic CH of a reading cannot be explained by the ring-template library (furan, thiophene, pyrrole, > the ring limit, …). */
+  | 'AROMATIC_TEMPLATE_LIMITED'
+  /** v1.2 (D10): the 1H constraints could not be applied for this formula and the v1.1.7 flexible-atom path was used instead (never COMPLETE). */
+  | 'V12_CONSTRAINTS_FALLBACK';
 export interface RejectionStats {
   sanitizeFailed: number;
   duplicatesMerged: number;
@@ -108,6 +142,8 @@ export interface RejectionStats {
   strainByRule: Record<string, number>;
   /** True when more rejected structures occurred than `maxTrackedRejected`; the by-rule counts may then count a structure twice. */
   approximate: boolean;
+  /** v1.2 leaf checks: structures rejected by the aromatic / required-substructure / equivalence checks (absent when none ran). */
+  v12?: {aromaticFailed: number; requiredFailed: number; equivalenceFailed: number};
 }
 export interface SetOutcome {
   id: string;
@@ -135,7 +171,17 @@ export interface EnumerationResult {
   candidates: EnumeratedCandidate[];
   errors: EnumerationError[];
   sets: SetOutcome[];
-  stats: {visited: number; leaves: number; elapsedMs: number; rejected: RejectionStats};
+  stats: {visited: number; leaves: number; elapsedMs: number; rejected: RejectionStats; leafCost?: LeafCost};
+}
+/** Cost of the v1.2 leaf checks (measurement only). */
+export interface LeafCost {
+  /** Leaves that went through the v1.2 pipeline. */
+  leaves: number;
+  parseMs: number;
+  checksMs: number;
+  orbitChecks: number;
+  orbitMs: number;
+  requiredMatches: number;
 }
 
 // ------------------------------------------------------------------------------------------------ stage 2 diagnostics
@@ -167,6 +213,28 @@ export interface EnumerationRunDiagnostic {
   legacySupplement?: {candidates: number; added: number; visited: number};
   conversions: AdaptedConversion[];
   notes: string[];
+  /** v1.2 constraint layer (absent unless useV12Constraints was on for this formula). */
+  v12?: V12RunDiagnostic;
+}
+/** What the v1.2 layer did for one formula (panel data, stage 4). */
+export interface V12RunDiagnostic {
+  /** INVENTORY: the 1H atom inventory was enumerated; FLEX_NO_INTEGRALS: no integrals, v1.1.7 flexible-atom path with leaf substructure filters (D9); FALLBACK: D10, the inventory path produced nothing usable. */
+  path: 'INVENTORY' | 'FLEX_NO_INTEGRALS' | 'FALLBACK';
+  /** Badge text of the fallback ("1H 約束未能套用（已退回）"), else null. */
+  badge: string | null;
+  reason: string | null;
+  inventory: {
+    status: 'BUILT' | 'NOT_AVAILABLE'; reason: string | null; alternatives: number; truncated: boolean; patternSets: number; patternTruncated: boolean;
+    incompleteReasons: string[]; ratioSum: number | null;
+    combinations: {k: number; extraExchangeable: number; ratio: number[]}[];
+    signals: {observationId: string; shiftPpm: number; relativeIntegral: number | null; ratio: number | null; multiplicity: string | null; broad: boolean; classes: string[]; singletRuleApplied: boolean; equivalenceRequired: boolean}[];
+    voided: {reason: string; count: number}[];
+    aromaticLimited: {k: number; extraExchangeable: number; aromaticCh: number; reason: string}[];
+  } | null;
+  required: {id: string; smarts: string; label: string; evidenceObservationIds: string[]}[];
+  /** One entry per (k, extra exchangeable H) of the inventory path. */
+  runs: {k: number; extraExchangeable: number; alternatives: number; sets: number; complete: boolean | null; visited: number; leaves: number; candidates: number; incompleteReasons: IncompleteReason[]}[];
+  leafCost: LeafCost | null;
 }
 export interface EnumerationDiagnostics {
   /** At least one run used the enumerator. */

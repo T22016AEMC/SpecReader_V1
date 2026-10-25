@@ -8,6 +8,7 @@ import {createExhaustiveGenerator} from '../enumeration/exhaustiveGenerator';
 import {capScored,deferredSamples} from '../enumeration/prefilter';
 import type {EnumerationDiagnostics,EnumerationRunDiagnostic} from '../enumeration/types';
 import type {PlausibilityEvidence} from '../scientificEngines/structurePlausibility';
+import type {V12Evidence} from '../constraints/v12Evidence';
 
 export interface StructureGenerationBudget {
  timeMs:number;maxStates:number;maxResults:number;maxFrontier:number;beamWidth:number;
@@ -17,6 +18,8 @@ export interface StructureGenerationRequest {formula:string|undefined;hints:Grap
  /** P1b (ignored by the legacy generator): hints without symmetric-unit copies, the unit multiple k, plausibility evidence and the enumeration budget. */
  unprepared?:GraphSearchHints;symmetryMultiple?:number|null;plausibility?:PlausibilityEvidence;
  enumerationBudget?:{timeMs:number;maxStates:number;maxCandidates?:number};
+ /** v1.2 (only read when useV12Constraints is on): observations and facts the 1H-constraint layer needs. */
+ constraintEvidence?:V12Evidence;
  /** The caller limited time/states explicitly: enumeration and any legacy fallback draw on one pool, so total work stays within the caller limit. */
  sharedPool?:boolean}
 /** Generator-independent contract. P1a: deNovoGraphSearch. P1b swaps in the exhaustive enumerator behind the same interface. */
@@ -106,7 +109,9 @@ const SEVERITY:SearchTermination[]=['EXECUTION_ERROR','CANCELLED','UNAVAILABLE',
  */
 export async function generateForCompositions(args:{userFormula:string|null;composition:CompositionInferenceResult|null;hints:GraphSearchHints;budget:StructureGenerationBudget;generator?:StructureGenerator;
  /** P1b: plausibility evidence and the enumerator's own budget (the legacy `budget` stays the budget of the legacy search). */
- plausibility?:PlausibilityEvidence;enumerationBudget?:{timeMs:number;maxStates:number;maxCandidates?:number};sharedPool?:boolean}):Promise<CompositionSearchOutcome> {
+ plausibility?:PlausibilityEvidence;enumerationBudget?:{timeMs:number;maxStates:number;maxCandidates?:number};sharedPool?:boolean;
+ /** v1.2: evidence for the 1H-constraint layer (ignored unless useV12Constraints is on). */
+ constraintEvidence?:V12Evidence}):Promise<CompositionSearchOutcome> {
  const useExhaustive=!args.generator&&ENUM.useExhaustiveEnumerator;
  const generator=args.generator??(useExhaustive?exhaustiveStructureGenerator:deNovoStructureGenerator),budget=args.budget;
  const eBudget=args.enumerationBudget??{timeMs:ENUM.analysis.timeMs,maxStates:ENUM.analysis.maxStates,maxCandidates:ENUM.analysis.maxCandidatesPerFormula};
@@ -121,7 +126,7 @@ export async function generateForCompositions(args:{userFormula:string|null;comp
  };
  const single=async(formula:string|undefined,h:CompositionHypothesis|null,mode:CompositionSearchOutcome['mode'],note:string|null):Promise<CompositionSearchOutcome>=>{
   const prepared=prepareSymmetry(h,formula,args.hints);
-  const search=capSearch(await generator.generateStructures({formula,hints:prepared.hints,budget,unprepared:args.hints,symmetryMultiple:h?.symmetryMultiple??null,plausibility:args.plausibility,enumerationBudget:eBudget,sharedPool:args.sharedPool}));
+  const search=capSearch(await generator.generateStructures({formula,hints:prepared.hints,budget,unprepared:args.hints,symmetryMultiple:h?.symmetryMultiple??null,plausibility:args.plausibility,enumerationBudget:eBudget,sharedPool:args.sharedPool,constraintEvidence:args.constraintEvidence}));
   if(h)search.formulaSources=Object.fromEntries(search.smiles.map(s=>[s,[h.id]]));
   const run=finishRun({hypothesisId:h?.id??null,formula,maxStates:budget.maxStates,timeMs:budget.timeMs,visited:search.visited,elapsedMs:search.elapsedMs??0,termination:search.termination,candidates:search.smiles.length,symmetry:prepared.symmetry,diagnostic:null},search);
   return {search,mode,note:[note,run.diagnostic].filter(Boolean).join('；')||null,runs:[run]};
@@ -149,7 +154,7 @@ export async function generateForCompositions(args:{userFormula:string|null;comp
   const prepared=prepareSymmetry(h,h.formula,args.hints);
   const frac=pooled?ENUM.pooledEnumerationFraction:1;
   const eMaxStates=Math.max(0,Math.floor(frac*(eBudget.maxStates-eUsedStates-(pooled?usedStates:0))/left)),eTimeMs=Math.max(0,frac*(eBudget.timeMs-eUsedTime-(pooled?usedTime:0))/left);
-  const search=await generator.generateStructures({formula:h.formula,hints:prepared.hints,budget:{...budget,maxStates,timeMs,maxResults:CFG.maxResultsPerFormula,onProgress:budget.onProgress?p=>budget.onProgress!({...p,visited:offset+p.visited}):undefined},unprepared:args.hints,symmetryMultiple:h.symmetryMultiple,plausibility:args.plausibility,enumerationBudget:{timeMs:eTimeMs,maxStates:eMaxStates,maxCandidates:eBudget.maxCandidates},sharedPool:args.sharedPool});
+  const search=await generator.generateStructures({formula:h.formula,hints:prepared.hints,budget:{...budget,maxStates,timeMs,maxResults:CFG.maxResultsPerFormula,onProgress:budget.onProgress?p=>budget.onProgress!({...p,visited:offset+p.visited}):undefined},unprepared:args.hints,symmetryMultiple:h.symmetryMultiple,plausibility:args.plausibility,enumerationBudget:{timeMs:eTimeMs,maxStates:eMaxStates,maxCandidates:eBudget.maxCandidates},sharedPool:args.sharedPool,constraintEvidence:args.constraintEvidence});
   h.searched=true;
   const ev=search.enumeration?.runs[0];
   if(ev){eUsedStates+=ev.visited;eUsedTime+=ev.elapsedMs;enumRuns.push(...search.enumeration!.runs);Object.assign(originsAcc,search.enumeration!.origins);}
