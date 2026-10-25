@@ -55,8 +55,8 @@ export interface StrongEvidenceRuleDef {
 }
 
 export const V12_CONFIG = {
-  /** D1: false during development (every path is then identical to v1.1.8); it becomes true only when 1.2.0 is released. */
-  useV12Constraints: false as boolean,
+  /** D1: true from 1.2.0. With false every path is identical to v1.1.8 (tests/v12/legacyGolden.test.ts sets it in code). */
+  useV12Constraints: true as boolean,
 
   // ---------------------------------------------------------------- inventory (W1), D8
   /** k = H_total / (sum of the simplest integer ratio), tried for 1…maxK. */

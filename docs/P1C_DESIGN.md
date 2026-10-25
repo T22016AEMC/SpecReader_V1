@@ -387,3 +387,17 @@ interface FragmentAlternativeSet { id: string; fragments: FragmentSpec[]; equiva
 
 - 階段 1–2 回報中的兩筆：同一次全套執行（開始 12:09:46，總耗時 1829 s）中，`tests/v12/generatorV12.test.ts` 的 `symmetric diaryl (resolved multiplicities, equivalence required)` 耗時 902.9 s、`tert-butyl phenol type (CDCl3, broad OH)` 耗時 618.7 s（引擎回報的 `elapsedMs` 同為 902,902／618,744，且帶 `TIME_BUDGET`＋`ALTERNATIVE_SET_NOT_RUN`）。單獨重跑同一組測試三次分別為 10.0 s 與 9.4 s；整套重跑 320 s 無異常。原因未能直接證實，推測是機器休眠（時鐘跳躍）；本輪沒有再出現。沒有調高任何逾時。
 - 本輪全套（13:16:35–13:21:11，266 s）沒有異常耗時；有一個測試失敗：`stage3.test.ts` 的「evidence, N evidence and plausibility evidence …」。單獨重跑通過；以 300 次重複確認是**我的測試迴圈**造成的：標記 id 是 `Date.now()` 加 0–999 的隨機數，同一毫秒建立的兩個標記約 1/1000 機率撞 id，後者覆蓋前者（人手點擊不可能這麼快）。測試改為每個標記之間等 2 ms，連跑 3 次通過；產品程式碼沒有改。
+
+
+### 9.9 階段 4 實作與 v1.2.0 發佈（審核決定 Q1–Q6 與後續決定）
+
+- **旗標預設 true**（D1）。沒有任何使用者可見的開關；`useV12Constraints=false` 與 v1.1.8 逐項相同的測試保留，旗標在測試中以程式設定（`tests/v12/legacyGolden.test.ts`，黃金檔 `v12Legacy.v118.json`）。旗標 true 的表格新值另存 `v12.v120.json`。
+- **面板 W8**（`compositionPanelModel.ts`、`CompositionPanel.tsx`）：區段 A「由 1H 推得的原子清單」（有 v12 診斷時預設展開）、區段 B「實際套用的約束」（預設收合）、`V12_FALLBACK` 徽章、四條原因句。診斷新增 `inventory.alternativesPreview`（6 個）、`constraints`。評分摘要採 (a)：區段 B 只有固定句「雙向評分見各候選的證據清單」。
+- **帳本可讀文字**（`evidenceLedger.ts` 的 `display`）：預測多出的環境、環境數、H 總數三種句子，減輕或豁免原因寫在同一行；候選的反對／支持清單使用這些句子，不顯示內部代碼；實測 H 總數是「依積分比例換算」（用已配對訊號的比例尺，不是直接乘 k）。
+- **卡片來源**：退回路徑（`V12_CONSTRAINTS_FALLBACK`）產生的候選加「1H 約束未套用」。
+- **組裝來歷**（`AssemblyDerivation.v12`、`assemblyText.ts`）：清單讀法 id、k、額外 OH、整數比、各訊號群、必含子結構、葉端檢查、退回原因；卡片「候選組裝與驗證證據」以繁體中文顯示。
+- **選 B（D10 的保證）**：強證據子結構在任何路徑都有效。兩路徑（清單與彈性原子退回）都零候選時，保證執行一次舊 beam 補充（預算＝既有補充常數 500 ms／10000 步，不看共用預算剩餘）；補充的候選與整個請求退回舊搜尋時的候選都要通過強證據子結構；標「1H 約束未套用」與既有的「含舊搜尋補充」，不標 COMPLETE。任一路徑有候選時不加入不受 1H 約束的候選。**不加**「不套用強證據子結構」的保底。「約束已放寬（只依分子式）」（v1.1.7 的既有放寬，讀法與分子式矛盾時）維持原樣，仍是明確標示的例外。
+- **零候選說明**（`exclusionStats.ts`）：候選區域的主句、被擋掉的結構（必含子結構以名稱計數，葉端檢查、應變、合理性）、沒跑完的部分、建議；區段 B 共用同一份排除統計（`requiredById` 為新增的診斷計數）。
+- **作廢原因的結構化種類**：`inventory.voided[].kind`（`ELEMENT_SHORTAGE`／`HYDROGEN_MISMATCH`／`EXCHANGEABLE_ATOM_SHORTAGE`／`NO_SHIFT_CLASS`），測試用種類判定「與分子式不相容」，不比對文字。
+- **旗標改 true 引起的既有測試更新**：逐項見 `V1_2_0_CHANGELOG.md` §3（共 11 項）。清單以外的失敗曾兩次停下回報並取得核准（`hotfix117FullFlow` A／E、`hotfix117Plausibility` GEM_DIOL、`sixStepReasoning`、`p1bPipeline` flow (i) 與徽章、徽章設定完全相等比對、E 的允許名單、`incompatibleReadings`）。
+- **驗證**：typecheck 通過；vitest 48 個檔、564 個測試全過（360 s，沒有單一測試的異常耗時）；build 通過；E2E 24 個全過（既有 21＋新增 3）。
