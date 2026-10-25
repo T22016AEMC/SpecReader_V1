@@ -2,6 +2,8 @@ import {beforeAll,describe,expect,it} from 'vitest';
 import {initializeRDKit} from '../src/engines/scientificEngines/rdkitAdapter';
 import {WorkbenchOrchestrator} from '../src/engines/workbenchOrchestrator';
 import {SpectrumParser} from '../src/engines/spectrumParser';
+import {SignalCharacterizationEngine} from '../src/engines/signalCharacterizationEngine';
+import {V12_CONFIG} from '../src/engines/constraints/v12Config';
 import {BANDS,refPoint,syntheticSegmentedIRImage,pixelOf} from './irAxisFixture';
 import type {ExperimentalSpectrumData} from '../src/types/spectrum';
 import {createReasoningPlan} from '../src/engines/reasoning/hypothesisGenerator';
@@ -31,9 +33,14 @@ describe('T1 re-detected peaks carry the traced curve intensity',()=>{
   expect(depth(1240)).toBeGreaterThan(depth(1385));
   const ys=auto.map(p=>p.y);
   expect(auto.find(p=>p.y===Math.min(...ys))!.x).toBeGreaterThan(0);
-  // the relative intensity fields derived from y use the same definition (same order as y, reversed for absorption depth is NOT mixed in)
-  const ordered=[...auto].sort((a,b)=>a.y-b.y);
-  for(let i=1;i<ordered.length;i++)expect((ordered[i].normalizedIntensity??0)).toBeGreaterThanOrEqual((ordered[i-1].normalizedIntensity??0)-1e-9);
+  // The relative-intensity field derived from y. v1.1.8 wrote "same order as y" but read an undefined field as 0 (the assertion was empty). Since 1.2.0 it
+  // is measured for real, per flag: flag off = v1.1.8 definition (same order as y); flag on = absorption depth (stronger band = larger value, reversed).
+  const normalized=(on:boolean)=>{const was=V12_CONFIG.useV12Constraints;V12_CONFIG.useV12Constraints=on;try{return SignalCharacterizationEngine.characterizeSpectrumSignals(s).peaks.filter(p=>p.id.startsWith('ir-auto-px')).sort((a,b)=>a.y-b.y);}finally{V12_CONFIG.useV12Constraints=was;}};
+  const off=normalized(false),on=normalized(true);
+  expect(off.length).toBe(auto.length);expect(off.every(p=>typeof p.normalizedIntensity==='number')).toBe(true);
+  for(let i=1;i<off.length;i++)expect(off[i].normalizedIntensity!).toBeGreaterThanOrEqual(off[i-1].normalizedIntensity!-1e-9);
+  for(let i=1;i<on.length;i++)expect(on[i].normalizedIntensity!).toBeLessThanOrEqual(on[i-1].normalizedIntensity!+1e-9);
+  expect(on[0].normalizedIntensity).toBe(100);
  });
 });
 

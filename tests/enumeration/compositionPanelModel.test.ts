@@ -50,7 +50,7 @@ describe('badges (amber): relaxed / legacy supplement / incomplete', () => {
     expect(runBadges(runDiag({complete: false, status: 'INCOMPLETE', incompleteReasons: ['TIME_BUDGET']})).map(b => b.text)).toEqual(['未完整']);
     expect(runBadges(runDiag({used: false, complete: false, fallbackReason: '沒有分子式'})).map(b => b.text)).toEqual(['未完整']);
     expect(runBadges(runDiag({relaxedToFormulaOnly: {candidates: 1, complete: true}, legacySupplement: {candidates: 1, added: 1, visited: 1}, complete: false})).map(b => b.id)).toEqual(['RELAXED', 'LEGACY_SUPPLEMENT', 'INCOMPLETE']);
-    expect(CFG.ui.badges).toEqual({RELAXED: '約束已放寬（只依分子式）', LEGACY_SUPPLEMENT: '含舊搜尋補充', INCOMPLETE: '未完整'});
+    expect(CFG.ui.badges).toEqual({RELAXED: '約束已放寬（只依分子式）', LEGACY_SUPPLEMENT: '含舊搜尋補充', INCOMPLETE: '未完整', V12_FALLBACK: '1H 約束未能套用（已退回）'});
   });
   it('the summary line collects the badges of all formulas, each kind once, in a fixed order', () => {
     const a = runDiag({complete: false, incompleteReasons: ['STATE_BUDGET']});

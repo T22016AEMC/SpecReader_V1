@@ -12,7 +12,7 @@ import type {NMRSolvent} from '../../src/types/spectrum';
 // Stage 2 acceptance through the generator (the same entry the pipeline uses). All spectra are SYNTHETIC generic shapes made for these tests;
 // the tests check program behaviour (target present in the output, completeness flags, diagnostics) — never chemical accuracy or ranking.
 beforeAll(() => initializeRDKit(), 60000);
-afterEach(() => { V12_CONFIG.useV12Constraints = false; });
+afterEach(() => { V12_CONFIG.useV12Constraints = true; });   // the 1.2.0 default; `run` sets the flag it needs
 
 let counter = 0;
 const h1 = (value: number, integral: number | null, mult: string | null, o: {j?: number[]; broad?: boolean; solvent?: NMRSolvent; exchangeable?: boolean} = {}): ObservedEvidence => ({

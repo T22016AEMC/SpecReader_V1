@@ -19,7 +19,7 @@ import {mk} from '../helpers/p1bScenarios';
 // Stage 3 (W4 two-way scoring, W5 plausibility, W6 IR intensity, W7 candidate merging). SYNTHETIC peak lists / images only; the tests check
 // program behaviour (score direction, flags, equalities). No ranking of any real compound is asserted and nothing here says what is "accurate".
 beforeAll(() => initializeRDKit(), 60000);
-afterEach(() => { V12_CONFIG.useV12Constraints = false; });
+afterEach(() => { V12_CONFIG.useV12Constraints = true; });   // the 1.2.0 default; every test below sets the flag it needs
 const flag = (on: boolean) => { V12_CONFIG.useV12Constraints = on; };
 
 // ---------------------------------------------------------------------------------------------------------------- W4
@@ -92,6 +92,37 @@ describe('W4 two-way 1H scoring', () => {
       const lower = bidirectional1H([obs(1.2, 3), obs(3.5, 2)], [env(1.2, 3), env(3.5, 2), env(0.9, 6)], new Map([[0, 0], [1, 1]]), 1, true);
       expect(lower.find(e => e.evidenceId === '1H:integral-total')!.compatibility!).toBeLessThan(0.1);
     });
+    it('readable lines for the candidate card (Traditional Chinese, shift / H count / reason, discount stated on the same line, no internal code)', () => {
+      const line = (out: ReturnType<typeof bidirectional1H>, prefix: string) => out.filter(e => e.evidenceId.startsWith(prefix)).map(e => e.display);
+      const hObs = [obs(1.2, 4), obs(2.5, 4), obs(3.4, 4), obs(7.1, 4)];
+      const hPred = [env(1.2, 4), env(2.5, 4), env(3.4, 3), env(7.1, 3), env(3.8, 3), env(5.0, 2), env(0.9, 4, false)];
+      const assign = new Map([[0, 0], [1, 1], [2, 2], [3, 3]]);
+      const full = bidirectional1H(hObs, hPred, assign, 1, true);
+      expect(line(full, '1H:unmatched-predicted')).toEqual(['預測有 3.8 ppm 的 1H 環境（3H），實測沒有對應訊號', '預測有 5 ppm 的 1H 環境（2H），實測沒有對應訊號', '預測有 0.9 ppm 的 1H 環境（4H），實測沒有對應訊號']);
+      expect(line(full, '1H:environment-count')).toEqual(['預測 7 種氫環境，實測 4 組訊號（不含可交換 H）']);
+      expect(line(full, '1H:integral-total')).toEqual(['預測 H 總數 23，實測（依積分比例換算）16（不含可交換 H）']);
+      const discounted = bidirectional1H([obs(1.2, 3)], [env(1.2, 3), env(2.0, 1, true)], new Map([[0, 0]]), 1, false);
+      expect(line(discounted, '1H:unmatched-predicted')).toEqual(['預測有 2 ppm 的 1H 環境（1H），實測沒有對應訊號（可交換 H，扣分已減輕）（1H 涵蓋未確認完整，扣分減半）']);
+      const overlap = bidirectional1H([obs(1.2, 6)], [env(1.20, 3), env(1.25, 3)], new Map([[0, 0]]), 1, true);
+      expect(line(overlap, '1H:environment-count')).toEqual(['預測 2 種氫環境，實測 1 組訊號（不含可交換 H）（1 種預測環境與其他環境位移重疊、積分吻合，已視為同一組訊號）']);
+      for (const e of [...full, ...discounted, ...overlap]) { expect(e.display).toBeTruthy(); expect(e.display).not.toMatch(/1H:|unmatched|[A-Z]{4,}|_/); expect(e.method).toBe(e.display); }
+    });
+    it('on the candidate card: a good match puts the readable lines in the support list, a poor H total puts its line in "反對證據" (contradictingReasons)', async () => {
+      flag(true);
+      const spectra = {'1H_NMR': mk('1H_NMR', [{x: 6.84, integration: 4, multiplicity: 's'}, {x: 3.77, integration: 6, multiplicity: 's'}] as never, {nmrSolvent: 'CDCl3'})};
+      const r = await executeSixStepAnalysis({spectra, extraInput: {molecularFormula: 'C8H10O2'}}, {});
+      expect(r.rankedCandidates.length).toBeGreaterThan(3);
+      const countLine = /^預測 2 種氫環境，實測 2 組訊號（不含可交換 H）$/, totalGood = /^預測 H 總數 10，實測（依積分比例換算）10（不含可交換 H）$/, totalPoor = /^預測 H 總數 \d+，實測（依積分比例換算）[\d.]+（不含可交換 H）$/;
+      const good = r.rankedCandidates.filter(c => c.supportingReasons.some(t => totalGood.test(t)));
+      const poor = r.rankedCandidates.filter(c => c.contradictingReasons.some(t => totalPoor.test(t)));
+      expect(good.length).toBeGreaterThan(0);
+      expect(poor.length).toBeGreaterThan(0);
+      for (const c of r.rankedCandidates) expect(c.supportingReasons.some(t => countLine.test(t))).toBe(true);
+      // a candidate whose H total matches is never ranked below one whose H total does not (same spectra, same formula: only the scored terms differ)
+      const rank = (c: { smiles: string }) => r.rankedCandidates.findIndex(x => x.smiles === c.smiles);
+      expect(Math.min(...good.map(rank))).toBeLessThan(Math.min(...poor.map(rank)));
+      for (const c of r.rankedCandidates) for (const t of [...c.contradictingReasons, ...c.supportingReasons]) expect(t).not.toMatch(/1H:(unmatched|environment|integral)/);
+    }, 60000);
     it('no integral scale (fewer than two matched integrals): no H-total entry', () => {
       const out = bidirectional1H([obs(1.2, 3)], [env(1.2, 3)], new Map([[0, 0]]), null, true);
       expect(out.find(e => e.evidenceId === '1H:integral-total')).toBeUndefined();

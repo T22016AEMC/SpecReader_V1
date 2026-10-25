@@ -6,7 +6,7 @@ import {mk} from '../helpers/p1bScenarios';
 
 // Complete flow through the same entry the Web Worker uses, with useV12Constraints = true. SYNTHETIC peak lists; program behaviour only.
 beforeAll(() => initializeRDKit(), 60000);
-afterEach(() => { V12_CONFIG.useV12Constraints = false; });
+afterEach(() => { V12_CONFIG.useV12Constraints = true; });   // the 1.2.0 default
 const canon = (s: string) => canonicalizeMolecule(s).canonical;
 const h1 = (peaks: {x: number; integration: number; multiplicity: string; jValues?: number[]; isBroad?: boolean}[]) => mk('1H_NMR', peaks as never, {nmrSolvent: 'CDCl3', observationCoverage: 'CONFIRMED_COMPLETE'});
 
@@ -28,6 +28,7 @@ describe('executeSixStepAnalysis with the v1.2 constraints', () => {
   }, 120000);
 
   it('the same request with the flag off has no v1.2 diagnostics', async () => {
+    V12_CONFIG.useV12Constraints = false;
     const spectra = {'1H_NMR': h1([{x: 6.84, integration: 4, multiplicity: 's'}, {x: 3.77, integration: 6, multiplicity: 's'}])};
     const r = await executeSixStepAnalysis({spectra, extraInput: {molecularFormula: 'C8H10O2'}}, {timeMs: 8000, maxStates: 500000});
     expect(r.reasoningTrace!.compositionSearch!.runs[0].enumeration?.v12).toBeUndefined();
