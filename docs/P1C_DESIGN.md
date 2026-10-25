@@ -347,3 +347,43 @@ interface FragmentAlternativeSet { id: string; fragments: FragmentSpec[]; equiva
 3. D10 退路的結果仍套用強證據子結構（D9）。若你希望退路＝純 v1.1.7（不套用），請告訴我。
 4. 整數比多重讀法（9.2 第 1 點）是我加的；若你要嚴格只用最簡比，把 `v12Config.inventoryRatioReadings` 改成 `'SIMPLEST'`（預設 `'ALL'`）。
 5. `REASON_LABEL` 三筆佔位文字與 `V12_CONSTRAINTS_FALLBACK` 名稱，等階段 4 面板設計一併決定。
+
+
+### 9.6 烯基修正（審核決定 Q1，已完成）
+
+- **定義**：`FragmentAtomSpec.alkeneCH`。帶此旗標的原子（烯基 CH、=CH2）必須恰有**一個**雙鍵、**沒有**三鍵；雙鍵的另一端必須是**碳**（C=O、C=N、N=O 不算）；該雙鍵在 RDKit 消毒後的分子中**不得是芳香鍵**（六個烯基 CH 連成苯環時，環上的雙鍵是芳香鍵，被排除）。
+- **早剪枝**（`search.ts`）：任何新鍵若讓烯基原子出現三鍵、對非碳原子的雙鍵、或第二個雙鍵就立刻剪掉；原子的列完成時必須恰有一個雙鍵。**葉端**（`leafChecks.ts`）檢查「該雙鍵不是芳香鍵」；此項與原子清單如何對到分子有關，所以不記入「已否決」快取（同一個分子的另一種對應可能通過）。
+- **只在沒有 sp3 類別共用時才強制**：同一個 (元素, 每原子 H) 的讀法若同時屬於 O_CH 等 sp3 類別（例如 4.5–5.0 ppm 的 VINYL_CH＋O_CH），合併後不加旗標——不受限的讀法包含所有烯基解，這樣不會漏。`vinylRequiresAlkene=false` 可關掉。
+- **排序與原因**（`exhaustiveGenerator.ts`）：整個窮舉請求內，先跑不含烯基讀法的片段組合，再用剩餘預算跑含烯基者（公平分配沿用）。只由含烯基讀法造成的預算原因（時間、步數、候選上限、未執行）改記為 `VINYL_READINGS_BUDGET`，已找到的候選照常輸出；`termination` 仍依實際的預算原因。（設計寫「每個 (分子式, k, 額外 OH) 內」；實作是整個請求內全部不含烯基者在前，效果相同或更保守。）
+- **暴力法對照**（`bruteForceV12.ts` 以最終分子陳述同一條件）：新增 5 個指定案例（2-丁烯型、三鍵與 C=O 被排除、六個烯基 CH 無解、苯乙烯型、與等價群／單峰鄰接合用）與隨機案例的 `alkeneCH`；**504 個可比較的隨機案例（其中 26 個非空且含烯基）與全部指定案例，集合完全相同**，剪枝開／關相同。
+- **C6 重新量測**（`enumerationBudget.timeMs` 10 s；本機單次；此表同時包含 W5 的應變規則，因為 v12 路徑現在套用 `SURGE_INSPIRED`）：
+
+| 案例 | 結果 | 讀法／組合 | 步數 | 葉 | 候選 | 耗時 |
+|---|---|---|---|---|---|---|
+| 對稱雙芳環 C15H16（多重峰） | INCOMPLETE（VINYL_READINGS_BUDGET） | 57／190 | 29,173,951 | 10,502 | 238 | 10.0 s |
+| 對稱雙芳環 C15H16（已分裂） | INCOMPLETE（VINYL_READINGS_BUDGET） | 57／190 | 20,344,736 | 9,823 | 1 | 10.0 s |
+| 叔丁基酚型 C10H14O | COMPLETE | 12／20 | 2,447,257 | 8,237 | 1 | 1.9 s |
+| 乙基酯型 C9H10O2 | COMPLETE | 3／5 | 1,197 | 19 | 3 | 0.005 s |
+| 對二甲氧基苯型 C8H10O2 | COMPLETE | 6／8 | 74,239 | 284 | 18 | 0.11 s |
+| 甲基萘型 C11H10 | COMPLETE | 8／15 | 4,767 | 98 | 43 | 0.02 s |
+| 萘酚型 C10H8O | COMPLETE | 22／41 | 44,580 | 662 | 53 | 0.13 s |
+
+  修正前（9.3 表）三個芳香案例不完整、候選 1,902／44／1；修正後叔丁基酚型完成，乙基酯型候選 64→3、對二甲氧基苯型 250→18。對稱雙芳環兩案仍把預算用在含烯基的讀法上（標 VINYL_READINGS_BUDGET，目標在輸出中）。葉端成本與 9.3 同量級（每葉約 100–300 µs，軌道檢查每次約 60–130 µs）。
+
+### 9.7 階段 3（`useV12Constraints` 控制，旗標 false 時全部不生效）
+
+- **W4 評分雙向**（`evidenceLedger.ts`，`bidirectional1H`）：預測多出的 1H 環境各加一筆（相容度 0、權重 0.8；可交換環境 ×0.25；1H 涵蓋未確認完整 ×0.5；與已配對環境位移差 ≤ 0.10 ppm 且觀測積分＝兩者 H 合計（容差 15 %）者視為同一個重疊訊號、不扣）；環境數比（`exp(−(Δ/1)²)`，權重 0.6）；非可交換 H 總數比（高斯，σ＝max(1, 0.1×預測 H)，權重 0.6，只在能估出積分比例尺時）。**圖片權重**：旗標開啟時所有光譜（含 IR）的「來自圖片」係數都用 `scoring.imageSourceWeightFactor`（預設 1.0），低品質 ×0.5 的規則不變。分數仍是 `UNCALIBRATED_COMPATIBILITY`；所有常數在 `v12Config.scoring`，標明工程預設、未校準。
+- **W5**：`HEMIACETAL_ACYCLIC`（非環狀 sp3 碳同時接 ≥1 個游離 OH 與 ≥1 個其他 O）、`ORTHOESTER_ACYCLIC`（非環狀 sp3 碳接 ≥3 個 O）；環狀半縮醛、縮醛／縮酮、一般醇與醚不受影響；證據例外機制不變。旗標開啟時，v12 路徑與其退路的窮舉都套用 `pipelineStrainProfile='SURGE_INSPIRED'`（`v12Config.pipelineStrainProfile`）；旗標關閉仍為無。
+- **W6**：
+  - `pixelToPhysicalIntensity` 的 IR 分支（旗標開啟）＝`100·(bottom − py)/(bottom − top)`，不再乘 0.85、不再反向；有描線（`irPixelCurve`）時，標記的 y＝描線在該 x 的值（`SpectrumParser.markerIntensity`，檢視器的點擊與滑鼠移動、`upsertUserSignalAnnotation` 都用它）。
+  - **設計 §1.4 的前提有誤，已確認**：`measureSpectrumSignals` 只是原樣回傳（編輯路徑）；計算 `normalizedIntensity` 的是 `characterizeSpectrumSignals`，而**管線從不呼叫它**（只有 `observationWorkflow.test.ts` 對它做 spy）。所以在即時管線中這個欄位本來就不存在；我仍在 `characterizeSpectrumSignals` 做了「越強越大（吸收深度）」的改動（旗標開啟、峰來自圖片／描線時），讓它被使用時方向正確。**v1.1.8 T1 的 `normalizedIntensity` 同序斷言其實是空的**（欄位是 `undefined`，被 `?? 0` 讀成 0，永遠通過）；旗標關閉時它不變，我沒有改既有測試，而是在 `stage3.test.ts` 新增真正檢查數值的兩個方向（旗標關閉＝與 y 同序；旗標開啟＝反向，最強帶 100）。
+  - **標記畫面位置不變——已確認**：檢視器以 `pk.pixelY ?? ann.pixelY` 定位標記，強度只是備援；已把這個運算抽成 `SpectrumParser.markerPixelY`（行為不變），測試確認「有像素位置時完全不看 y」、備援在旗標開啟時是 `pixelToPhysicalIntensity` 的精確反函數（誤差 < 0.5 px），並用原始碼檢查確認檢視器使用該函式。
+  - **證據與 N／合理性判定不受影響——已加測試**：同一個圖片光譜、同樣三個手動標記，旗標開啟與關閉的 `createReasoningPlan` IR 觀測（波數與相對強度）、N 證據、`buildPlausibilityEvidence` 完全相同（`prepareIR` 對手動峰改用描線值）。數值檔路徑的 IR 峰在兩種旗標下逐值相同。
+- **W7**：每個 (k, 額外 OH) 的細項在 `run.v12.runs`；候選合併去重（同一個結構由多個讀法產生時只出現一次），`origins[smiles].v12` 記錄來自哪些 (k, 額外 OH)；排名只看 W4 的雙向評分，不看 k（測試：排名分數單調不增，且每個候選都有來源）。
+
+**預期改動清單**：旗標 false 時沒有任何既有測試的預期值需要改，也沒有改。旗標改為 true（1.2.0 發佈）時，下列既有項目的輸出會依設計改變，到時需逐項更新：(1) `tests/helpers/v12Golden.ts` 黃金中的 `pixelToPhysicalIR`（5 個值）與 `transmittanceMarkers`／`absorptionMarkers`（它們走 pass-through，值不變）；(2) `irRecalibrationPeaks.test.ts` T1 的 `normalizedIntensity` 同序斷言（目前是空斷言，旗標 true 時若改成真值檢查則方向相反）；(3) 評分帳本多出 `1H:*` 三類條目與圖片權重 1.0，使旗標 true 時的 `p1bPipeline`／`v12Legacy` 排名與分數不同。
+
+### 9.8 異常耗時紀錄
+
+- 階段 1–2 回報中的兩筆：同一次全套執行（開始 12:09:46，總耗時 1829 s）中，`tests/v12/generatorV12.test.ts` 的 `symmetric diaryl (resolved multiplicities, equivalence required)` 耗時 902.9 s、`tert-butyl phenol type (CDCl3, broad OH)` 耗時 618.7 s（引擎回報的 `elapsedMs` 同為 902,902／618,744，且帶 `TIME_BUDGET`＋`ALTERNATIVE_SET_NOT_RUN`）。單獨重跑同一組測試三次分別為 10.0 s 與 9.4 s；整套重跑 320 s 無異常。原因未能直接證實，推測是機器休眠（時鐘跳躍）；本輪沒有再出現。沒有調高任何逾時。
+- 本輪全套（13:16:35–13:21:11，266 s）沒有異常耗時；有一個測試失敗：`stage3.test.ts` 的「evidence, N evidence and plausibility evidence …」。單獨重跑通過；以 300 次重複確認是**我的測試迴圈**造成的：標記 id 是 `Date.now()` 加 0–999 的隨機數，同一毫秒建立的兩個標記約 1/1000 機率撞 id，後者覆蓋前者（人手點擊不可能這麼快）。測試改為每個標記之間等 2 ms，連跑 3 次通過；產品程式碼沒有改。
