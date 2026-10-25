@@ -175,6 +175,13 @@ describe('integer-ratio readings', () => {
     expect(r.kCombinations.map(c => [c.ratio.join(':'), c.k, c.extraExchangeable])).toEqual([['1:9', 1, 0], ['1:8', 1, 1]]);
     expect(admissibleRatios([1, 9]).slice(0, 2)).toEqual([[1, 8], [1, 9]]);
   });
+  it("inventoryRatioReadings = 'SIMPLEST' keeps only the simplest ratio (1:8 plus one unobserved OH)", () => {
+    V12_CONFIG.inventoryRatioReadings = 'SIMPLEST';
+    try {
+      const r = buildAtomInventory(input([sig('a', 9.2, 1, 's'), sig('b', 1.3, 9, 's')], {C: 10, H: 10, O: 1}, {solvent: 'DMSO-d6'}));
+      expect(r.kCombinations.map(c => [c.ratio.join(':'), c.k, c.extraExchangeable])).toEqual([['1:8', 1, 1]]);
+    } finally { V12_CONFIG.inventoryRatioReadings = 'ALL'; }
+  });
   it('the same hydrogens per signal from a finer unit (ratio x k) are one reading, not two', () => {
     // 3:3 can be 1:1 with k = 3 or 3:3 with k = 1; both give 3H + 3H
     const r = buildAtomInventory(input([sig('a', 1.2, 3, 's'), sig('b', 2.3, 3, 's')], {C: 6, H: 6}));

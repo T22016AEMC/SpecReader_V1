@@ -69,6 +69,11 @@ export const V12_CONFIG = {
   maxPatternSetsPerAlternative: 128,
   /** Combinations of per-signal readings looked at before the generation is cut (guards the product of many signals). */
   maxCombinationsExamined: 200_000,
+  /**
+   * 'ALL': every integer ratio the integrals admit (within h1IntegralTolerance) is a reading, so integrals 1 and 9 are also read as 1:9;
+   * 'SIMPLEST': only the ratio of simplestIntegerRatio (largest unit; 1 and 9 become 1:8), as in the first design text.
+   */
+  inventoryRatioReadings: 'ALL' as 'ALL' | 'SIMPLEST',
   /** Order in which hydrogens per atom are preferred when an integral can be split in several ways (CH3 before CH2 before CH). */
   hPerAtomPreference: [3, 2, 1],
   /** Singlet rule: the signal is a singlet, not broad, and every other signal is farther away than this (ppm). */

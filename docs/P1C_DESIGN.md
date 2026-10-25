@@ -267,3 +267,83 @@ interface FragmentAlternativeSet { id: string; fragments: FragmentSpec[]; equiva
 7. W5 範圍：只剔除非環狀的「sp3 碳同時接 OH 與其他 O」（半縮醛／半縮酮）與「≥3 個 O」（原酸酯型）；縮醛／縮酮（兩個 OR、沒有 OH）保留，可以嗎？
 8. W7 的 k 上限 3 與額外可交換 H 上限 2：維持任務描述的設定，替代解讀總數上限 64，可以嗎？
 9. 沒有 1H 積分時（沿用 v1.1.7 彈性原子路徑），W2 的必含子結構作為葉端篩選是否啟用？（我預設啟用，因為不影響列舉速度。）
+
+
+---
+
+## 9. 階段 1–2 實作紀錄（v1.2.0 開發中，`useV12Constraints` 仍為 false）
+
+基準：`claude-mode`，與 `origin/main`（`fcc2bda`＝1.1.8）同步後開始。本節是**實際做法與量測**；與第 1–8 節衝突時，以本指令的審核決定 D1–D10 與本節為準。所有測試只用自編的通用合成資料；沒有讀取 `benchmark\`，沒有為任何化合物調參數；本節的 pass／fail 只是程式行為，不代表任何化合物的結果正確或排名正確。
+
+### 9.1 做了什麼
+
+| 項目 | 檔案 |
+|---|---|
+| 旗標與全部新常數（工程預設，未校準） | `src/engines/constraints/v12Config.ts` |
+| D5 位移類別分類 | `constraints/shiftClasses.ts` |
+| 1H 原子清單（積分→H 數、等價 H 分解、單峰規則、環模板、額外可交換 H、64 上限） | `constraints/atomInventory.ts` |
+| 清單→`FragmentAlternativeSet`（固定 H 的單原子 open 片段、環模板、group／旗標、等價群、池、必含子結構） | `constraints/inventoryAdapter.ts` |
+| W2 強證據規則（規則清單與門檻在 config） | `constraints/requiredSubstructures.ts` |
+| 觀測→清單輸入（1H 訊號、IR 醛區脈絡） | `constraints/v12Evidence.ts` |
+| 原子屬性 `group`／`aromatic`／`noHCarbonNeighbors`；`equivalentGroups`／`required`／`equivalencePools` | `enumeration/types.ts`、`problem.ts` |
+| 鄰接限制進配對清單；簽名相同單原子的增量對稱剪枝；等價群列尾必要條件 | `enumeration/search.ts` |
+| 精確自同構軌道（回溯＋顏色細化只作剪枝，接受前逐邊驗證）、軌道裝箱 | `enumeration/automorphism.ts` |
+| 葉端：同一個 RDKit Mol 做 canonical、`[a]`、必含子結構、等價（`analyseLeaf`） | `enumeration/leafChecks.ts`、`scientificEngines/rdkitAdapter.ts`（新增函式，既有函式未改） |
+| 接線：`useV12Constraints=true` 且 1H 有積分走清單路徑；無積分走 v1.1.7 彈性原子＋葉端子結構（D9）；D10 退路 | `enumeration/exhaustiveGenerator.ts`、`composition/structureGenerator.ts`、`reasoning/sixStepAnalysis.ts` |
+| `ObservedEvidence.exchangeable`（來自 `SpectralPeak.isExchangeable`，只在有值時才加欄位） | `reasoning/types.ts`、`hypothesisGenerator.ts` |
+
+`useV12Constraints=false` 時：不呼叫任何新模組；`buildProblem` 對沒有 v1.2 功能的請求產生與 1.1.8 相同的 `Problem`（逐步數相同，既有 T4／T6 步數不變）；`sixStepAnalysis` 不建立 `constraintEvidence`。黃金檔 `tests/goldens/v12Legacy.v118.json` 是在未改動的 1.1.8 程式上擷取的（候選、runs、狀態、termination、評分帳本重點欄位、IR 標記值與峰表），`tests/v12/legacyGolden.test.ts` 逐項比對。黃金執行內關閉「舊 beam 補充」（它受 500 ms 牆鐘限制，步數每次不同；補充路徑本身由既有 `p1bPipeline.test.ts` 涵蓋）。
+
+### 9.2 與設計文件的差異（需要你知道）
+
+1. **整數比不只取最簡一組。** 實測 `simplestIntegerRatio` 取「最大單位」：積分 1 與 9 會被讀成 1:8（容差 0.15），積分 9:2:2 會被讀成 4:1:1。若只用最簡比，真正的讀法（1:9，k=1，e=0）會消失。`admissibleRatios` 列出所有在容差內可化為整數的比，只保留 `H − e = k·S` 成立的組合，每個 (比, k, e) 一個讀法；同一組「每訊號 H 數＋e」只算一個。`simplestIntegerRatio` 本身未改。
+2. **取代型式展開成片段組合，不佔 64 個替代解讀的名額。** `InventoryAlternative` 的環計畫保存每個環的全部取代型式；轉接器把型式展開成多個 `FragmentAlternativeSet`（相同 (模板, ch) 的環取多重集合，不重複排列），每個替代解讀最多 `maxPatternSetsPerAlternative=128` 組，超過標 `INVENTORY_ALTERNATIVES_TRUNCATED`。64 的上限是每個 (比, k, e) 的「讀法」數，依 (各訊號的讀法序號和、環數、環模板序) 由好到壞排序後截斷。
+3. **芳香 CH 用「池」而不是逐原子的 group。** 一個環 CH 屬於哪個訊號事先不知道，逐一指派會爆炸。環上 CH 原子共用標籤，`equivalencePools: [{group, demands}]` 的每個 demand 是一個需要嚴格等價的訊號大小（≥2）；葉端用精確軌道檢查「每個 demand 能否完整放進池中的一個軌道，且各 demand 不共用原子」（`canPackDemands`）。非芳香群仍用 `group`＋`equivalentGroups`（列尾必要條件＋葉端軌道）。多重性為 m／multiplet／unresolved／br／br s／寬峰（以及未給多重性）的訊號不要求等價（D2，config 可調）。
+4. **位移類別只決定「每原子 H 數、元素、環模板」；混成與雜原子鄰接不強制。** 這是設計 §3 W3 寫的（sp2／sp3 由鍵階與固定 H 隱含）。因此 O_CH 與 ALPHA_CH 等「原子與 H 完全相同」的讀法合併為一個讀法（`shiftClasses` 保留全部類別名），不重複窮舉。`heteroatom` 只當適用條件（分子式要有該元素；N 類還要 N 證據）。**醛基讀法不強制出現 `[CH]=O`，VINYL 讀法不強制有雙鍵**（見 9.5 問題 2）。
+5. 單峰規則只套用在非芳香、非可交換的群；芳香單峰不套用（環 CH 的鄰接是環內固定鍵）。
+6. 相同種類的原子（元素、H、旗標相同）不論來自哪個訊號都合併成一個片段（`count=n`），以便增量對稱剪枝；只有需要等價的群（≥2 個原子）保留自己的片段與標籤。
+7. 葉端順序：RDKit 解析一次 → 是否已知 → 必含子結構 → 芳香 → 等價 → 應變 → 合理性。必含子結構與合理性／應變的否決只與分子本身有關，可記住；**芳香與等價的否決與「原子清單如何對到分子」有關，不記住**（同一個分子的另一種對應可能通過；分子只要有一種對應通過就是候選＝設計 §4 的存在性語意）。
+8. `noHCarbonNeighbors` 除了配對清單排除（對 `fixedH>0` 的碳），也對 flex／自由碳加列尾檢查（不得保留隱含 H），讓它與「鄰碳最終 H=0」的定義一致。
+9. v12 清單路徑**不做**舊 beam 補充與「放寬成只依分子式」（那兩項會加入不受 1H 約束的候選）；預算用完就標 INCOMPLETE。D10 退路（演算清單作廢或 0 個候選）改走 v1.1.7 彈性原子路徑（同樣套用強證據子結構，D9），預算至少保留四分之一；退回的結果 `complete=false`，原因代碼 `V12_CONSTRAINTS_FALLBACK`，診斷徽章文字「1H 約束未能套用（已退回）」。
+10. 新增 `IncompleteReason`：`INVENTORY_ALTERNATIVES_TRUNCATED`、`AROMATIC_TEMPLATE_LIMITED`（指令指定）、`V12_CONSTRAINTS_FALLBACK`（D10 需要一個原因代碼；指令未指定名稱）。`compositionPanelModel.ts` 的 `REASON_LABEL` 因型別需要而加了三筆佔位文字（只在新旗標開啟且該原因出現時才可能顯示）；**階段 4 面板審核時一併決定正式文字**。
+11. 一個公式的清單路徑在診斷中仍是一筆 `EnumerationRunDiagnostic`（面板與預算會計不變）；每個 (k, 額外 OH) 的 run 在 `run.v12.runs`。
+12. 芳香環模板的 `ch` 可到該模板所有外圍位置；全是 CH 的環（沒有取代位）只在它就是整個分子時保留。吡啶只在有 N 證據且分子式有 N 時加入。
+13. 軌道計算有搜尋節點安全上限（`DEFAULT_ORBIT_NODE_LIMIT`＝200,000；分子圖上從未達到）：超過時回報放棄、等價檢查**不排除任何分子**（輸出只會是超集，不會漏），次數記在 `leafCost.orbitGiveUps`。
+14. ALDEHYDE 與 IR：IR 涵蓋 1680–1740 cm-1（沿用 `irRangeCovered`）而沒有強 C=O 才刪除；涵蓋但強度全是未知時**保留**並註記。
+
+### 9.3 驗證結果（全部是程式行為，不是化學準確度）
+
+- **C1 暴力法對照**（`tests/v12/bruteForceV12.ts`，不 import `src/engines`；每個葉用 RDKit 解析、`[a]`、子結構比對，等價用「只在標籤相同的原子類別內試所有置換」判定軌道，不用回溯或顏色細化）：等價群（2、3 個原子，多群）、鄰接限制（含自由原子）、芳香旗標（苯、甲苯、吡啶）、必含子結構（含重疊、次數 2、無解）、池（對位／鄰位／間位環、單取代、雙環）、全部功能合用，各自單獨對照，**canonical SMILES 集合完全相同**；對稱剪枝開／關各比對一次，**輸出相同**。另有 3000 個種子中產生的隨機案例（≤ 9 個重原子），可比較 217 個（其中 109 個非空、110 個含等價或池），**全部相同**。`orbitPartition` 另以 300 個隨機標籤圖對照「試所有置換」，分割完全相同。
+- **C2 重疊正反對照**：舊語意（苯環片段＋C–O 片段，不重疊）C7H8O 有候選但**沒有任何含芳基 OH 的**，C6H6O 為 `FORMULA_ELEMENT_SHORTAGE`、0 個候選；新語意（清單＋重疊的必含 `c[OX2H]`）輸出包含對甲酚型與苯酚型目標。兩邊都在 `tests/v12/generatorV12.test.ts` 固定。
+- **C3 目標在輸出中**：對稱雙芳環（多重峰與已分裂兩版）、叔丁基酚（CDCl3 寬 OH；DMSO-d6 尖銳 OH 單峰）、乙基酯（含與不含強 C=O）、對二甲氧基苯、甲基萘型、萘酚型，目標皆在輸出中。DMSO 尖銳單峰的同一組訊號若改標 CDCl3（9.15 ppm 不在 0.5–6），目標不在輸出中（符合 D5 規則）。
+- **C4**：`AROMATIC_TEMPLATE_LIMITED`（環數上限 1、10 個芳香 CH）、`INVENTORY_ALTERNATIVES_TRUNCATED`（上限改 2）、D10（H 與積分不相容；必含腈但分子式無 N 而 0 個候選；大分子式退到舊 beam）各一個案例，皆 INCOMPLETE 並寫入診斷，退回者不標 COMPLETE。
+- **C5**：旗標 false 與 v1.1.8 黃金逐項相同（`legacyGolden.test.ts`）；既有測試預期值未改。
+- **C6 量測**（本機單次；`enumerationBudget.timeMs` 10 s；「步」＝搜尋步數）：
+
+| 案例 | 結果 | 讀法／片段組合 | 步數 | 葉 | 候選 | 耗時 |
+|---|---|---|---|---|---|---|
+| 對稱雙芳環（多重峰）C15H16 | INCOMPLETE（TIME_BUDGET） | 57／190 | 18,260,241 | 9,801 | 1,902 | 10.0 s |
+| 對稱雙芳環（已分裂）C15H16 | INCOMPLETE（TIME_BUDGET） | 57／190 | 15,799,331 | 7,652 | 44 | 10.0 s |
+| 叔丁基酚型 C10H14O | INCOMPLETE（TIME_BUDGET） | 12／20 | 7,136,179 | 31,456 | 1 | 9.4 s |
+| 乙基酯型 C9H10O2 | COMPLETE | 3／5 | 12,849 | 313 | 64 | 0.08 s |
+| 對二甲氧基苯型 C8H10O2 | COMPLETE | 6／8 | 585,744 | 2,330 | 250 | 1.0 s |
+| 甲基萘型 C11H10 | COMPLETE | 8／15 | 15,999 | 355 | 194 | 0.13 s |
+| 萘酚型 C10H8O | COMPLETE | 22／41 | 139,992 | 1,961 | 290 | 0.62 s |
+
+  葉端成本：每葉（RDKit 解析＋檢查）約 130–460 µs；精確軌道檢查每次約 75–230 µs（對稱雙芳環 6,838／7,127 次、共 1.0／1.7 s；對二甲氧基苯 2,280 次、0.17 s）。**三個 INCOMPLETE 的案例，時間全花在 VINYL_CH 與 ARO_CH 重疊區（4.5–7.5 ppm）的「烯基」讀法**：同樣的四個案例在**測試中關閉 VINYL 讀法**後全部 COMPLETE、各只有 1 個候選（含目標），46／46／707／707 步、≤ 4 ms。D5 要求重疊區兩種讀法都保留，所以預設仍保留；見 9.5 問題 1。
+
+### 9.4 已知限制
+
+- 呋喃、噻吩、吡咯等五員雜環不在環模板庫；芳香 CH 數無法由庫解釋時標 `AROMATIC_TEMPLATE_LIMITED`。NH2、NH3+ 等「一個 N 帶多個 H」的可交換基沒有表示（可交換原子每個 1 個 H）。
+- `k ≤ 3`、額外可交換 H ≤ 2（D8）；積分大於這個範圍的倍數關係會落到退路。
+- 整數比容差 0.15 沿用 `h1IntegralTolerance`；積分誤差過大時整組讀法可能都錯（設計 §8 已列）。
+- Worker 內的耗時未量測（以上是 Node）；位移類別數值是工程預設，未對照原書頁碼。
+- 吡啶模板、`requiredInFlexPath`、各常數都在 `v12Config.ts`，未校準。
+
+### 9.5 需要你決定的問題
+
+1. **VINYL 重疊讀法的成本。**（上表）要不要在階段 3 前先處理？可選做法：(a) 保持現狀，讓這類輸入回報 INCOMPLETE（TIME_BUDGET）；(b) 對 VINYL／ALDEHYDE 讀法強制 sp2（每個 CH 必須恰有一個雙鍵；醛基須為 `[CH]=O`）——我估計能剪掉一部分但**未量測**，不保證解決；(c) 在 4.5–7.5 的重疊區，已有環模板讀法能解釋全部 ARO 訊號時，對 VINYL 讀法設較小的步數上限；(d) 開啟 `SURGE_INSPIRED` 應變規則（階段 3 的 W5 本來就要開）後再量。
+2. 位移類別的混成與雜原子鄰接是否要強制（目前依設計不強制，會產生較多候選，不會漏掉目標）？
+3. D10 退路的結果仍套用強證據子結構（D9）。若你希望退路＝純 v1.1.7（不套用），請告訴我。
+4. 整數比多重讀法（9.2 第 1 點）是我加的；若你要嚴格只用最簡比，把 `v12Config.inventoryRatioReadings` 改成 `'SIMPLEST'`（預設 `'ALL'`）。
+5. `REASON_LABEL` 三筆佔位文字與 `V12_CONSTRAINTS_FALLBACK` 名稱，等階段 4 面板設計一併決定。

@@ -39,6 +39,7 @@ export function createExhaustiveGenerator(legacy: StructureGenerator): Structure
         const req = request.sharedPool && attempt ? {...request, budget: {...request.budget, maxStates: Math.max(0, request.budget.maxStates - attempt.stats.visited), timeMs: Math.max(0, request.budget.timeMs - attempt.stats.elapsedMs)}} : request;
         const search = await legacy.generateStructures(req);
         const run = legacyRun(formula, reason, notes);
+        if (ext?.v12) { run.v12 = ext.v12; if (ext.v12.path === 'FALLBACK') run.incompleteReasons = ['V12_CONSTRAINTS_FALLBACK']; }
         if (attempt) { run.status = attempt.status; run.incompleteReasons = attempt.incompleteReasons; run.visited = attempt.stats.visited; run.leaves = attempt.stats.leaves; run.elapsedMs = attempt.stats.elapsedMs; }
         const origins: Record<string, CandidateOrigin> = {};
         for (const s of search.smiles) origins[s] = {source: 'LEGACY', relaxed: false};

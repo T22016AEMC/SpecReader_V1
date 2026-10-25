@@ -182,6 +182,8 @@ export interface LeafCost {
   orbitChecks: number;
   orbitMs: number;
   requiredMatches: number;
+  /** Orbit computations that hit the search-node safety limit (the equivalence check then excluded nothing). */
+  orbitGiveUps?: number;
 }
 
 // ------------------------------------------------------------------------------------------------ stage 2 diagnostics

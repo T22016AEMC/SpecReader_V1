@@ -51,8 +51,13 @@ function refineTogether(G: Prepared, ca: number[], cb: number[]): boolean {
   }
 }
 
-/** An automorphism φ with φ(u) = v, or null. Colourings are modified in place (callers pass copies). */
-function findMapping(G: Prepared, ca: number[], cb: number[]): number[] | null {
+class SearchLimit extends Error {}
+/** Shared search-node counter of one orbitPartition call (a safety limit; molecular graphs stay far below it). */
+interface Budget {left: number}
+
+/** An automorphism φ with φ(u) = v, or null. Colourings are modified in place (callers pass copies). Throws SearchLimit when the budget is spent. */
+function findMapping(G: Prepared, ca: number[], cb: number[], budget: Budget): number[] | null {
+  if (--budget.left < 0) throw new SearchLimit();
   if (!refineTogether(G, ca, cb)) return null;
   const n = G.n;
   const sizes = new Map<number, number>();
@@ -77,14 +82,21 @@ function findMapping(G: Prepared, ca: number[], cb: number[]): number[] | null {
     if (cb[y] !== target) continue;
     const a2 = ca.slice(), b2 = cb.slice();
     a2[x] = fresh; b2[y] = fresh;
-    const phi = findMapping(G, a2, b2);
+    const phi = findMapping(G, a2, b2, budget);
     if (phi) return phi;
   }
   return null;
 }
 
-/** orbitId[v] = smallest vertex index in the orbit of v. */
-export function orbitPartition(g: AutGraph, interest?: number[]): number[] {
+export const DEFAULT_ORBIT_NODE_LIMIT = 200_000;
+/**
+ * orbitId[v] = smallest vertex index in the orbit of v. Exact; only when the search needs more than `nodeLimit` nodes (never seen on a
+ * molecular graph, but a worst-case guard for the worker thread) it gives up and returns null — callers then must not exclude anything.
+ */
+export function orbitPartition(g: AutGraph, interest?: number[], nodeLimit = DEFAULT_ORBIT_NODE_LIMIT): number[] | null {
+  try { return orbitPartitionExact(g, interest, {left: nodeLimit}); } catch (e) { if (e instanceof SearchLimit) return null; throw e; }
+}
+function orbitPartitionExact(g: AutGraph, interest: number[] | undefined, budget: Budget): number[] {
   const G = prepare(g);
   const n = g.n;
   const uf = Array.from({length: n}, (_, i) => i);
@@ -100,7 +112,7 @@ export function orbitPartition(g: AutGraph, interest?: number[]): number[] {
       const ca = base.slice(), cb = base.slice();
       const fresh = Math.max(...base) + 1;
       ca[u] = fresh; cb[v] = fresh;
-      const phi = findMapping(G, ca, cb);
+      const phi = findMapping(G, ca, cb, budget);
       if (phi) for (let i = 0; i < n; i++) union(i, phi[i]);
     }
   }

@@ -50,7 +50,7 @@ export function analyseLeaf(P: Problem, newBonds: NewBond[], queries: LeafQuerie
     if (needOrbits) {
       const t2 = now();
       cost.orbitChecks++;
-      const ok = equivalenceHolds(P, newBonds, aromaticAtoms!, mol.aromaticBonds());
+      const ok = equivalenceHolds(P, newBonds, aromaticAtoms!, mol.aromaticBonds(), cost);
       cost.orbitMs += now() - t2;
       if (!ok) { cost.checksMs += now() - t1; return {kind: 'rejected', smiles, stage: 'equivalence', remember: false}; }
     }
@@ -60,7 +60,7 @@ export function analyseLeaf(P: Problem, newBonds: NewBond[], queries: LeafQuerie
 }
 
 /** Equivalence groups lie in one orbit, and the demands of every pool can be packed into the pool's orbits. */
-function equivalenceHolds(P: Problem, newBonds: NewBond[], aromaticAtoms: Uint8Array, aromaticBonds: [number, number][]): boolean {
+function equivalenceHolds(P: Problem, newBonds: NewBond[], aromaticAtoms: Uint8Array, aromaticBonds: [number, number][], cost: LeafCost): boolean {
   const n = P.n;
   const degNew = new Array<number>(n).fill(0);
   for (const b of newBonds) { degNew[b.a] += b.order; degNew[b.b] += b.order; }
@@ -77,6 +77,8 @@ function equivalenceHolds(P: Problem, newBonds: NewBond[], aromaticAtoms: Uint8A
   for (const b of [...P.fixedBonds, ...newBonds]) edges.push({a: b.a, b: b.b, label: arom.has(Math.min(b.a, b.b) * n + Math.max(b.a, b.b)) ? AROMATIC_BOND_LABEL : b.order});
   const interest = [...new Set([...P.eqGroups.flatMap(g => g.atoms), ...P.pools.flatMap(p => p.atoms)])];
   const orbit = orbitPartition({n, vertexLabel, edges}, interest);
+  // Search limit reached: nothing is excluded (the output can only be a superset, never miss a molecule).
+  if (!orbit) { cost.orbitGiveUps = (cost.orbitGiveUps ?? 0) + 1; return true; }
   for (const g of P.eqGroups) if (!sameOrbit(orbit, g.atoms)) return false;
   for (const pool of P.pools) {
     const sizes = new Map<number, number>();

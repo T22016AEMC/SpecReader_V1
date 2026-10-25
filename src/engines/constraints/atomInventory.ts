@@ -206,7 +206,7 @@ export function buildAtomInventory(input: AtomInventoryInput): AtomInventoryResu
   // (ratio, k, e) readings with H − e = k·S; readings that give the same hydrogens per signal and the same e are one reading.
   const kCombinations: InventoryCombination[] = [];
   const seenReading = new Set<string>();
-  for (const ratio of admissibleRatios(signals.map(s => s.relativeIntegral!))) {
+  for (const ratio of cfg.inventoryRatioReadings === 'SIMPLEST' ? [simplest] : admissibleRatios(signals.map(s => s.relativeIntegral!))) {
     const S = ratio.reduce((a, b) => a + b, 0);
     for (let e = 0; e <= cfg.maxExtraExchangeable; e++) for (let k = 1; k <= cfg.maxK; k++) {
       if (H - e !== k * S) continue;
