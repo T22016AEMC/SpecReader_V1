@@ -9,7 +9,7 @@ import RDKitModuleFactory from '@rdkit/rdkit';
  * A molecule is an output when at least one labelling of it passes (the atom list is matched to the molecule in some way).
  * Only usable for ≤ 9 heavy atoms.
  */
-export interface BFAtom {element: string; fixedH?: number; charge?: number; open?: boolean; flex?: boolean; group?: string; aromatic?: boolean; noHCarbonNeighbors?: boolean}
+export interface BFAtom {element: string; fixedH?: number; charge?: number; open?: boolean; flex?: boolean; group?: string; aromatic?: boolean; noHCarbonNeighbors?: boolean; alkeneCH?: boolean}
 export interface BFFragment {atoms: BFAtom[]; bonds: {a: number; b: number; order: number}[]; count?: number}
 export interface BFSet {
   fragments: BFFragment[];
@@ -58,7 +58,7 @@ function orbitsByPermutation(n: number, label: string[], bondLabel: Map<number, 
 export async function bruteForceV12(formula: Record<string, number>, set: BFSet): Promise<Set<string>> {
   const R = await rd();
   const el: string[] = [], charge: number[] = [], fixedH: number[] = [], room: number[] = [], must: boolean[] = [], free: boolean[] = [];
-  const group: (string | null)[] = [], arom: boolean[] = [], noHC: boolean[] = [];
+  const group: (string | null)[] = [], arom: boolean[] = [], noHC: boolean[] = [], alk: boolean[] = [];
   const fixedBonds: [number, number, number][] = [];
   const used: Record<string, number> = {};
   let hUsed = 0;
@@ -71,7 +71,7 @@ export async function bruteForceV12(formula: Record<string, number>, set: BFSet)
         const q = a.charge ?? 0, val = q === 0 ? VALENCE[a.element] : CHARGED[a.element][q];
         el.push(a.element); charge.push(q); fixedH.push(a.fixedH ?? 0);
         room.push(a.flex ? val - sum[i] : a.open ? val - sum[i] - (a.fixedH ?? 0) : 0); must.push(Boolean(a.open)); free.push(Boolean(a.flex));
-        group.push(a.group ?? null); arom.push(Boolean(a.aromatic)); noHC.push(Boolean(a.noHCarbonNeighbors));
+        group.push(a.group ?? null); arom.push(Boolean(a.aromatic)); noHC.push(Boolean(a.noHCarbonNeighbors)); alk.push(Boolean(a.alkeneCH));
         used[a.element] = (used[a.element] ?? 0) + 1; hUsed += a.fixedH ?? 0;
       });
       for (const b of f.bonds) fixedBonds.push([base + b.a, base + b.b, b.order]);
@@ -79,7 +79,7 @@ export async function bruteForceV12(formula: Record<string, number>, set: BFSet)
   }
   for (const [e, count] of Object.entries(formula)) {
     if (e === 'H') continue;
-    for (let k = 0; k < count - (used[e] ?? 0); k++) { el.push(e); charge.push(0); fixedH.push(0); room.push(VALENCE[e]); must.push(false); free.push(true); group.push(null); arom.push(false); noHC.push(false); }
+    for (let k = 0; k < count - (used[e] ?? 0); k++) { el.push(e); charge.push(0); fixedH.push(0); room.push(VALENCE[e]); must.push(false); free.push(true); group.push(null); arom.push(false); noHC.push(false); alk.push(false); }
   }
   const hFree = (formula.H ?? 0) - hUsed;
   const n = el.length;
@@ -127,9 +127,21 @@ export async function bruteForceV12(formula: Record<string, number>, set: BFSet)
       for (const r of queries) if (matchesOf(mol, r.q).length < r.min) return;
       const aromaticAtom = new Set<number>(matchesOf(mol, qAtom).map(m => m.atoms[0]));
       for (let i = 0; i < n; i++) if (arom[i] && !aromaticAtom.has(i)) return;
-      if (eqAtoms.some(a => a.length > 1) || pools.some(p => p.demands.length)) {
-        const aromaticBond = new Set<number>();
+      const aromaticBond = new Set<number>();
+      if (alk.some(Boolean) || eqAtoms.some(a => a.length > 1) || pools.some(p => p.demands.length)) {
         for (const m of matchesOf(mol, qBond)) aromaticBond.add(Math.min(...m.atoms) * n + Math.max(...m.atoms));
+      }
+      // vinyl CH, stated on the final molecule: exactly one double bond, no triple bond, the partner is carbon, and the bond is not aromatic
+      for (let i = 0; i < n; i++) {
+        if (!alk[i]) continue;
+        const mine = bonds.filter(([a, b]) => a === i || b === i);
+        const doubles = mine.filter(([, , o]) => o === 2), triples = mine.filter(([, , o]) => o === 3);
+        if (doubles.length !== 1 || triples.length) return;
+        const [a, b] = doubles[0];
+        const partner = a === i ? b : a;
+        if (el[partner] !== 'C' || aromaticBond.has(Math.min(a, b) * n + Math.max(a, b))) return;
+      }
+      if (eqAtoms.some(a => a.length > 1) || pools.some(p => p.demands.length)) {
         const label = el.map((e, i) => `${e}|${charge[i]}|${hCount(i)}|${aromaticAtom.has(i) ? 1 : 0}`);
         const bondLabel = new Map<number, string>();
         for (const [a, b, o] of bonds) { const key = Math.min(a, b) * n + Math.max(a, b); bondLabel.set(key, aromaticBond.has(key) ? 'ar' : String(o)); }

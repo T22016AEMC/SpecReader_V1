@@ -4,6 +4,9 @@ import {buildAtomInventory} from '../constraints/atomInventory';
 import {inventoryToFragmentSets, type InventorySetInfo} from '../constraints/inventoryAdapter';
 import {requiredFromEvidence} from '../constraints/requiredSubstructures';
 import {V12_CONFIG} from '../constraints/v12Config';
+
+/** v1.2 (W5): the pipeline applies the strain profile of the v1.2 layer while the flag is on. */
+const pipelineStrain = (v12: boolean) => (v12 ? V12_CONFIG.pipelineStrainProfile : CFG.pipelineStrainProfile);
 import {h1SignalsFromObservations, irAldehydeContext} from '../constraints/v12Evidence';
 import {parseFormula} from './problem';
 import {adaptLocalStructures} from './adapter';
@@ -62,7 +65,7 @@ export function createExhaustiveGenerator(legacy: StructureGenerator): Structure
         // By default the existing downstream gate is the only plausibility filter (it rejects and records); with
         // pipelineEarlyPlausibilityPrune the monotone rules (no O–O without a user formula, no N–O without N–O evidence) prune inside the
         // search and the other rules still stay with the downstream gate. The evidence also ranks such candidates last when the cap applies.
-        forbid: {...(request.plausibility && CFG.pipelineEarlyPlausibilityPrune ? {plausibility: request.plausibility, plausibilityLeaf: false} : {}), strain: CFG.pipelineStrainProfile},
+        forbid: {...(request.plausibility && CFG.pipelineEarlyPlausibilityPrune ? {plausibility: request.plausibility, plausibilityLeaf: false} : {}), strain: pipelineStrain(Boolean(ext?.v12))},
         budget: {
           timeMs: eb.timeMs, maxStates: eb.maxStates, maxCandidates: eb.maxCandidates ?? CFG.analysis.maxCandidatesPerFormula, shouldCancel: request.budget.shouldCancel,
           onProgress: request.budget.onProgress ? p => request.budget.onProgress!({visited: p.visited, candidateCount: p.candidates, elapsedMs: p.elapsedMs, frontier: 0}) : undefined,
@@ -95,7 +98,7 @@ export function createExhaustiveGenerator(legacy: StructureGenerator): Structure
       let relaxed: EnumerationResult | null = null;
       if (!smiles.length && finished && realReasons.length === 0) {
         if (heavy > CFG.adapter.maxHeavyAtomsWithoutFragments) return fallback(`所有片段讀法都沒有符合分子式的分子，而且重原子數 ${heavy} 太大，無法放寬成純分子式窮舉`, adapted.notes, result);
-        relaxed = await enumerateStructures({formula: parsed.counts, forbid: {strain: CFG.pipelineStrainProfile, ...(request.plausibility && CFG.pipelineEarlyPlausibilityPrune ? {plausibility: request.plausibility, plausibilityLeaf: false} : {})}, budget: {timeMs: eb.timeMs, maxStates: eb.maxStates, maxCandidates: eb.maxCandidates ?? CFG.analysis.maxCandidatesPerFormula, shouldCancel: request.budget.shouldCancel}});
+        relaxed = await enumerateStructures({formula: parsed.counts, forbid: {strain: pipelineStrain(Boolean(ext?.v12)), ...(request.plausibility && CFG.pipelineEarlyPlausibilityPrune ? {plausibility: request.plausibility, plausibilityLeaf: false} : {})}, budget: {timeMs: eb.timeMs, maxStates: eb.maxStates, maxCandidates: eb.maxCandidates ?? CFG.analysis.maxCandidatesPerFormula, shouldCancel: request.budget.shouldCancel}});
         for (const c of relaxed.candidates) { smiles.push(c.smiles); origins[c.smiles] = {source: 'ENUMERATOR', relaxed: true}; }
         run.relaxedToFormulaOnly = {candidates: relaxed.candidates.length, complete: relaxed.status === 'COMPLETE'};
         run.notes = [...run.notes, `所有片段讀法都沒有符合分子式的分子（片段與分子式矛盾）：放寬成只依分子式窮舉，得到 ${relaxed.candidates.length} 個候選（${relaxed.status === 'COMPLETE' ? 'COMPLETE' : 'INCOMPLETE'}）`];
@@ -189,9 +192,12 @@ async function generateWithInventory(request: StructureGenerationRequest, exhaus
     sets.push(...adapted.sets); Object.assign(info, adapted.info);
     patternTruncated ||= adapted.truncated;
   }
+  // Q1: inside the run the readings without a vinyl (alkene CH) reading go first; the vinyl readings use what is left of the budget.
+  const vinylSet = (id: string) => Boolean(info[id]?.hasVinyl);
+  const ordered = [...sets.filter(x => !vinylSet(x.id)), ...sets.filter(x => vinylSet(x.id))];
   const result = await enumerateStructures({
-    formula: parsed.counts, alternatives: sets,
-    forbid: {...(request.plausibility && CFG.pipelineEarlyPlausibilityPrune ? {plausibility: request.plausibility, plausibilityLeaf: false} : {}), strain: CFG.pipelineStrainProfile},
+    formula: parsed.counts, alternatives: ordered,
+    forbid: {...(request.plausibility && CFG.pipelineEarlyPlausibilityPrune ? {plausibility: request.plausibility, plausibilityLeaf: false} : {}), strain: pipelineStrain(true)},
     symmetryPruning: V12_CONFIG.symmetryPruning,
     budget: {
       timeMs: eb.timeMs, maxStates: eb.maxStates, maxCandidates: eb.maxCandidates ?? CFG.analysis.maxCandidatesPerFormula, shouldCancel: request.budget.shouldCancel,
@@ -216,13 +222,21 @@ async function generateWithInventory(request: StructureGenerationRequest, exhaus
   }
   const incompatibleSets = result.sets.filter(x => x.error && FORMULA_INCOMPATIBLE.includes(x.error.code));
   const otherErrors = result.sets.filter(x => x.error && !FORMULA_INCOMPATIBLE.includes(x.error.code));
-  const realReasons = result.incompleteReasons.filter(r => r !== 'INVALID_ALTERNATIVE_SET');
+  // Budget reasons that come only from vinyl readings are reported as VINYL_READINGS_BUDGET; the readings without a vinyl reading stay as they are.
+  const BUDGET: IncompleteReason[] = ['TIME_BUDGET', 'STATE_BUDGET', 'CANDIDATE_LIMIT', 'ALTERNATIVE_SET_NOT_RUN'];
+  const plainReasons = new Set<IncompleteReason>(result.sets.filter(x => !vinylSet(x.id)).flatMap(x => x.incompleteReasons));
+  const vinylBudget = result.sets.some(x => vinylSet(x.id) && x.incompleteReasons.some(r => BUDGET.includes(r)));
+  const realReasons: IncompleteReason[] = [...new Set<IncompleteReason>([...result.incompleteReasons.filter(r => r !== 'INVALID_ALTERNATIVE_SET' && (!BUDGET.includes(r) || plainReasons.has(r))), ...(vinylBudget ? ['VINYL_READINGS_BUDGET' as const] : [])])];
   const extraReasons: IncompleteReason[] = [...inv.incompleteReasons, ...(patternTruncated && !inv.incompleteReasons.includes('INVENTORY_ALTERNATIVES_TRUNCATED') ? ['INVENTORY_ALTERNATIVES_TRUNCATED' as const] : [])];
   const incompleteReasons = [...new Set<IncompleteReason>([...realReasons, ...(otherErrors.length ? ['INVALID_ALTERNATIVE_SET' as const] : []), ...extraReasons])];
   const complete = incompleteReasons.length === 0;
   const smiles = result.candidates.map(c => c.smiles);
   const origins: Record<string, CandidateOrigin> = {};
-  for (const x of smiles) origins[x] = {source: 'ENUMERATOR', relaxed: false};
+  for (const c of result.candidates) {
+    const seen = new Set<string>(), from: {k: number; extraExchangeable: number}[] = [];
+    for (const sid of c.alternativeSetIds) { const i = info[sid]; if (i && !seen.has(`${i.k}/${i.extraExchangeable}`)) { seen.add(`${i.k}/${i.extraExchangeable}`); from.push({k: i.k, extraExchangeable: i.extraExchangeable}); } }
+    origins[c.smiles] = {source: 'ENUMERATOR', relaxed: false, v12: from};
+  }
   const run: EnumerationRunDiagnostic = {
     used: true, fallbackReason: null, formula, status: result.status, complete, incompleteReasons,
     readings: result.sets.map(x => ({id: x.id, localIds: [], complete: x.complete, error: x.error ? `${x.error.code}：${x.error.message}` : null, newCandidates: x.newCandidates})),
@@ -237,7 +251,7 @@ async function generateWithInventory(request: StructureGenerationRequest, exhaus
     derivations[c.smiles] = {localStructureIds: [], operations: [`1H 原子清單窮舉（k=${first?.k}，額外可交換 H=${first?.extraExchangeable}${first?.patternLabel ? `；${first.patternLabel}` : ''}；讀法 ${c.alternativeSetIds.join('、')}）`], observationIds: h1Ids};
   }
   const reasonsMap: Record<string, SearchTermination> = {CANCELLED: 'CANCELLED', TIME_BUDGET: 'TIME_BUDGET', STATE_BUDGET: 'STATE_BUDGET', CANDIDATE_LIMIT: 'OUTPUT_BUDGET'};
-  const firstStop = (['CANCELLED', 'TIME_BUDGET', 'STATE_BUDGET', 'CANDIDATE_LIMIT'] as const).find(r => incompleteReasons.includes(r));
+  const firstStop = (['CANCELLED', 'TIME_BUDGET', 'STATE_BUDGET', 'CANDIDATE_LIMIT'] as const).find(r => result.incompleteReasons.includes(r));
   return {
     smiles, status: 'BOUNDED', visited: result.stats.visited, termination: firstStop ? reasonsMap[firstStop] : 'GRAMMAR_EXHAUSTED', complete,
     note: `1H 原子清單窮舉：${result.stats.visited} 步；${complete ? 'COMPLETE（在目前分子式與 1H 約束下所有分支走完）' : `INCOMPLETE（${incompleteReasons.join('、')}）`}；${smiles.length} 個去重候選`,

@@ -89,8 +89,8 @@ export async function enumerateStructures(req: EnumerationRequest): Promise<Enum
         if (verdict.kind === 'seenRejected') return;
         smiles = verdict.smiles;
         if (verdict.kind === 'rejected') {
-          const v12 = (rejected.v12 ??= {aromaticFailed: 0, requiredFailed: 0, equivalenceFailed: 0});
-          if (verdict.stage === 'aromatic') v12.aromaticFailed++; else if (verdict.stage === 'required') v12.requiredFailed++; else v12.equivalenceFailed++;
+          const v12 = (rejected.v12 ??= {aromaticFailed: 0, requiredFailed: 0, equivalenceFailed: 0, alkeneFailed: 0});
+          if (verdict.stage === 'aromatic') v12.aromaticFailed++; else if (verdict.stage === 'required') v12.requiredFailed++; else if (verdict.stage === 'alkene') v12.alkeneFailed++; else v12.equivalenceFailed++;
           if (verdict.remember) remember();
           return;
         }

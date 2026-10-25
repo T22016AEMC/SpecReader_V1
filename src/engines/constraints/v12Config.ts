@@ -76,6 +76,11 @@ export const V12_CONFIG = {
   inventoryRatioReadings: 'ALL' as 'ALL' | 'SIMPLEST',
   /** Order in which hydrogens per atom are preferred when an integral can be split in several ways (CH3 before CH2 before CH). */
   hPerAtomPreference: [3, 2, 1],
+  /**
+   * Q1 (vinyl fix): a VINYL_CH reading that no other class shares must be a real alkene CH: the atom carries exactly one non-aromatic C=C double
+   * bond (FragmentAtomSpec.alkeneCH). Readings that share their atoms with an sp3 class (e.g. O_CH at 4.5–5.0 ppm) stay unconstrained.
+   */
+  vinylRequiresAlkene: true as boolean,
   /** Singlet rule: the signal is a singlet, not broad, and every other signal is farther away than this (ppm). */
   singletOverlapPpm: 0.1,
 
@@ -156,6 +161,31 @@ export const V12_CONFIG = {
   /** Lex-leader pruning between interchangeable atoms of identical signature. Only the output order of work changes, never the output set. */
   symmetryPruning: true as boolean,
 
+  // ---------------------------------------------------------------- scoring (W4), plausibility (W5), IR intensity (W6)
+  /** ENGINEERING DEFAULTS, NOT CALIBRATED. The score stays UNCALIBRATED_COMPATIBILITY. */
+  scoring: {
+    /** Weight of a predicted 1H environment that no observation was matched to (compatibility 0), like an unmatched observation. */
+    unmatchedPredictedWeight: 0.8,
+    /** Multiplier for an unmatched predicted environment that is exchangeable (OH/NH may be invisible). */
+    exchangeableUnmatchedFactor: 0.25,
+    /** Two predicted environments closer than this (ppm) whose combined H matches one observation count as one overlapped signal. */
+    overlapShiftPpm: 0.1,
+    /** Relative tolerance of "the observation integral equals the combined H of the overlapped environments". */
+    overlapIntegralTolerance: 0.15,
+    /** Multiplier when the 1H coverage is not confirmed complete (the missing signal may simply not have been listed). */
+    incompleteCoverageUnmatchedFactor: 0.5,
+    /** Environment count: compatibility = exp(−(Δ/σ)²), Δ = max(0, predicted − observed − overlapped). */
+    envCountSigma: 1.0,
+    envCountWeight: 0.6,
+    /** Predicted versus observed non-exchangeable H total (observed integrals converted with the matched integral scale). */
+    integralTotalWeight: 0.6,
+    integralTotalSigmaFraction: 0.1,
+    integralTotalSigmaMin: 1,
+    /** Weight factor for every spectrum that was digitized from an image (v1.1.8: NMR/MS ×0.5, IR 1). */
+    imageSourceWeightFactor: 1.0,
+  },
+  /** W5: strain profile the pipeline applies while the flag is on (v1.1.8 behaviour: none). */
+  pipelineStrainProfile: 'SURGE_INSPIRED' as 'SURGE_INSPIRED' | null,
   // ---------------------------------------------------------------- D10 fallback
   fallbackBadge: '1H 約束未能套用（已退回）',
 };

@@ -74,7 +74,7 @@ export const REASON_LABEL: Record<IncompleteReason, string> = {
   TIME_BUDGET: '時間預算', STATE_BUDGET: '步數預算', CANDIDATE_LIMIT: '候選上限', CANCELLED: '已取消',
   INVALID_ALTERNATIVE_SET: '有讀法無法表達', ALTERNATIVE_SET_NOT_RUN: '有讀法未執行', READINGS_TRUNCATED: '讀法過多被截斷（只列舉前 ' + CFG.adapter.maxAlternativeSets + ' 組）',
   // v1.2 (only produced when useV12Constraints is on; wording is a placeholder until the stage-4 panel review)
-  INVENTORY_ALTERNATIVES_TRUNCATED: '1H 原子清單的替代解讀過多被截斷', AROMATIC_TEMPLATE_LIMITED: '芳香 CH 超出環模板庫', V12_CONSTRAINTS_FALLBACK: '1H 約束未能套用（已退回）',
+  INVENTORY_ALTERNATIVES_TRUNCATED: '1H 原子清單的替代解讀過多被截斷', AROMATIC_TEMPLATE_LIMITED: '芳香 CH 超出環模板庫', V12_CONSTRAINTS_FALLBACK: '1H 約束未能套用（已退回）', VINYL_READINGS_BUDGET: '含烯基的讀法預算內未跑完',
 };
 const NITROGEN_LABEL: Record<string, string> = {EVIDENCE: '有 N 專屬證據', EVEN_ION_ONLY: '只有偶電子離子（不足）', NONE: '沒有 N 專屬證據'};
 export const FIXED_LIMITATIONS = [

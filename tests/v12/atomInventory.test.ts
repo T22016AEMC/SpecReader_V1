@@ -140,6 +140,40 @@ describe('shift classes (D5)', () => {
   });
 });
 
+describe('vinyl (alkene CH) readings', () => {
+  const alkeneOf = (r: ReturnType<typeof buildAtomInventory>, g: number) => r.alternatives.map(a => [a.groups[g].shiftClasses.join('/'), a.groups[g].alkene] as const);
+  it('a vinyl reading that no sp3 class shares is constrained (5.8 ppm: ARO is out of range, VINYL only)', () => {
+    const r = buildAtomInventory(input([sig('a', 5.8, 2, 'd'), sig('b', 1.7, 3, 's')], {C: 6, H: 5, O: 0}));
+    expect(r.alternatives.length).toBeGreaterThan(0);
+    for (const a of r.alternatives) { expect(a.groups[0].shiftClasses).toEqual(['VINYL_CH']); expect(a.groups[0].alkene).toBe(true); expect(a.hasVinyl).toBe(true); }
+  });
+  it('a reading shared with O_CH (4.8 ppm) stays unconstrained, because the unconstrained reading contains every alkene one', () => {
+    const r = buildAtomInventory(input([sig('a', 4.8, 2, 'd'), sig('b', 1.7, 3, 's')], {C: 6, H: 5, O: 1}));
+    const first = alkeneOf(r, 0);
+    expect(first.some(([c, alk]) => c.includes('O_CH') && c.includes('VINYL_CH') && alk === false)).toBe(true);
+    expect(first.every(([c, alk]) => !(c.includes('O_CH') && alk))).toBe(true);
+  });
+  it('aromatic readings are not vinyl; a 7.2 ppm signal has both the unconstrained-ring reading and the constrained vinyl reading', () => {
+    const r = buildAtomInventory(input([sig('a', 7.2, 5, 'm'), sig('b', 2.3, 3, 's')], {C: 8, H: 8}));
+    expect(r.alternatives.some(a => a.groups[0].aromatic && !a.hasVinyl)).toBe(true);
+    expect(r.alternatives.some(a => a.groups[0].alkene && a.hasVinyl)).toBe(true);
+  });
+  it('vinylRequiresAlkene = false switches the constraint off', () => {
+    V12_CONFIG.vinylRequiresAlkene = false;
+    try {
+      const r = buildAtomInventory(input([sig('a', 5.8, 2, 'd'), sig('b', 1.7, 3, 's')], {C: 6, H: 5}));
+      expect(r.alternatives.every(a => !a.hasVinyl)).toBe(true);
+    } finally { V12_CONFIG.vinylRequiresAlkene = true; }
+  });
+  it('the adapter sets alkeneCH on the vinyl atoms and keeps them apart from plain atoms of the same H count', () => {
+    const r = buildAtomInventory(input([sig('a', 5.8, 2, 'd'), sig('b', 1.7, 3, 's')], {C: 6, H: 5}));
+    const alt = r.alternatives.find(a => a.hasVinyl && a.groups[0].hPerAtom === 1)!;
+    const sets = inventoryToFragmentSets(alt);
+    expect(sets.sets[0].fragments.some(f => f.atoms[0].alkeneCH === true && f.atoms[0].fixedH === 1)).toBe(true);
+    expect(Object.values(sets.info).every(i => i.hasVinyl)).toBe(true);
+  });
+});
+
 describe('extra exchangeable H (OH/NH not in the integrals) 0–2', () => {
   const three = [sig('a', 2.3, 3, 's'), sig('b', 7.1, 2, 'd'), sig('c', 6.9, 2, 'd')];   // S = 7
   it('one missing OH: H = S + 1', () => {

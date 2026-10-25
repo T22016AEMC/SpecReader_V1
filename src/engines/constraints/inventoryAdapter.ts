@@ -8,6 +8,8 @@ export interface InventorySetInfo {
   extraExchangeable: number;
   /** Which substitution patterns of the rings this set stands for, e.g. "benzene[1,4]". */
   patternLabel: string;
+  /** The alternative holds a constrained vinyl reading. */
+  hasVinyl: boolean;
 }
 export interface AdaptedInventory {
   sets: FragmentAlternativeSet[];
@@ -60,24 +62,24 @@ export function inventoryToFragmentSets(alt: InventoryAlternative, options: {req
   const frags: FragmentSpec[] = [];
   // Atoms of identical kind (element, H, flags) are interchangeable whatever signal they belong to, so they share one fragment (count = n).
   // A group that must be topologically equivalent keeps its own fragment and label.
-  const atomKinds = new Map<string, {element: string; h: number; count: number; group?: string; noHC: boolean}>();
+  const atomKinds = new Map<string, {element: string; h: number; count: number; group?: string; noHC: boolean; alkene: boolean}>();
   const equivalentGroups: string[] = [];
-  const addKind = (element: string, h: number, count: number, noHC = false, group?: string) => {
-    const key = `${element}|${h}${noHC ? '|noHC' : ''}${group ? `|${group}` : ''}`;
+  const addKind = (element: string, h: number, count: number, noHC = false, group?: string, alkene = false) => {
+    const key = `${element}|${h}${noHC ? '|noHC' : ''}${alkene ? '|alkene' : ''}${group ? `|${group}` : ''}`;
     const kind = atomKinds.get(key);
-    if (kind) kind.count += count; else atomKinds.set(key, {element, h, count, noHC, ...(group ? {group} : {})});
+    if (kind) kind.count += count; else atomKinds.set(key, {element, h, count, noHC, alkene, ...(group ? {group} : {})});
   };
   const demands: number[] = [];
   for (const g of alt.groups) {
     if (g.aromatic) { if (g.equivalent && g.atomCount >= 2) demands.push(g.atomCount); continue; }
     const group = g.equivalent && g.atomCount >= 2 ? g.groupId : undefined;
     if (group) equivalentGroups.push(group);
-    addKind(g.element, g.hPerAtom, g.atomCount, g.singletNoHNeighbors, group);
+    addKind(g.element, g.hPerAtom, g.atomCount, g.singletNoHNeighbors, group, g.alkene);
   }
   if (alt.extraExchangeable > 0 && alt.extraElement) addKind(alt.extraElement, 1, alt.extraExchangeable);
   for (const [el, n] of Object.entries(alt.zeroHAtoms)) addKind(el, 0, n);
   for (const [key, kind] of atomKinds) {
-    const atom: FragmentAtomSpec = {element: kind.element, fixedH: kind.h, open: true, ...(kind.group ? {group: kind.group} : {}), ...(kind.noHC ? {noHCarbonNeighbors: true} : {})};
+    const atom: FragmentAtomSpec = {element: kind.element, fixedH: kind.h, open: true, ...(kind.group ? {group: kind.group} : {}), ...(kind.noHC ? {noHCarbonNeighbors: true} : {}), ...(kind.alkene ? {alkeneCH: true} : {})};
     frags.push({id: `atoms:${key}`, count: kind.count, atoms: [atom], bonds: []});
   }
   const pooled = demands.length > 0;
@@ -112,7 +114,7 @@ export function inventoryToFragmentSets(alt: InventoryAlternative, options: {req
     });
     const id = alt.rings.rings.length ? `${alt.id}/p${sets.length + 1}` : alt.id;
     sets.push({id, fragments: [...frags, ...ringFrags], ...(equivalentGroups.length ? {equivalentGroups: [...equivalentGroups]} : {}), ...(pooled ? {equivalencePools: [{group: AROMATIC_CH_POOL, demands: [...demands]}]} : {}), ...(options.required?.length ? {required: options.required.map(r => ({...r}))} : {})});
-    info[id] = {alternativeId: alt.id, k: alt.k, extraExchangeable: alt.extraExchangeable, patternLabel: labels.join(' + ')};
+    info[id] = {alternativeId: alt.id, k: alt.k, extraExchangeable: alt.extraExchangeable, patternLabel: labels.join(' + '), hasVinyl: alt.hasVinyl};
     // odometer over the classes
     for (let c = classList.length - 1; c >= 0; c--) { if (++idx[c] < perClass[c].length) break; idx[c] = 0; }
   }

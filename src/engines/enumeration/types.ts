@@ -27,6 +27,11 @@ export interface FragmentAtomSpec {
   aromatic?: boolean;
   /** v1.2: none of the carbon atoms bound to this atom by a NEW bond may carry hydrogen (singlet rule). Pairs with such carbons are never generated. */
   noHCarbonNeighbors?: boolean;
+  /**
+   * v1.2 (vinyl CH / =CH2): the atom must carry exactly one double bond, to a CARBON, that is not aromatic in the sanitized molecule, and no
+   * triple bond. The double-bond partner must be C (so C=O, C=N and N=O do not count); a double bond that RDKit perceives as aromatic does not count.
+   */
+  alkeneCH?: boolean;
 }
 export interface FragmentBondSpec {
   a: number;
@@ -133,7 +138,9 @@ export type IncompleteReason =
   /** v1.2: the aromatic CH of a reading cannot be explained by the ring-template library (furan, thiophene, pyrrole, > the ring limit, …). */
   | 'AROMATIC_TEMPLATE_LIMITED'
   /** v1.2 (D10): the 1H constraints could not be applied for this formula and the v1.1.7 flexible-atom path was used instead (never COMPLETE). */
-  | 'V12_CONSTRAINTS_FALLBACK';
+  | 'V12_CONSTRAINTS_FALLBACK'
+  /** v1.2: readings that contain a vinyl (alkene CH) reading did not finish within the budget; the readings without one did. */
+  | 'VINYL_READINGS_BUDGET';
 export interface RejectionStats {
   sanitizeFailed: number;
   duplicatesMerged: number;
@@ -143,7 +150,7 @@ export interface RejectionStats {
   /** True when more rejected structures occurred than `maxTrackedRejected`; the by-rule counts may then count a structure twice. */
   approximate: boolean;
   /** v1.2 leaf checks: structures rejected by the aromatic / required-substructure / equivalence checks (absent when none ran). */
-  v12?: {aromaticFailed: number; requiredFailed: number; equivalenceFailed: number};
+  v12?: {aromaticFailed: number; requiredFailed: number; equivalenceFailed: number; alkeneFailed: number};
 }
 export interface SetOutcome {
   id: string;
@@ -258,4 +265,6 @@ export interface CandidateOrigin {
   source: 'ENUMERATOR' | 'LEGACY_SUPPLEMENT' | 'LEGACY';
   /** The fragment readings contradicted the formula and the run was relaxed to formula-only enumeration. */
   relaxed: boolean;
+  /** v1.2 (W7): the (k, extra exchangeable H) readings of the 1H inventory that produced this structure (merged, de-duplicated). */
+  v12?: {k: number; extraExchangeable: number}[];
 }

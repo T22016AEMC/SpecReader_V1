@@ -5,6 +5,8 @@ import {createExhaustiveGenerator} from '../../src/engines/enumeration/exhaustiv
 import type {StructureGenerator} from '../../src/engines/composition/structureGenerator';
 import type {ObservedEvidence} from '../../src/engines/reasoning/types';
 import {V12_CONFIG} from '../../src/engines/constraints/v12Config';
+import {buildAtomInventory} from '../../src/engines/constraints/atomInventory';
+import {h1SignalsFromObservations} from '../../src/engines/constraints/v12Evidence';
 import type {NMRSolvent} from '../../src/types/spectrum';
 
 // Stage 2 acceptance through the generator (the same entry the pipeline uses). All spectra are SYNTHETIC generic shapes made for these tests;
@@ -91,6 +93,30 @@ describe('C3 generic cases: the target is among the outputs (no ranking is asser
     const r = await run('C10H14O', asCdcl3);
     expect(r.out.smiles).not.toContain(canon('CC(C)(C)c1ccc(O)cc1'));
   }, 120000);
+});
+
+describe('Q1 vinyl readings: constrained, run last, reported separately', () => {
+  it('with a short budget the readings without a vinyl reading finish, the run is INCOMPLETE with VINYL_READINGS_BUDGET (not TIME_BUDGET), and the target is there', async () => {
+    const r = await run('C15H16', diarylM(), {timeMs: 3000});
+    expect(r.run.complete).toBe(false);
+    expect(r.run.incompleteReasons).toContain('VINYL_READINGS_BUDGET');
+    expect(r.run.incompleteReasons).not.toContain('TIME_BUDGET');
+    expect(r.out.smiles).toContain(canon('CC(C)(c1ccccc1)c1ccccc1'));
+    expect(r.out.termination).toBe('TIME_BUDGET');
+  }, 60000);
+  it('the sets of readings without a vinyl reading are enumerated before the vinyl ones', async () => {
+    const r = await run('C15H16', diarylM(), {timeMs: 3000});
+    const vinylAlt = new Set((buildAtomInventory({signals: h1SignalsFromObservations(diarylM()).signals, formula: {C: 15, H: 16}, solvent: 'CDCl3', coverageComplete: true}).alternatives).filter(a => a.hasVinyl).map(a => a.id));
+    const kinds = r.run.readings.map(x => vinylAlt.has(x.id.split('/')[0]));
+    const firstVinyl = kinds.indexOf(true);
+    expect(firstVinyl).toBeGreaterThan(0);
+    expect(kinds.slice(firstVinyl).every(Boolean)).toBe(true);
+  }, 60000);
+  it('every output of a vinyl reading has a non-aromatic C=C at those atoms (spot check: styrene shape)', async () => {
+    const obs = [h1(7.3, 5, 'm'), h1(6.7, 1, 'dd', {j: [17.5, 10.9]}), h1(5.5, 2, 'm')];   // the two =CH2 hydrogens as one 2H signal (diastereotopic H are not split by the inventory)
+    const r = await run('C8H8', obs, {timeMs: 20000});
+    expect(r.out.smiles).toContain(canon('C=Cc1ccccc1'));
+  }, 60000);
 });
 
 describe('C2 overlap: a C–O reading and a ring reading may share the phenolic carbon', () => {
@@ -223,18 +249,5 @@ describe('C6 performance (measure only)', () => {
     }
     console.log('V12_C6 ' + JSON.stringify(rows));
     expect(rows.every(x => x.candidates > 0)).toBe(true);
-    // For information: the same aromatic cases with the vinyl reading of the 4.5–7.5 ppm window switched off (test-only), to show where the time goes.
-    const vinyl = V12_CONFIG.shiftClasses.find(c => c.id === 'VINYL_CH')!;
-    const old = vinyl.rangePpm;
-    vinyl.rangePpm = [99, 100];
-    try {
-      const rows2 = [];
-      for (const c of [CASES[0], CASES[1], CASES[2], CASES[3]]) {
-        const r = await run(c.formula, c.obs(), {timeMs: 60000});
-        const lc = r.v12?.leafCost ?? null;
-        rows2.push({name: c.name, status: r.run.status, complete: r.run.complete, alternatives: r.v12?.inventory?.alternatives, sets: r.v12?.runs.reduce((a, x) => a + x.sets, 0), steps: r.run.visited, leaves: r.run.leaves, candidates: r.out.smiles.length, hasTarget: r.out.smiles.includes(canon(c.target)), ms: Math.round(r.ms), orbitChecks: lc?.orbitChecks, orbitMs: lc && Math.round(lc.orbitMs)});
-      }
-      console.log('V12_C6_NOVINYL ' + JSON.stringify(rows2));
-    } finally { vinyl.rangePpm = old; }
   }, 600000);
 });

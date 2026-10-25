@@ -21,6 +21,8 @@ export interface InventoryGroup {
   hybrid: Hybrid;
   exchangeable: boolean;
   aromatic: boolean;
+  /** The atoms must be alkene CH (exactly one non-aromatic C=C): a vinyl reading that no sp3 class shares. */
+  alkene: boolean;
   /** Singlet rule: the carbon neighbours of these atoms carry no hydrogen. */
   singletNoHNeighbors: boolean;
   /** The atoms of this signal must be topologically equivalent (D2: not for m / unresolved / broad signals). */
@@ -50,6 +52,8 @@ export interface InventoryAlternative {
   rings: AromaticRingPlan;
   /** Heavy atoms of the formula that are in no group and no ring: H = 0. */
   zeroHAtoms: Record<string, number>;
+  /** Some group is a constrained vinyl reading (these readings are run after the others). */
+  hasVinyl: boolean;
   applied: AppliedConstraint[];
   notes: string[];
 }
@@ -183,6 +187,7 @@ interface Option {
   aromatic: boolean;
   hybrid: Hybrid;
   exchangeable: boolean;
+  alkene: boolean;
   rank: number;
 }
 
@@ -262,7 +267,7 @@ export function buildAtomInventory(input: AtomInventoryInput): AtomInventoryResu
         if (def.id === 'ARO_CH') {
           const key = 'C|1|ar';
           const o = merged.get(key);
-          if (o) o.classIds.push(def.id); else merged.set(key, {classIds: [def.id], element: 'C', hPerAtom: 1, atomCount: n, aromatic: true, hybrid: 'AR', exchangeable: false, rank: 0});
+          if (o) o.classIds.push(def.id); else merged.set(key, {classIds: [def.id], element: 'C', hPerAtom: 1, atomCount: n, aromatic: true, hybrid: 'AR', exchangeable: false, alkene: false, rank: 0});
           continue;
         }
         const elements: ('C' | 'O' | 'N')[] = def.exchangeable ? exchangeElements() : ['C'];
@@ -271,12 +276,14 @@ export function buildAtomInventory(input: AtomInventoryInput): AtomInventoryResu
           const key = `${element}|${h}|${def.exchangeable ? 'x' : 'c'}`;
           const o = merged.get(key);
           if (o) { if (!o.classIds.includes(def.id)) o.classIds.push(def.id); }
-          else merged.set(key, {classIds: [def.id], element, hPerAtom: h, atomCount: n / h, aromatic: false, hybrid: def.hybrid, exchangeable: def.exchangeable, rank: 0});
+          else merged.set(key, {classIds: [def.id], element, hPerAtom: h, atomCount: n / h, aromatic: false, hybrid: def.hybrid, exchangeable: def.exchangeable, alkene: false, rank: 0});
         }
       }
       // A broad (or user-marked exchangeable) signal is read as OH/NH first; otherwise the class order of the table decides.
       const exchFirst = signals[i].broad || Boolean(signals[i].exchangeable);
       const order = (id: ShiftClassId) => (id === 'EXCHANGEABLE' && exchFirst ? -1 : classOrder(id));
+      // A vinyl reading is only constrained when no other class gives the same atoms (an unconstrained reading contains every alkene one).
+      for (const o of merged.values()) o.alkene = cfg.vinylRequiresAlkene && !o.aromatic && !o.exchangeable && o.classIds.every(c => c === 'VINYL_CH');
       const list = [...merged.values()].sort((a, b) => {
         const ca = Math.min(...a.classIds.map(order)), cb = Math.min(...b.classIds.map(order));
         return ca - cb || hPref(a.hPerAtom) - hPref(b.hPerAtom) || (a.element < b.element ? -1 : a.element > b.element ? 1 : 0);
@@ -352,7 +359,7 @@ export function buildAtomInventory(input: AtomInventoryInput): AtomInventoryResu
         // Rings need an attachment site unless they are all there is: checked by the enumerator (CLOSED/connectivity), not here.
         const groups: InventoryGroup[] = combo.map((o, i) => ({
           groupId: `g${i + 1}`, observationId: signals[i].observationId, shiftClass: o.classIds[0], shiftClasses: [...o.classIds], hTotal: k * rr[i], atomCount: o.atomCount, hPerAtom: o.hPerAtom,
-          element: o.element, hybrid: o.hybrid, exchangeable: o.exchangeable, aromatic: o.aromatic,
+          element: o.element, hybrid: o.hybrid, exchangeable: o.exchangeable, aromatic: o.aromatic, alkene: o.alkene,
           singletNoHNeighbors: singletClean[i] && !o.exchangeable && !o.aromatic, equivalent: !isRelaxed(signals[i]),
         }));
         const rings: AromaticRingPlan = {
@@ -366,7 +373,8 @@ export function buildAtomInventory(input: AtomInventoryInput): AtomInventoryResu
         }
         const hSum = groups.reduce((s, g) => s + g.hTotal, 0) + e;
         if (hSum !== H) { runVoid(`清單 H 總和 ${hSum} 不等於分子式 H ${H}`); continue; }
-        out.push({id: '', k, extraExchangeable: e, extraElement, groups, rings, zeroHAtoms: zero, applied, notes: [...classNotes]});
+        if (groups.some(g => g.alkene)) applied.push({id: 'ALKENE_CH', detail: `${groups.filter(g => g.alkene).map(g => g.groupId).join('、')}：烯基 CH 必須恰有一個非芳香 C=C 雙鍵`, observationIds: groups.filter(g => g.alkene).map(g => g.observationId)});
+        out.push({id: '', k, extraExchangeable: e, extraElement, groups, rings, zeroHAtoms: zero, hasVinyl: groups.some(g => g.alkene), applied, notes: [...classNotes]});
       }
       return out;
     };

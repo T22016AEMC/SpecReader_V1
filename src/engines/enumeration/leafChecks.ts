@@ -8,7 +8,7 @@ import type {LeafCost} from './types';
 const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
 const AROMATIC_BOND_LABEL = 10;
 
-export type LeafStage = 'aromatic' | 'required' | 'equivalence';
+export type LeafStage = 'aromatic' | 'required' | 'equivalence' | 'alkene';
 export type LeafVerdict =
   | {kind: 'invalid'}
   /** The molecule is already a candidate. */
@@ -44,19 +44,34 @@ export function analyseLeaf(P: Problem, newBonds: NewBond[], queries: LeafQuerie
       if (mol.matchCount(i, P.required[i].minMatches) < P.required[i].minMatches) { cost.checksMs += now() - t1; return {kind: 'rejected', smiles, stage: 'required', remember: true}; }
     }
     const needOrbits = P.eqGroups.length > 0 || P.pools.length > 0;
+    const hasAlkene = P.alkene.some(Boolean);
     let aromaticAtoms: Uint8Array | null = null;
     if (P.aromaticFlag.some(Boolean) || needOrbits) aromaticAtoms = mol.aromaticAtoms(P.n);
     if (aromaticAtoms) for (let i = 0; i < P.n; i++) if (P.aromaticFlag[i] && !aromaticAtoms[i]) { cost.checksMs += now() - t1; return {kind: 'rejected', smiles, stage: 'aromatic', remember: false}; }
+    const aromaticBonds = needOrbits || hasAlkene ? mol.aromaticBonds() : [];
+    if (hasAlkene && !alkeneHolds(P, newBonds, aromaticBonds)) { cost.checksMs += now() - t1; return {kind: 'rejected', smiles, stage: 'alkene', remember: false}; }
     if (needOrbits) {
       const t2 = now();
       cost.orbitChecks++;
-      const ok = equivalenceHolds(P, newBonds, aromaticAtoms!, mol.aromaticBonds(), cost);
+      const ok = equivalenceHolds(P, newBonds, aromaticAtoms!, aromaticBonds, cost);
       cost.orbitMs += now() - t2;
       if (!ok) { cost.checksMs += now() - t1; return {kind: 'rejected', smiles, stage: 'equivalence', remember: false}; }
     }
     cost.checksMs += now() - t1;
     return {kind: 'ok', smiles};
   } finally { mol.close(); }
+}
+
+/** Every vinyl CH atom's double bond (to its carbon partner, guaranteed by the search) must not be an aromatic bond of the sanitized molecule. */
+function alkeneHolds(P: Problem, newBonds: NewBond[], aromaticBonds: [number, number][]): boolean {
+  const n = P.n;
+  const arom = new Set<number>();
+  for (const [a, b] of aromaticBonds) arom.add(Math.min(a, b) * n + Math.max(a, b));
+  for (const b of [...P.fixedBonds, ...newBonds]) {
+    if (b.order !== 2) continue;
+    if ((P.alkene[b.a] || P.alkene[b.b]) && arom.has(Math.min(b.a, b.b) * n + Math.max(b.a, b.b))) return false;
+  }
+  return true;
 }
 
 /** Equivalence groups lie in one orbit, and the demands of every pool can be packed into the pool's orbits. */

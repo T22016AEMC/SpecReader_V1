@@ -79,6 +79,31 @@ describe('C1 adjacency limit (singlet rule: no carbon neighbour with hydrogen)',
   });
 });
 
+describe('C1 vinyl CH (exactly one non-aromatic C=C)', () => {
+  const VCH = (count: number, id = 'VCH', extra: object = {}) => CH({alkeneCH: true, ...extra}, count, id);
+  const VCH2 = (count: number, id = 'VCH2') => CH2({alkeneCH: true}, count, id);
+  it('2-butene shape: two vinyl CH + two methyls (C4H8)', async () => {
+    const out = await same('C4H8', {fragments: [VCH(2), CH3({}, 2)]});
+    expect(out.length).toBeGreaterThan(0);
+  });
+  it('the flag removes the triple-bond and the C=O/C=N readings that the plain atoms allow (C3H4O: CH + CH2 + free atoms)', async () => {
+    const withFlag = await same('C3H4O', {fragments: [VCH(1), VCH2(1)]});
+    const without = await same('C3H4O', {fragments: [CH({}, 1), CH2({}, 1)]});
+    expect(without.length).toBeGreaterThan(withFlag.length);
+    for (const s of withFlag) expect(s).not.toMatch(/#/);
+  });
+  it('six vinyl CH: only benzene would fit and it is aromatic, so nothing remains', async () => {
+    expect(await same('C6H6', {fragments: [VCH(6)]})).toEqual([]);
+  });
+  it('a vinyl CH that is part of an aromatic ring written with the ring template is not an alkene (ring CH are not flagged here), a free vinyl CH2 next to a ring is (styrene shape, C8H8)', async () => {
+    const out = await same('C8H8', {fragments: [ring([0], null), VCH(1), VCH2(1)]});
+    expect(out).toEqual(['C=Cc1ccccc1']);
+  });
+  it('vinyl CH together with an equivalence group and a no-H-neighbour methyl', async () => {
+    await same('C6H10', {fragments: [VCH(2), CH3({group: 'm', noHCarbonNeighbors: true}, 2, 'M'), C0()], equivalentGroups: ['m']});
+  });
+});
+
 describe('C1 aromatic flag', () => {
   it('six aromatic CH: only benzene (not prismane, fulvene-like, open chains …)', async () => {
     const out = await same('C6H6', {fragments: [CH({aromatic: true}, 6)]});
@@ -179,6 +204,7 @@ function randomCase(seed: number): {formula: string; set: Omit<FragmentAlternati
     const extra: Record<string, unknown> = {};
     if (n >= 2 && r() < 0.4) { extra.group = id; eq.push(id); }
     if (id !== 'C0' && id !== 'O0' && r() < 0.25) extra.noHCarbonNeighbors = true;
+    if ((id === 'CH' || id === 'CH2') && r() < 0.5) extra.alkeneCH = true;
     frags.push(make(extra, n, id));
     heavy += n; hSum += h * n; slots += n * ((el === 'C' ? 4 : 2) - h); if (el === 'C') c += n; else o += n;
   }
@@ -201,11 +227,11 @@ function randomCase(seed: number): {formula: string; set: Omit<FragmentAlternati
 }
 
 describe('C1 seeded random battery (symmetry pruning on and off, against brute force)', () => {
-  const cases = Array.from({length: 3000}, (_, i) => ({seed: 1000 + i, c: randomCase(1000 + i)})).filter(x => x.c !== null) as {seed: number; c: NonNullable<ReturnType<typeof randomCase>>}[];
-  it('generates a useful number of cases', () => expect(cases.length).toBeGreaterThan(300));
+  const cases = Array.from({length: 8000}, (_, i) => ({seed: 1000 + i, c: randomCase(1000 + i)})).filter(x => x.c !== null) as {seed: number; c: NonNullable<ReturnType<typeof randomCase>>}[];
+  it('generates a useful number of cases', () => expect(cases.length).toBeGreaterThan(500));
   it('every case equals the brute force; the pruning switch never changes the output', async () => {
     let nonEmpty = 0, compared = 0;
-    const withEq: number[] = [];
+    const withEq: number[] = [], withAlkene: number[] = [];
     for (const {seed, c} of cases) {
       const t0 = performance.now();
       const on = await both(c.formula, c.set, true);
@@ -216,11 +242,13 @@ describe('C1 seeded random battery (symmetry pruning on and off, against brute f
       compared++;
       if (performance.now() - t0 > 3000) console.log('V12_C1_SLOW ' + JSON.stringify({seed, formula: c.formula, ms: Math.round(performance.now() - t0)}));
       if (on.ours.length) nonEmpty++;
+      if (c.set.fragments.some(f => f.atoms.some(a => a.alkeneCH)) && on.ours.length) withAlkene.push(seed);
       if (c.set.equivalentGroups?.length || c.set.equivalencePools?.length) withEq.push(seed);
     }
-    console.log('V12_C1_RANDOM ' + JSON.stringify({generated: cases.length, compared, nonEmpty, withEquivalence: withEq.length}));
+    console.log('V12_C1_RANDOM ' + JSON.stringify({generated: cases.length, compared, nonEmpty, withEquivalence: withEq.length, nonEmptyWithAlkene: withAlkene.length}));
     expect(compared).toBeGreaterThan(200);
     expect(nonEmpty).toBeGreaterThan(100);
     expect(withEq.length).toBeGreaterThan(100);
+    expect(withAlkene.length).toBeGreaterThan(10);
   }, 600000);
 });
