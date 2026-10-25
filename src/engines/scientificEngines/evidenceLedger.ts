@@ -9,6 +9,7 @@ import {graphChemicalFeatures} from './graphChemicalFeatures';
 import {graphFragments} from './graphFragmentation';
 import {prepareIR,irRangeCovered} from './irSignalProcessing';
 import {ionMz,type IonAdduct} from './ionMass';
+import {V12_CONFIG} from '../constraints/v12Config';
 
 export interface ScientificEvidence {
   id:string;sourceModality:ExtendedSpectrumModality|'FORMULA';observationIds:string[];
@@ -48,6 +49,46 @@ export function buildScientificEvidence(bundle:IntegratedAnalysisBundle):Scienti
 }
 function adduct(s?:ExperimentalSpectrumData):IonAdduct {return s?.msParams?.adductType&&s.msParams.adductType!=='Auto'?s.msParams.adductType:s?.msParams?.ionization==='ESI-'?'[M-H]-':s?.msParams?.ionization==='ESI+'?'[M+H]+':'[M]+•';}
 const gaussian=(delta:number,sigma:number)=>Math.exp(-.5*(delta/Math.max(sigma,1e-6))**2);
+/**
+ * v1.2 (W4): the 1H score also looks from the prediction side. Predicted environments no observation was matched to count against the
+ * candidate (exchangeable ones, signal overlaps and an unconfirmed 1H coverage are discounted), and the number of environments and the
+ * non-exchangeable H total are compared. Engineering defaults in V12_CONFIG.scoring; the score remains an uncalibrated compatibility.
+ */
+export function bidirectional1H(hObs:ScientificEvidence[],hPred:{shiftPpm:number;integration?:number|null;isExchangeable?:boolean}[],assignment:Map<number,number>,integralScale:number|null,coverageComplete:boolean):ScoreLedgerEntry[]{
+  const SC=V12_CONFIG.scoring,out:ScoreLedgerEntry[]=[];
+  const assigned=new Set(assignment.values());
+  const hOf=(p:{integration?:number|null})=>p.integration??0;
+  const integralOf=(i:number)=>hObs[i].originalObservedData.relativeIntegral;
+  const total=hPred.filter(p=>!p.isExchangeable).reduce((s,p)=>s+hOf(p),0);
+  let merged=0;
+  hPred.forEach((p,j)=>{
+    if(assigned.has(j))return;
+    if(!p.isExchangeable&&integralScale){
+      for(const [i,j2] of assignment){
+        const q=hPred[j2],v=integralOf(i);
+        if(q.isExchangeable||v==null||!(v>0)||Math.abs(q.shiftPpm-p.shiftPpm)>SC.overlapShiftPpm)continue;
+        const sum=hOf(q)+hOf(p);
+        if(sum>0&&Math.abs(v/integralScale-sum)<=SC.overlapIntegralTolerance*sum){merged++;return;}
+      }
+    }
+    const factor=(p.isExchangeable?SC.exchangeableUnmatchedFactor:1)*(coverageComplete?1:SC.incompleteCoverageUnmatchedFactor);
+    const id=`1H:unmatched-predicted:${p.shiftPpm.toFixed(2)}`;
+    out.push({evidenceId:id,observationIds:[id],sourceModality:'1H_NMR',compatibility:0,weight:SC.unmatchedPredictedWeight*factor,contribution:0,method:`預測多出的 1H 環境 δ ${p.shiftPpm.toFixed(2)}（${hOf(p)}H${p.isExchangeable?'，可交換':''}）沒有任何觀測與之配對${coverageComplete?'':'；1H 涵蓋未確認完整，扣分減半'}`,limitations:['雙向評分：預測多出的環境不一定是錯，可能未標記或重疊；未校準權重']});
+  });
+  const nPred=hPred.filter(p=>!p.isExchangeable).length;
+  const nObs=hObs.filter((_,i)=>{const j=assignment.get(i);return j===undefined||!hPred[j].isExchangeable;}).length;
+  const delta=Math.max(0,nPred-nObs-merged);
+  const countId='1H:environment-count';
+  out.push({evidenceId:countId,observationIds:[countId],sourceModality:'1H_NMR',compatibility:Math.exp(-((delta/SC.envCountSigma)**2)),weight:SC.envCountWeight,contribution:0,method:`非可交換 1H 環境數：預測 ${nPred}、觀測 ${nObs}、重疊合併 ${merged}`,limitations:['經驗環境分組；對稱類別以預測器的拓樸分組為準']});
+  if(integralScale!==null&&total>0){
+    const obsH=hObs.reduce((s,_,i)=>{const j=assignment.get(i),v=integralOf(i);return s+((j!==undefined&&hPred[j].isExchangeable)||v==null||!(v>0)?0:v/integralScale);},0);
+    const sigma=Math.max(SC.integralTotalSigmaMin,SC.integralTotalSigmaFraction*total);
+    const id='1H:integral-total';
+    out.push({evidenceId:id,observationIds:[id],sourceModality:'1H_NMR',compatibility:gaussian(obsH-total,sigma),weight:SC.integralTotalWeight,contribution:0,method:`非可交換 1H 總數：預測 ${total}H、觀測（以配對積分比例換算）${obsH.toFixed(1)}H`,limitations:['積分比例尺由已配對訊號的中位數估計']});
+  }
+  for(const e of out)e.contribution=e.weight*(e.compatibility??0);
+  return out;
+}
 export function scoreScientificEvidence(smiles:string,bundle:IntegratedAnalysisBundle):CandidateScoreLedger {
   const structure=ChemistryEngine.parseStructureInput(smiles),features=graphChemicalFeatures(smiles),sources=sourceSpectra(bundle);
   const evidence=bundle.scientificEvidence??buildScientificEvidence(bundle),entries:ScoreLedgerEntry[]=[];
@@ -124,9 +165,13 @@ export function scoreScientificEvidence(smiles:string,bundle:IntegratedAnalysisB
       else if(interpreted?.ionClass==='oxygenated_secondary_ion')compatibility=(structure.atomCounts.O??0)>0?.55:0;
       weight=compatibility===null?0:.3;method='表面碎片／極性與候選組成的弱相容性';limitations.push('基質、基底、污染及离子產率未知；不能確認整個表面分子');
     }
-    if(ev.sourceModality!=='FORMULA'&&ev.sourceModality!=='IR'){const input=sources[ev.sourceModality];if(input?.digitizedFromImage)weight*=.5;if(input?.dataQuality==='LOW')weight*=.5;}
+    if(V12_CONFIG.useV12Constraints){
+      // v1.2 (D3): one image-source factor for every spectrum (default 1.0); the LOW-quality rule is unchanged.
+      if(ev.sourceModality!=='FORMULA'){const input=sources[ev.sourceModality];if(input?.digitizedFromImage)weight*=V12_CONFIG.scoring.imageSourceWeightFactor;if(ev.sourceModality!=='IR'&&input?.dataQuality==='LOW')weight*=.5;}
+    }else if(ev.sourceModality!=='FORMULA'&&ev.sourceModality!=='IR'){const input=sources[ev.sourceModality];if(input?.digitizedFromImage)weight*=.5;if(input?.dataQuality==='LOW')weight*=.5;}
     entries.push({evidenceId:ev.id,observationIds:ev.observationIds,sourceModality:ev.sourceModality,compatibility,weight,contribution:weight*(compatibility??0),method,limitations});
   }
+  if(V12_CONFIG.useV12Constraints&&hObs.length&&hPred.length)entries.push(...bidirectional1H(hObs,hPred,hAssignment,integralScale,sources['1H_NMR']?.observationCoverage==='CONFIRMED_COMPLETE'));
   if(sources.IR&&irProcessed){
     for(const [lo,hi] of [[1630,1850],[2100,2300]]){
       const expected=irPred.filter(p=>p.x>=lo&&p.x<=hi&&p.y>=70);

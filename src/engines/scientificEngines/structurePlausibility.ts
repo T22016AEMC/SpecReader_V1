@@ -1,6 +1,7 @@
 import {StructureParserAdapter} from '../chemistryEngine';
 import type {ObservedEvidence} from '../reasoning/types';
 import {PLAUSIBILITY_CONFIG as CFG} from './plausibilityConfig';
+import {V12_CONFIG} from '../constraints/v12Config';
 
 /**
  * Chemical-plausibility gate (v1.1.7-hotfix.1). Candidates with unstable linkages are rejected unless specific
@@ -16,10 +17,12 @@ import {PLAUSIBILITY_CONFIG as CFG} from './plausibilityConfig';
  * - GEM_DIOL  sp³ C with two free OH (acetals/ketals are not affected)                         → rejected.
  * - ENOL      non-aromatic C=C–OH (phenols are not affected)                                   → rejected.
  * - KETENE    C=C=O (allenes are not affected)          → allowed only with a strong IR band near 2150.
+ * - HEMIACETAL_ACYCLIC / ORTHOESTER_ACYCLIC (v1.2 only, useV12Constraints): acyclic sp³ C with a free OH and another O (hemiacetal /
+ *             hemiketal), or with ≥ 3 O (orthoester). Cyclic hemiacetals and acetals/ketals (two OR, no OH) are not affected.
  * - AMINAL    acyclic sp³ C with two N, or one N and one free OH (cyclic, carbonyl, aromatic and imine carbons are
  *             not affected)                                                                    → rejected.
  */
-export type PlausibilityRule='PEROXIDE'|'N_O_N'|'N_DI_OH'|'N_O_LINK'|'CUMULATED_N'|'GEM_DIOL'|'ENOL'|'KETENE'|'AMINAL';
+export type PlausibilityRule='PEROXIDE'|'N_O_N'|'N_DI_OH'|'N_O_LINK'|'CUMULATED_N'|'GEM_DIOL'|'ENOL'|'KETENE'|'AMINAL'|'HEMIACETAL_ACYCLIC'|'ORTHOESTER_ACYCLIC';
 export interface PlausibilityEvidence {userFormula:boolean;nitrogenEvidence:boolean;irNO:boolean;irNOxide:boolean;irCumulatedN:boolean;irKetene:boolean}
 export interface PlausibilityViolation {rule:PlausibilityRule;text:string}
 export const NO_PLAUSIBILITY_EVIDENCE:PlausibilityEvidence={userFormula:false,nitrogenEvidence:false,irNO:false,irNOxide:false,irCumulatedN:false,irKetene:false};
@@ -76,6 +79,11 @@ export function plausibilityViolations(smiles:string,ev:PlausibilityEvidence):Pl
    if(sp3C(i)&&ns.filter(n=>freeOH(n.toAtom)).length>=2)add('GEM_DIOL','偶二醇：sp³ 碳上有兩個游離 OH');
    if(!a.isAromatic&&ns.some(n=>n.order===2&&el(n.toAtom)==='C'&&!atoms[n.toAtom].isAromatic)&&ns.some(n=>n.order===1&&freeOH(n.toAtom)))add('ENOL','非芳香烯醇 C=C–OH');
    if(ns.some(n=>n.order===2&&el(n.toAtom)==='O')&&ns.some(n=>n.order===2&&el(n.toAtom)==='C')&&!ev.irKetene)add('KETENE','烯酮 C=C=O：需要 IR 約 2150 強帶');
+   if(V12_CONFIG.useV12Constraints&&sp3C(i)&&!inRing(atoms,i)){
+    const oNeighbours=ns.filter(n=>el(n.toAtom)==='O'),free=oNeighbours.filter(n=>freeOH(n.toAtom)).length;
+    if(free>=1&&oNeighbours.length>free)add('HEMIACETAL_ACYCLIC','非環狀半縮醛／半縮酮：sp³ 碳上同時有游離 OH 與其他 O');
+    if(oNeighbours.length>=3)add('ORTHOESTER_ACYCLIC','非環狀原酸酯型：sp³ 碳上有 3 個以上的 O');
+   }
    if(sp3C(i)){
     const nCount=ns.filter(n=>el(n.toAtom)==='N').length,ohCount=ns.filter(n=>freeOH(n.toAtom)).length;
     if((nCount>=2||(nCount>=1&&ohCount>=1))&&!inRing(atoms,i))add('AMINAL',nCount>=2?'非環狀胺縮醛：sp³ 碳上同時有兩個 N':'非環狀半縮醛胺：sp³ 碳上同時有 N 與游離 OH');

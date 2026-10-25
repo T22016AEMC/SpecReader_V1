@@ -1,3 +1,4 @@
+import {V12_CONFIG} from './constraints/v12Config';
 import {traceIRPixels} from './scientificEngines/irImageTrace';
 import {processIRSeries, resolveIRScale} from "./scientificEngines/irSignalProcessing";
 import {decodeJcamp} from "./scientificEngines/jcampAdapter";
@@ -1398,11 +1399,32 @@ export class SpectrumParser {
     const normalizedFromBottom =
       ((calibration.plotBottomPx - pixelY) / plotH) * 100;
     const clamped = Math.max(0, Math.min(100, normalizedFromBottom));
+    // v1.2 (W6): with the flag on an IR marker without a traced curve uses the same definition as the curve: 100·(bottom − py)/(bottom − top).
+    if (modality === "IR" && V12_CONFIG.useV12Constraints) return Number(clamped.toFixed(1));
     // IR spectra typically have baseline near top (100% T) and absorption bands pointing downward
     if (modality === "IR") {
       return Number(Math.max(5, Math.min(100, 100 - clamped * 0.85)).toFixed(1));
     }
     return Number(clamped.toFixed(1));
+  }
+
+  /**
+   * v1.2 (W6): intensity of a mark made at an image pixel. With the flag on and a traced IR curve it is the curve's own value at that x
+   * (the transmittance-like value every traced/re-detected peak carries); otherwise pixelToPhysicalIntensity.
+   */
+  static markerIntensity(spectrum: ExperimentalSpectrumData, pixelX: number, pixelY: number, calibration: ImageSpectrumCalibration): number {
+    const curve = spectrum.irPixelCurve;
+    if (V12_CONFIG.useV12Constraints && spectrum.modality === "IR" && curve && curve.length) {
+      let best = curve[0];
+      for (const q of curve) if (Math.abs(q.x - pixelX) < Math.abs(best.x - pixelX)) best = q;
+      return Number((100 * (calibration.plotBottomPx - best.y) / Math.max(1, calibration.plotBottomPx - calibration.plotTopPx)).toFixed(1));
+    }
+    return this.pixelToPhysicalIntensity(pixelY, calibration, spectrum.modality);
+  }
+
+  /** Pixel row at which the viewer draws a peak marker: the marker's own pixel position first; the intensity is only a fallback. */
+  static markerPixelY(peak: { pixelY?: number; y: number }, annotation: { pixelY?: number } | undefined, calibration: ImageSpectrumCalibration): number {
+    return peak.pixelY ?? annotation?.pixelY ?? this.physicalIntensityToPixelY(peak.y, calibration);
   }
 
   static updateImagePlotBoundaries(
@@ -3002,7 +3024,9 @@ export class SpectrumParser {
           ? this.pixelToPhysicalX(updatedSignal.pixelX, cal)
           : undefined;
       const physY =
-        updatedSignal.y !== undefined
+        V12_CONFIG.useV12Constraints && spectrum.modality === "IR" && spectrum.irPixelCurve?.length && updatedSignal.pixelX !== undefined && updatedSignal.pixelY !== undefined
+          ? this.markerIntensity(spectrum, updatedSignal.pixelX, updatedSignal.pixelY, cal)
+          : updatedSignal.y !== undefined
           ? updatedSignal.y
           : updatedSignal.pixelY !== undefined
           ? this.pixelToPhysicalIntensity(updatedSignal.pixelY, cal, spectrum.modality)

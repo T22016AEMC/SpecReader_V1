@@ -1,3 +1,4 @@
+import {V12_CONFIG} from './constraints/v12Config';
 import {
   DataPoint,
   ExperimentalSpectrumData,
@@ -934,14 +935,20 @@ export class SignalCharacterizationEngine {
     const points = spectrum.points || [];
     const noiseFloor = this.estimateNoiseFloor(points, modality);
     const maxPeakY = Math.max(...spectrum.peaks.map((p) => p.y || 0), 1);
+    // v1.2 (W6): IR peaks read from an image or its traced curve carry the curve's own (transmittance-like) value; their relative intensity is the
+    // absorption depth below the 100 % baseline, so a stronger band has the larger value. Peaks of numeric files keep their definition.
+    const curveLike = (pk: SpectralPeak) => V12_CONFIG.useV12Constraints && modality === "IR" && (Boolean(spectrum.irPixelCurve?.length) || pk.pixelY !== undefined);
+    const maxDepth = Math.max(...spectrum.peaks.filter(curveLike).map((p) => Math.max(0, 100 - (p.y || 0))), 1);
 
     const enrichedPeaks: SpectralPeak[] = [];
     const unifiedSignals: Signal[] = [];
 
     for (const pk of spectrum.peaks) {
-      const normalizedIntensity = Number(
-        Math.max(0, Math.min(100, (pk.y / maxPeakY) * 100)).toFixed(1)
-      );
+      const normalizedIntensity = curveLike(pk)
+        ? Number(Math.max(0, Math.min(100, (Math.max(0, 100 - (pk.y || 0)) / maxDepth) * 100)).toFixed(1))
+        : Number(
+            Math.max(0, Math.min(100, (pk.y / maxPeakY) * 100)).toFixed(1)
+          );
       const geom = this.measurePeakGeometry(
         { ...pk, y: normalizedIntensity },
         points,
