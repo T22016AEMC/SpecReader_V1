@@ -1,14 +1,17 @@
 import type {CompositionInferenceResult, CompositionReason} from '../composition/types';
 import type {CompositionSearchRun} from '../composition/structureGenerator';
 import {ENUMERATION_CONFIG as CFG} from './enumerationConfig';
-import type {CandidateOrigin, EnumerationDiagnostics, EnumerationRunDiagnostic, IncompleteReason} from './types';
+import {V12_CONFIG} from '../constraints/v12Config';
+import {COMPOSITION_CONFIG} from '../composition/compositionConfig';
+import {exclusionLines, exclusionStats, zeroCandidateExplanation, type ZeroCandidateExplanation} from './exclusionStats';
+import type {CandidateOrigin, EnumerationDiagnostics, EnumerationRunDiagnostic, IncompleteReason, V12RunDiagnostic} from './types';
 
 /**
  * Pure model of the "組成推斷（分子式假設）" panel (docs/P1B_COMPOSITION_PANEL_DESIGN.md). Input: the analysis result objects; output:
  * rows and texts. The component only renders this, so every wording is testable. Fixed wordings that are configuration-like (badges,
  * tooltip prefix, deferred note, candidate source tags) live in ENUMERATION_CONFIG.ui.
  */
-export type BadgeId = 'RELAXED' | 'LEGACY_SUPPLEMENT' | 'INCOMPLETE';
+export type BadgeId = 'RELAXED' | 'LEGACY_SUPPLEMENT' | 'INCOMPLETE' | 'V12_FALLBACK';
 export interface PanelBadge {id: BadgeId; text: string}
 export interface ReadingLine {text: string}
 export interface SearchCell {
@@ -38,6 +41,31 @@ export interface HypothesisRow {
   contradiction: ReasonLine[];
   unknown: ReasonLine[];
 }
+/** Section A of the v1.2 panel: what the 1H spectrum says about the atoms (one entry per formula that has a v1.2 diagnostic). */
+export interface InventoryFormulaView {
+  formula: string;
+  path: V12RunDiagnostic['path'];
+  /** Status line, and the reason (fallback / not available) on its own line. */
+  statusText: string;
+  reasonText: string | null;
+  badges: PanelBadge[];
+  combinations: string[];
+  /** Column headers are fixed by the component; `hText` is for the first reading. */
+  signals: {shift: string; integral: string; ratio: string; hText: string; multiplicity: string; classes: string; hPerAtom: string; atoms: string; equivalence: string; singlet: string}[];
+  preview: string[];
+  countsText: string | null;
+  voided: {text: string}[];
+  aromaticLimited: string[];
+  incompleteReasons: string[];
+}
+export interface ConstraintsFormulaView {
+  formula: string;
+  stateText: string;
+  required: string[];
+  requiredEmptyText: string | null;
+  structural: string[];
+  leaf: string[];
+}
 export interface PanelModel {
   statusCode: CompositionInferenceResult['status'];
   statusLabel: string;
@@ -53,8 +81,13 @@ export interface PanelModel {
   excludedElements: string[];
   bounds: string;
   limitations: string[];
+  /** v1.2 sections; null when no formula has a v1.2 diagnostic (flag off or legacy runs). */
+  inventory: {formulas: InventoryFormulaView[]; notes: string[]} | null;
+  constraints: {formulas: ConstraintsFormulaView[]; scoringText: string; exclusionTitle: string; exclusions: string[]} | null;
 }
 export interface PanelInput {
+  /** Candidates the downstream gates rejected (their reasons feed the exclusion statistics of section B). */
+  rejectedCandidates?: {violatedConstraints: string[]}[];
   composition: CompositionInferenceResult | undefined;
   runs: CompositionSearchRun[];
   mode: 'USER_FORMULA' | 'COMPOSITION_HYPOTHESES' | 'NO_FORMULA' | undefined;
@@ -73,6 +106,11 @@ export const SOURCE_LABEL: Record<CompositionReason['source'], string> = {MS: 'M
 export const REASON_LABEL: Record<IncompleteReason, string> = {
   TIME_BUDGET: '時間預算', STATE_BUDGET: '步數預算', CANDIDATE_LIMIT: '候選上限', CANCELLED: '已取消',
   INVALID_ALTERNATIVE_SET: '有讀法無法表達', ALTERNATIVE_SET_NOT_RUN: '有讀法未執行', READINGS_TRUNCATED: '讀法過多被截斷（只列舉前 ' + CFG.adapter.maxAlternativeSets + ' 組）',
+  // v1.2 (only produced when useV12Constraints is on; wording is a placeholder until the stage-4 panel review)
+  INVENTORY_ALTERNATIVES_TRUNCATED: `1H 原子清單的替代解讀超過上限，只列舉最前面的（每個 k／額外 OH 組合至多 ${V12_CONFIG.maxInventoryAlternatives} 個，取代型式至多 ${V12_CONFIG.maxPatternSetsPerAlternative} 組）`,
+  AROMATIC_TEMPLATE_LIMITED: '芳香 CH 超出環模板庫（目前只有苯、萘，有 N 證據時才有吡啶；呋喃、噻吩、吡咯等五員雜環是已知限制）',
+  VINYL_READINGS_BUDGET: '含烯基（C=C–H）的讀法在預算內沒有跑完；不含烯基的讀法已完成',
+  V12_CONSTRAINTS_FALLBACK: '1H 約束未能套用（已退回）：改用舊的彈性原子讀法',
 };
 const NITROGEN_LABEL: Record<string, string> = {EVIDENCE: '有 N 專屬證據', EVEN_ION_ONLY: '只有偶電子離子（不足）', NONE: '沒有 N 專屬證據'};
 export const FIXED_LIMITATIONS = [
@@ -92,19 +130,20 @@ export function runBadges(e: EnumerationRunDiagnostic | undefined): PanelBadge[]
   if (e.relaxedToFormulaOnly) out.push(badge('RELAXED'));
   if (e.legacySupplement) out.push(badge('LEGACY_SUPPLEMENT'));
   if (!e.complete) out.push(badge('INCOMPLETE'));
+  if (e.v12?.path === 'FALLBACK') out.push(badge('V12_FALLBACK'));
   return out;
 }
 /** Summary-line badges: every kind that occurs in any run, once each, in a fixed order. */
 export function summaryBadges(runs: (EnumerationRunDiagnostic | undefined)[]): PanelBadge[] {
   const ids = new Set(runs.flatMap(r => runBadges(r).map(b => b.id)));
-  return (['RELAXED', 'LEGACY_SUPPLEMENT', 'INCOMPLETE'] as BadgeId[]).filter(id => ids.has(id)).map(badge);
+  return (['RELAXED', 'LEGACY_SUPPLEMENT', 'INCOMPLETE', 'V12_FALLBACK'] as BadgeId[]).filter(id => ids.has(id)).map(badge);
 }
 
 /** "窮舉器" / "舊 beam 搜尋（補充）" / "舊 beam 搜尋（退回）", plus "約束已放寬" when the run was relaxed; null without origin information. */
 export function candidateSourceTag(origin: CandidateOrigin | undefined): string | null {
   if (!origin) return null;
   const T = CFG.ui.candidateSourceTags;
-  return T[origin.source] + (origin.relaxed ? `｜${T.RELAXED}` : '');
+  return T[origin.source] + (origin.relaxed ? `｜${T.RELAXED}` : '') + (origin.v12Fallback ? `｜${T.V12_FALLBACK}` : '');
 }
 
 function searchCell(h: CompositionInferenceResult['hypotheses'][number], run: CompositionSearchRun | undefined, kindOf: Map<string, string>): SearchCell {
@@ -128,6 +167,81 @@ function searchCell(h: CompositionInferenceResult['hypotheses'][number], run: Co
   return {text, note: e.complete ? '只相對於目前分子式與片段約束，不代表所有可能結構' : null, badges, readings, excluded};
 }
 
+export const SHIFT_CLASS_LABEL: Record<string, string> = {
+  ARO_CH: '芳香 CH', VINYL_CH: '烯基 CH', ALDEHYDE: '醛基 H', O_CH: '接 O 的碳 H', N_CH: '接 N 的碳 H', ALPHA_CH: '鄰羰基／芳環／炔的碳 H', ALKYL_CH: '烷基 H', EXCHANGEABLE: '可交換 H（OH／NH）',
+};
+export const INVENTORY_NOTES = [
+  '原子清單是由 1H 積分與位移類別推得的假設讀法，不是確認的結構；位移類別的數值是工程預設，未校準。',
+  '位移類別只決定每原子 H 數與環模板，不要求原子的混成或鄰接元素（例如 3.9 ppm 的 CH2 可以不接 O）；位移的鑑別留給評分。',
+  `整數比容差 ±${COMPOSITION_CONFIG.h1IntegralTolerance}；積分誤差過大時整組讀法都可能錯。`,
+];
+export const SCORING_TEXT = '雙向評分見各候選的證據清單';
+const MODALITY_LABEL: Record<string, string> = {'1H_NMR': '1H', '13C_NMR': '13C', IR: 'IR'};
+/** "1H_NMR:source:7.20" → "1H 7.2 ppm"; IR → "IR 1720 cm-1". */
+export function observationLabel(id: string): string {
+  const parts = id.split(':');
+  const mod = MODALITY_LABEL[parts[0]] ?? parts[0], value = Number(parts[parts.length - 1]);
+  if (!Number.isFinite(value)) return id;
+  return parts[0] === 'IR' ? `${mod} ${Math.round(value)} cm-1` : `${mod} ${Number(value.toFixed(2))} ppm`;
+}
+const num = (v: number) => String(Number(v.toFixed(2)));
+
+function inventoryView(formula: string, v: V12RunDiagnostic): InventoryFormulaView {
+  const inv = v.inventory;
+  const badges = v.path === 'FALLBACK' ? [badge('V12_FALLBACK')] : [];
+  const statusText = v.path === 'INVENTORY' ? `1H 原子清單：${inv?.alternatives ?? 0} 個替代解讀、${inv?.patternSets ?? 0} 個片段組合`
+    : v.path === 'FLEX_NO_INTEGRALS' ? '1H 沒有積分，無法建立原子清單；使用舊的彈性原子路徑'
+    : '1H 約束未能套用（已退回）：改用舊的彈性原子讀法';
+  const reasonText = v.path === 'INVENTORY' ? null : `原因：${v.reason ?? inv?.reason ?? '未記錄'}`;
+  const first = inv?.combinations[0];
+  const combos = (inv?.combinations ?? []).map(c => {
+    const r = v.runs.find(x => x.k === c.k && x.extraExchangeable === c.extraExchangeable);
+    const reasons = r?.incompleteReasons.map(x => REASON_LABEL[x] ?? x).join('、');
+    return `k=${c.k}，額外可交換 H=${c.extraExchangeable}｜整數比 ${c.ratio.join(':')}（H 數 ${c.ratio.map(x => x * c.k).join('、')}）${r ? `｜${r.alternatives} 個替代解讀、${r.sets} 個片段組合｜${r.complete === true ? '完整' : r.complete === false ? `未完整${reasons ? `（${reasons}）` : ''}` : '未執行'}｜候選 ${r.candidates}` : ''}`;
+  });
+  const signals = (inv?.signals ?? []).map(s => ({
+    shift: num(s.shiftPpm), integral: s.relativeIntegral === null ? '—' : num(s.relativeIntegral), ratio: s.ratio === null ? '—' : String(s.ratio),
+    hText: s.ratio === null || !first ? '—' : String(s.ratio * first.k), multiplicity: s.multiplicity ?? '—', classes: s.classes.map(x => SHIFT_CLASS_LABEL[x] ?? x).join('、') || '—',
+    hPerAtom: '', atoms: '', equivalence: s.equivalenceRequired ? '要求' : '不要求', singlet: s.singletRuleApplied ? '套用' : '—',
+  }));
+  const firstAlt = inv?.alternativesPreview[0];
+  firstAlt?.groups.forEach((g, i) => { if (signals[i]) { signals[i].hPerAtom = g.aromatic ? '1（環上）' : String(g.hPerAtom); signals[i].atoms = String(g.atomCount); } });
+  const preview = (inv?.alternativesPreview ?? []).map((a, i) => {
+    const groups = a.groups.map(g => `${g.hTotal}H＝${g.atomCount}×${g.aromatic ? '芳香 CH' : g.exchangeable ? `${g.element}H` : `${g.element}H${g.hPerAtom === 1 ? '' : g.hPerAtom}`}${g.alkene ? '（烯基）' : ''}${g.equivalent && g.atomCount > 1 ? '，等價' : ''}`).join('；');
+    const rings = a.rings.length ? `｜環：${a.rings.map(r => `${r.templateId === 'benzene' ? '苯' : r.templateId === 'naphthalene' ? '萘' : r.templateId === 'pyridine' ? '吡啶' : r.templateId} ${r.ch} 個 CH（${r.patterns} 種取代型式）`).join('＋')}` : '';
+    return `讀法 ${i + 1}（k=${a.k}，額外可交換 H=${a.extraExchangeable}）：${groups}${rings}`;
+  });
+  return {
+    formula, path: v.path, statusText, reasonText, badges, combinations: combos, signals, preview,
+    countsText: inv ? `替代解讀 ${inv.alternatives} 個，片段組合 ${inv.patternSets} 組${inv.truncated || inv.patternTruncated ? '（已截斷）' : ''}` : null,
+    voided: (inv?.voided ?? []).map(x => ({text: `${x.reason}（${x.count} 次）`})),
+    aromaticLimited: (inv?.aromaticLimited ?? []).map(x => `k=${x.k}，額外可交換 H=${x.extraExchangeable}：${x.reason}`),
+    incompleteReasons: (inv?.incompleteReasons ?? []).map(x => REASON_LABEL[x as IncompleteReason] ?? x),
+  };
+}
+function constraintsView(formula: string, e: EnumerationRunDiagnostic): ConstraintsFormulaView {
+  const v = e.v12!;
+  const c = v.constraints;
+  const structural: string[] = [];
+  if (c) {
+    structural.push(`釘住 H 的原子：${c.pinnedAtoms} 個（分子式的全部重原子）`);
+    structural.push(`需要拓樸等價的群：${c.equivalentGroups} 個${c.aromaticPools.length ? `；芳香 CH 需要等價的訊號大小：${c.aromaticPools.join('、')}` : ''}`);
+    structural.push(`單峰規則（相鄰碳不帶 H）：${c.singletGroups} 群；烯基 CH（恰有一個非芳香 C=C）：${c.alkeneGroups} 群`);
+    structural.push(`應變規則：${c.strainProfile ?? '無'}；對稱剪枝：${c.symmetryPruning ? '開' : '關'}`);
+  }
+  return {
+    formula,
+    stateText: v.path === 'FLEX_NO_INTEGRALS' ? '1H 沒有積分：使用舊的彈性原子路徑，只套用強證據子結構' : v.path === 'FALLBACK' ? '1H 約束未能套用（已退回）：使用舊的彈性原子路徑，仍套用強證據子結構' : '1H 約束：開啟',
+    required: v.required.map(r => `${r.label}｜SMARTS ${r.smarts}｜依據：${r.evidenceObservationIds.map(observationLabel).join('、')}`),
+    requiredEmptyText: v.required.length ? null : '沒有強證據規則被觸發',
+    structural,
+    leaf: [
+      ...(v.leafCost ? [`葉端檢查：${v.leafCost.leaves} 個葉；軌道（等價）檢查 ${v.leafCost.orbitChecks} 次${v.leafCost.orbitGiveUps ? `（${v.leafCost.orbitGiveUps} 次達搜尋上限而未排除）` : ''}`] : []),
+      ...(e.rejected?.v12 ? [`被葉端檢查排除的結構：芳香 ${e.rejected.v12.aromaticFailed}、必含子結構 ${e.rejected.v12.requiredFailed}、等價 ${e.rejected.v12.equivalenceFailed}、烯基 ${e.rejected.v12.alkeneFailed}`] : []),
+    ],
+  };
+}
+
 function boundsText(c: CompositionInferenceResult): string {
   const b = c.bounds;
   const parts: string[] = [];
@@ -138,6 +252,15 @@ function boundsText(c: CompositionInferenceResult): string {
   parts.push(`DBE ≥ ${b.dbeMin}`);
   if (b.hardBoundsRelaxed) parts.push('硬邊界已放寬');
   return parts.join('；');
+}
+
+function v12Sections(c: CompositionInferenceResult, runOf: (id: string) => CompositionSearchRun | undefined, rejected: {violatedConstraints: string[]}[]): Pick<PanelModel, 'inventory' | 'constraints'> {
+  const items = c.hypotheses.flatMap(h => { const e = runOf(h.id)?.enumeration; return e?.v12 ? [{formula: h.formula, e, v: e.v12}] : []; });
+  if (!items.length) return {inventory: null, constraints: null};
+  return {
+    inventory: {formulas: items.map(x => inventoryView(x.formula, x.v)), notes: INVENTORY_NOTES},
+    constraints: {formulas: items.map(x => constraintsView(x.formula, x.e)), scoringText: SCORING_TEXT, exclusionTitle: '被排除的結構（全部分子式合計）', exclusions: exclusionLines(exclusionStats(items.map(x => x.e), rejected)).length ? exclusionLines(exclusionStats(items.map(x => x.e), rejected)) : ['沒有結構被葉端檢查或下游規則排除']},
+  };
 }
 
 export function buildCompositionPanel(input: PanelInput): PanelModel | null {
@@ -182,5 +305,21 @@ export function buildCompositionPanel(input: PanelInput): PanelModel | null {
     excludedElements: c.elementsExcluded.map(x => `${x.element}：${x.reason}`),
     bounds: boundsText(c),
     limitations: [...FIXED_LIMITATIONS, ...c.limitations],
+    ...v12Sections(c, runOf, input.rejectedCandidates ?? []),
   };
+}
+
+/** The "no candidate" explanation of a finished analysis, or null (flag off, nothing to explain, or candidates exist). */
+export function zeroCandidateModel(result: {
+  rankedCandidates: unknown[];
+  rejectedCandidates: {violatedConstraints: string[]}[];
+  generationStatus?: {userFormula: string | null};
+  reasoningTrace?: {compositionSearch?: {runs: CompositionSearchRun[]}; observations: {modality: string; optional?: boolean; coverage: string}[]};
+}): ZeroCandidateExplanation | null {
+  if (result.rankedCandidates.length) return null;
+  const h1 = (result.reasoningTrace?.observations ?? []).filter(o => o.modality === '1H_NMR' && !o.optional);
+  return zeroCandidateExplanation({
+    runs: (result.reasoningTrace?.compositionSearch?.runs ?? []).map(r => r.enumeration), userFormula: result.generationStatus?.userFormula ?? null,
+    rejectedCandidates: result.rejectedCandidates, reasonLabel: REASON_LABEL, coverageUnconfirmed: h1.length > 0 && h1.some(o => o.coverage !== 'CONFIRMED_COMPLETE'),
+  });
 }

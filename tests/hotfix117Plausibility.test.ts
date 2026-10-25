@@ -1,5 +1,6 @@
 import {describe,expect,it} from 'vitest';
 import {NO_PLAUSIBILITY_EVIDENCE as NONE,buildPlausibilityEvidence,plausibilityViolations,type PlausibilityEvidence,type PlausibilityRule} from '../src/engines/scientificEngines/structurePlausibility';
+import {V12_CONFIG} from '../src/engines/constraints/v12Config';
 import type {ObservedEvidence} from '../src/engines/reasoning/types';
 
 // Work 4 (v1.1.7-hotfix.1): chemical-plausibility gate. Each rule has a rejected case and a must-not-reject case.
@@ -37,9 +38,14 @@ describe('plausibility rules',()=>{
   expect(rules('CN=NC')).not.toContain('CUMULATED_N');
  });
  it('GEM_DIOL: two free OH on one sp³ C rejected; acetals and hemiacetals untouched',()=>{
-  expect(rules('CC(O)O')).toContain('GEM_DIOL');
-  expect(rules('CC(OC)OC')).toEqual([]);
-  expect(rules('CC(O)OC')).toEqual([]);
+  // v1.2.0: the acyclic hemiacetal rule (W5) belongs to the 1H-constraint layer; this test states the v1.1.x rule set, so the flag is set off here.
+  // The flag-on behaviour (acyclic hemiacetal rejected) is tested in tests/v12/stage3.test.ts.
+  const was=V12_CONFIG.useV12Constraints;V12_CONFIG.useV12Constraints=false;
+  try{
+   expect(rules('CC(O)O')).toContain('GEM_DIOL');
+   expect(rules('CC(OC)OC')).toEqual([]);
+   expect(rules('CC(O)OC')).toEqual([]);
+  }finally{V12_CONFIG.useV12Constraints=was;}
  });
  it('ENOL: non-aromatic C=C–OH rejected; phenols untouched',()=>{
   expect(rules('CC(O)=CC')).toContain('ENOL');

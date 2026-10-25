@@ -109,6 +109,7 @@ export const ENUMERATION_CONFIG = {
       RELAXED: '約束已放寬（只依分子式）',
       LEGACY_SUPPLEMENT: '含舊搜尋補充',
       INCOMPLETE: '未完整',
+      V12_FALLBACK: '1H 約束未能套用（已退回）',
     },
     confidenceTooltipPrefix: '各假設間的相對比較，不是機率，也沒有以實測準確度校準：',
     deferredNote: '未評分的候選沒有被排除，只是沒有進入完整評分。',
@@ -117,6 +118,7 @@ export const ENUMERATION_CONFIG = {
       LEGACY_SUPPLEMENT: '舊 beam 搜尋（補充）',
       LEGACY: '舊 beam 搜尋（退回）',
       RELAXED: '約束已放寬',
+      V12_FALLBACK: '1H 約束未套用',
     },
   },
   /** Strain profile applied by the pipeline (null = none). */

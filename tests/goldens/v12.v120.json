@@ -1,0 +1,265 @@
+{
+ "tables": {
+  "observations": [
+   {
+    "id": "IR:synthetic-fixture.csv:3030",
+    "modality": "IR",
+    "value": 3030,
+    "relativeIntensity": 4.444444,
+    "relativeIntegral": null,
+    "multiplicity": null,
+    "jHz": [],
+    "shape": "UNKNOWN",
+    "optional": false
+   },
+   {
+    "id": "IR:synthetic-fixture.csv:2965",
+    "modality": "IR",
+    "value": 2965,
+    "relativeIntensity": 20,
+    "relativeIntegral": null,
+    "multiplicity": null,
+    "jHz": [],
+    "shape": "UNKNOWN",
+    "optional": false
+   },
+   {
+    "id": "IR:synthetic-fixture.csv:1600",
+    "modality": "IR",
+    "value": 1600,
+    "relativeIntensity": 40,
+    "relativeIntegral": null,
+    "multiplicity": null,
+    "jHz": [],
+    "shape": "UNKNOWN",
+    "optional": false
+   },
+   {
+    "id": "IR:synthetic-fixture.csv:1495",
+    "modality": "IR",
+    "value": 1495,
+    "relativeIntensity": 64.444444,
+    "relativeIntegral": null,
+    "multiplicity": null,
+    "jHz": [],
+    "shape": "UNKNOWN",
+    "optional": false
+   },
+   {
+    "id": "IR:synthetic-fixture.csv:755",
+    "modality": "IR",
+    "value": 755,
+    "relativeIntensity": 91.111111,
+    "relativeIntegral": null,
+    "multiplicity": null,
+    "jHz": [],
+    "shape": "UNKNOWN",
+    "optional": false
+   },
+   {
+    "id": "IR:synthetic-fixture.csv:700",
+    "modality": "IR",
+    "value": 700,
+    "relativeIntensity": 100,
+    "relativeIntegral": null,
+    "multiplicity": null,
+    "jHz": [],
+    "shape": "UNKNOWN",
+    "optional": false
+   },
+   {
+    "id": "1H_NMR:synthetic-fixture.csv:8.05",
+    "modality": "1H_NMR",
+    "value": 8.05,
+    "relativeIntensity": 100,
+    "relativeIntegral": 2,
+    "multiplicity": "m",
+    "jHz": [],
+    "shape": "UNKNOWN",
+    "optional": false
+   },
+   {
+    "id": "1H_NMR:synthetic-fixture.csv:7.45",
+    "modality": "1H_NMR",
+    "value": 7.45,
+    "relativeIntensity": 100,
+    "relativeIntegral": 3,
+    "multiplicity": "m",
+    "jHz": [],
+    "shape": "UNKNOWN",
+    "optional": false
+   },
+   {
+    "id": "1H_NMR:synthetic-fixture.csv:4.37",
+    "modality": "1H_NMR",
+    "value": 4.37,
+    "relativeIntensity": 100,
+    "relativeIntegral": 2,
+    "multiplicity": "q",
+    "jHz": [
+     7.1
+    ],
+    "shape": "UNKNOWN",
+    "optional": false
+   },
+   {
+    "id": "1H_NMR:synthetic-fixture.csv:1.39",
+    "modality": "1H_NMR",
+    "value": 1.39,
+    "relativeIntensity": 100,
+    "relativeIntegral": 3,
+    "multiplicity": "t",
+    "jHz": [
+     7.1
+    ],
+    "shape": "UNKNOWN",
+    "optional": false
+   },
+   {
+    "id": "MS:synthetic-fixture.csv:150",
+    "modality": "MS",
+    "value": 150,
+    "relativeIntensity": 30,
+    "relativeIntegral": null,
+    "multiplicity": null,
+    "jHz": [],
+    "shape": "UNKNOWN",
+    "optional": false
+   },
+   {
+    "id": "MS:synthetic-fixture.csv:151",
+    "modality": "MS",
+    "value": 151,
+    "relativeIntensity": 3,
+    "relativeIntegral": null,
+    "multiplicity": null,
+    "jHz": [],
+    "shape": "UNKNOWN",
+    "optional": false
+   },
+   {
+    "id": "MS:synthetic-fixture.csv:152",
+    "modality": "MS",
+    "value": 152,
+    "relativeIntensity": 0.3,
+    "relativeIntegral": null,
+    "multiplicity": null,
+    "jHz": [],
+    "shape": "UNKNOWN",
+    "optional": false
+   },
+   {
+    "id": "MS:synthetic-fixture.csv:105",
+    "modality": "MS",
+    "value": 105,
+    "relativeIntensity": 100,
+    "relativeIntegral": null,
+    "multiplicity": null,
+    "jHz": [],
+    "shape": "UNKNOWN",
+    "optional": false
+   },
+   {
+    "id": "MS:synthetic-fixture.csv:77",
+    "modality": "MS",
+    "value": 77,
+    "relativeIntensity": 60,
+    "relativeIntegral": null,
+    "multiplicity": null,
+    "jHz": [],
+    "shape": "UNKNOWN",
+    "optional": false
+   }
+  ],
+  "irMeasuredPeaks": [
+   {
+    "x": 3030,
+    "y": 30,
+    "rel": null,
+    "norm": null
+   },
+   {
+    "x": 2965,
+    "y": 40,
+    "rel": null,
+    "norm": null
+   },
+   {
+    "x": 1600,
+    "y": 55,
+    "rel": null,
+    "norm": null
+   },
+   {
+    "x": 1495,
+    "y": 60,
+    "rel": null,
+    "norm": null
+   },
+   {
+    "x": 755,
+    "y": 90,
+    "rel": null,
+    "norm": null
+   },
+   {
+    "x": 700,
+    "y": 85,
+    "rel": null,
+    "norm": null
+   }
+  ],
+  "transmittanceMarkers": [
+   {
+    "x": 3000,
+    "y": 20,
+    "rel": null,
+    "norm": null
+   },
+   {
+    "x": 1700,
+    "y": 35,
+    "rel": null,
+    "norm": null
+   },
+   {
+    "x": 1100,
+    "y": 70,
+    "rel": null,
+    "norm": null
+   }
+  ],
+  "absorptionMarkers": [
+   {
+    "x": 3000,
+    "y": 80,
+    "rel": null,
+    "norm": null
+   },
+   {
+    "x": 1700,
+    "y": 65,
+    "rel": null,
+    "norm": null
+   },
+   {
+    "x": 1100,
+    "y": 30,
+    "rel": null,
+    "norm": null
+   }
+  ],
+  "pixelToPhysicalIR": [
+   100,
+   83.3,
+   50,
+   16.7,
+   0
+  ],
+  "pixelToPhysicalNMR": [
+   100,
+   50,
+   0
+  ]
+ }
+}

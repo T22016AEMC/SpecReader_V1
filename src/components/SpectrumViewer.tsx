@@ -582,10 +582,11 @@ export const SpectrumViewer: React.FC<SpectrumViewerProps> = ({
                     px,
                     effectiveCalibration
                   );
-                  const physY = SpectrumParser.pixelToPhysicalIntensity(
+                  const physY = SpectrumParser.markerIntensity(
+                    spectrum,
+                    px,
                     py,
-                    effectiveCalibration,
-                    spectrum.modality
+                    effectiveCalibration
                   );
                   setHoverCoord({
                     x: physX,
@@ -631,10 +632,11 @@ export const SpectrumViewer: React.FC<SpectrumViewerProps> = ({
                     px,
                     effectiveCalibration
                   );
-                  const physY = SpectrumParser.pixelToPhysicalIntensity(
+                  const physY = SpectrumParser.markerIntensity(
+                    spectrum,
+                    px,
                     py,
-                    effectiveCalibration,
-                    spectrum.modality
+                    effectiveCalibration
                   );
 
                   if (
@@ -741,13 +743,7 @@ export const SpectrumViewer: React.FC<SpectrumViewerProps> = ({
                       pk.x,
                       effectiveCalibration
                     );
-                  const py =
-                    pk.pixelY ??
-                    ann?.pixelY ??
-                    SpectrumParser.physicalIntensityToPixelY(
-                      pk.y,
-                      effectiveCalibration
-                    );
+                  const py = SpectrumParser.markerPixelY(pk, ann, effectiveCalibration);
                   const isSelected = pk.id === selectedPeakId;
                   const isSolvent =
                     pk.userClassification === "SOLVENT" ||

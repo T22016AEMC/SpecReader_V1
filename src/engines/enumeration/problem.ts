@@ -28,6 +28,31 @@ export interface Problem {
   freePairs: [number, number][];
   /** Permutations that swap two adjacent identical fragment copies. */
   blockSwaps: number[][];
+  // ---------------------------------------------------------------- v1.2 (all empty/false for a request without v1.2 features)
+  /** Per atom: the signal group label, the aromatic flag and the no-hydrogen-carbon-neighbour flag of FragmentAtomSpec. */
+  group: (string | null)[];
+  aromaticFlag: boolean[];
+  noHC: boolean[];
+  /** Atoms that must carry exactly one non-aromatic C=C double bond (FragmentAtomSpec.alkeneCH). */
+  alkene: boolean[];
+  /** Groups (≥ 2 atoms) whose atoms must be topologically equivalent. */
+  eqGroups: {id: string; atoms: number[]}[];
+  /** Per atom: the first atom of its equivalence group when the atom is a later member, else -1 (row-end necessary condition). */
+  eqFirst: number[];
+  /** Pools of atoms (aromatic CH) with the signals that need one orbit each. */
+  pools: {group: string; atoms: number[]; demands: number[]}[];
+  required: {id: string; smarts: string; minMatches: number}[];
+  /** Adjacent interchangeable single-atom pairs of identical signature (incremental lex-leader, like freePairs). */
+  symPairs: [number, number][];
+  /** True when the leaf needs the v1.2 pipeline (aromatic check, required substructures, equivalence). */
+  leafChecks: boolean;
+  /** True when the request carries any v1.2 feature. */
+  v12: boolean;
+}
+
+export interface BuildOptions {
+  /** Default: on for a request with v1.2 features, off otherwise (the v1.1.8 search is unchanged). false switches every symmetry pruning off. */
+  symmetryPruning?: boolean;
 }
 
 const err = (code: EnumerationErrorCode, message: string, setId?: string): EnumerationError => ({code, message, ...(setId ? {alternativeSetId: setId} : {})});
@@ -64,7 +89,7 @@ export function valenceOf(element: string, charge: number): number | undefined {
   return CFG.chargedValence[element]?.[String(charge)];
 }
 
-export function buildProblem(formulaIn: Record<string, number>, set: FragmentAlternativeSet): {ok: true; problem: Problem} | {ok: false; error: EnumerationError} {
+export function buildProblem(formulaIn: Record<string, number>, set: FragmentAlternativeSet, options: BuildOptions = {}): {ok: true; problem: Problem} | {ok: false; error: EnumerationError} {
   const fail = (code: EnumerationErrorCode, message: string) => ({ok: false as const, error: err(code, message, set.id)});
   if (CFG.allowHypervalentS) return fail('UNSUPPORTED_CONFIG', 'allowHypervalentS=true 尚未支援（本版不產生 S(IV)/S(VI)）');
   const formula = {...formulaIn};
@@ -73,6 +98,7 @@ export function buildProblem(formulaIn: Record<string, number>, set: FragmentAlt
   const el: string[] = [], charge: number[] = [], fixedH: number[] = [], cap: number[] = [], forced: boolean[] = [], isFree: boolean[] = [], slack: boolean[] = [];
   const fixedBonds: Problem['fixedBonds'] = [];
   const blocks: {start: number; size: number}[][] = [];
+  const group: (string | null)[] = [], aromaticFlag: boolean[] = [], noHC: boolean[] = [], alkene: boolean[] = [], singleKey: (string | null)[] = [];
   const used: Record<string, number> = {};
   let fragmentH = 0;
   const ids = new Set<string>();
@@ -128,6 +154,9 @@ export function buildProblem(formulaIn: Record<string, number>, set: FragmentAlt
         forced.push(Boolean(a.open) && open[i] > 0);
         isFree.push(false);
         slack.push(flexAtom[i]);
+        group.push(a.group ?? null); aromaticFlag.push(Boolean(a.aromatic)); noHC.push(Boolean(a.noHCarbonNeighbors)); alkene.push(Boolean(a.alkeneCH));
+        // Interchangeable single atoms (no bond inside the fragment) of identical complete signature.
+        singleKey.push(frag.atoms.length === 1 && !(frag.bonds ?? []).length ? [a.element, a.fixedH ?? 0, a.charge ?? 0, open[i], Boolean(a.open) && open[i] > 0, flexAtom[i], a.group ?? '', Boolean(a.aromatic), Boolean(a.noHCarbonNeighbors), Boolean(a.alkeneCH)].join('|') : null);
         used[a.element] = (used[a.element] ?? 0) + 1;
         fragmentH += a.fixedH ?? 0;
       }
@@ -151,6 +180,7 @@ export function buildProblem(formulaIn: Record<string, number>, set: FragmentAlt
   for (const e of CFG.elementOrder) {
     for (let k = 0; k < (freeCounts[e] ?? 0); k++) {
       el.push(e); charge.push(0); fixedH.push(0); cap.push(CFG.valence[e]); forced.push(false); isFree.push(true); slack.push(true);
+      group.push(null); aromaticFlag.push(false); noHC.push(false); alkene.push(false); singleKey.push(null);
     }
   }
   const n = el.length;
@@ -165,16 +195,46 @@ export function buildProblem(formulaIn: Record<string, number>, set: FragmentAlt
 
   const fixedOrder = Array.from({length: n}, () => new Array<number>(n).fill(0));
   for (const b of fixedBonds) { fixedOrder[b.a][b.b] = b.order; fixedOrder[b.b][b.a] = b.order; }
+  // ------------------------------------------------------------------------------------------ v1.2 features
+  const eqNames = set.equivalentGroups ?? [], poolSpecs = set.equivalencePools ?? [], requiredSpecs = set.required ?? [];
+  const v12 = group.some(g => g !== null) || aromaticFlag.some(Boolean) || noHC.some(Boolean) || alkene.some(Boolean) || eqNames.length > 0 || poolSpecs.length > 0 || requiredSpecs.length > 0;
+  const pruning = options.symmetryPruning ?? true;
+  const atomsOf = (g: string): number[] => group.flatMap((x, i) => (x === g ? [i] : []));
+  const eqGroups: Problem['eqGroups'] = [];
+  const eqFirst = new Array<number>(n).fill(-1);
+  for (const name of eqNames) {
+    const atoms = atomsOf(name);
+    if (!atoms.length) return fail('INVALID_FRAGMENT', `equivalentGroups 指向沒有任何原子的群組 ${name}`);
+    if (atoms.length < 2) continue;
+    eqGroups.push({id: name, atoms});
+    for (const a of atoms.slice(1)) eqFirst[a] = atoms[0];
+  }
+  const pools: Problem['pools'] = [];
+  for (const spec of poolSpecs) {
+    const atoms = atomsOf(spec.group);
+    if (!atoms.length) return fail('INVALID_FRAGMENT', `equivalencePools 指向沒有任何原子的群組 ${spec.group}`);
+    const demands = spec.demands.filter(d => d >= 2);
+    if (demands.reduce((x, y) => x + y, 0) > atoms.length) return fail('INVALID_FRAGMENT', `equivalencePools ${spec.group}：需求 ${demands.join('+')} 超過群組原子數 ${atoms.length}`);
+    if (demands.length) pools.push({group: spec.group, atoms, demands: [...demands].sort((x, y) => y - x)});
+  }
+  for (const r of requiredSpecs) if (!r.id || !r.smarts) return fail('INVALID_FRAGMENT', `required 子結構需要 id 與 smarts`);
+  const required = requiredSpecs.map(r => ({id: r.id, smarts: r.smarts, minMatches: r.minMatches ?? 1}));
+  const leafChecks = aromaticFlag.some(Boolean) || alkene.some(Boolean) || eqGroups.length > 0 || pools.length > 0 || required.length > 0;
   const freePairs: [number, number][] = [];
-  for (let i = 0; i + 1 < n; i++) if (isFree[i] && isFree[i + 1] && el[i] === el[i + 1]) freePairs.push([i, i + 1]);
+  if (pruning) for (let i = 0; i + 1 < n; i++) if (isFree[i] && isFree[i + 1] && el[i] === el[i + 1]) freePairs.push([i, i + 1]);
+  const symPairs: [number, number][] = [];
+  if (pruning && v12) for (let i = 0; i + 1 < n; i++) if (singleKey[i] !== null && singleKey[i] === singleKey[i + 1]) symPairs.push([i, i + 1]);
+  const inSymPair = new Set(symPairs.flat());
   const blockSwaps: number[][] = [];
-  for (const fragBlocks of blocks) {
+  if (pruning) for (const fragBlocks of blocks) {
     for (let c = 0; c + 1 < fragBlocks.length; c++) {
+      // v1.2: copies of a single-atom fragment are covered by the incremental pair check.
+      if (fragBlocks[c].size === 1 && inSymPair.has(fragBlocks[c].start) && inSymPair.has(fragBlocks[c + 1].start)) continue;
       const sigma = Array.from({length: n}, (_, i) => i);
       const A = fragBlocks[c], B = fragBlocks[c + 1];
       for (let t = 0; t < A.size; t++) { sigma[A.start + t] = B.start + t; sigma[B.start + t] = A.start + t; }
       blockSwaps.push(sigma);
     }
   }
-  return {ok: true, problem: {n, el, charge, fixedH, cap, forced, isFree, slack, fixedOrder, fixedBonds, targetUnits: twoB / 2, hFree, freePairs, blockSwaps}};
+  return {ok: true, problem: {n, el, charge, fixedH, cap, forced, isFree, slack, fixedOrder, fixedBonds, targetUnits: twoB / 2, hFree, freePairs, blockSwaps, group, aromaticFlag, noHC, alkene, eqGroups, eqFirst, pools, required, symPairs, leafChecks, v12}};
 }

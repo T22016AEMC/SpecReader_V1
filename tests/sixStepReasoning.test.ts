@@ -7,6 +7,7 @@ import {createReasoningPlan} from '../src/engines/reasoning/hypothesisGenerator'
 import {executeSixStepAnalysis,planningSearchHints} from '../src/engines/reasoning/sixStepAnalysis';
 import {searchMolecularGraphsAsync,graphSearchHints} from '../src/engines/scientificEngines/deNovoGraphSearch';
 import {FormulaGenerator} from '../src/engines/candidateGeneration/formulaGenerator';
+import {V12_CONFIG} from '../src/engines/constraints/v12Config';
 import type {AnalysisProgress} from '../src/engines/reasoning/types';
 beforeAll(()=>initializeRDKit());
 const aromatic=(scale=1,j=8)=>spectrum('1H_NMR',[
@@ -73,6 +74,9 @@ it('evidence-seeded fragment joins handle a 17-heavy-atom composition without a 
  expect(Object.values(r.derivations!).some(d=>d.localStructureIds.length&&d.operations.some(op=>op.startsWith('join ')))).toBe(true);
 });
 it('six stages pass actual IDs into assembly and independent candidate evidence, without formula enumeration',async()=>{
+ // v1.2.0: this test states the v1.1.x provenance (local-structure ids in the assembly); the v1.2 provenance is asserted in tests/v12/provenance.test.ts.
+ const v12Was=V12_CONFIG.useV12Constraints;V12_CONFIG.useV12Constraints=false;
+ try{
  const stages:AnalysisProgress[]=[];const enumerate=vi.spyOn(FormulaGenerator,'enumeratePlausibleFormulas');
  const h=spectrum('1H_NMR',[{id:'q',x:3.6,y:80,integration:2,multiplicity:'q',jValues:[7]},{id:'t',x:1.2,y:100,integration:3,multiplicity:'t',jValues:[7]}]);
  const result=await executeSixStepAnalysis({spectra:{'1H_NMR':h},extraInput:{molecularFormula:'C2H6O'}},{timeMs:1800,onProgress:p=>stages.push(p)});
@@ -87,6 +91,7 @@ it('six stages pass actual IDs into assembly and independent candidate evidence,
   expect(c.evidence.every(e=>e.modality==='1H_NMR'||e.modality==='FORMULA')).toBe(true);
   expect(c.evidence.find(e=>e.modality==='FORMULA')?.observationIds).toEqual(['user-formula']);
  }
+ }finally{V12_CONFIG.useV12Constraints=v12Was;}
 });
 it('RDKit depicts the full actual graph and positional isomers, rejecting invalid or partial complete structures',()=>{
  const structures=['CCOc1ccc(C(=O)O)cc1','CCOc1cc(C(=O)O)ccc1','NCC(=O)O'];

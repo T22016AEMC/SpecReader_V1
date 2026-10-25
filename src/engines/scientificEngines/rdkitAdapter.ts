@@ -59,3 +59,53 @@ export function depictMolecule(smiles:string,width=320,height=210,partial=false)
   return {svg:svg.replace(/<\?xml[^>]*>/g,''),canonicalSmiles:mol.get_smiles(),formula:'',atomCount:graph?.atoms?.length??0,bondCount:graph?.bonds?.length??0,error:null};
  }catch{return {...empty,error:'分子圖繪製失敗；SMILES已保留。'};}finally{mol?.delete();}
 }
+
+// ---------------------------------------------------------------------------------------------------- v1.2 leaf analysis
+// One parsed molecule serves canonical SMILES, aromatic perception and substructure matching (queries are parsed once per request).
+type RDMol=NonNullable<ReturnType<MainModule['get_mol']>>;
+export interface LeafQueries {
+  /** Number of required-substructure queries that parsed (all or nothing: `failed` lists the SMARTS that did not). */
+  failed:string[];
+  delete():void;
+  /** @internal */ required:RDMol[];
+  /** @internal */ aromaticAtom:RDMol|null;
+  /** @internal */ aromaticBond:RDMol|null;
+}
+/** Parses the required-substructure SMARTS and the two aromaticity queries once. null = RDKit is not available. */
+export function compileLeafQueries(requiredSmarts:string[]):LeafQueries|null {
+  if (!rdkit) return null;
+  const required:RDMol[]=[],failed:string[]=[];
+  for (const smarts of requiredSmarts) {const q=rdkit.get_qmol(smarts);if(q)required.push(q);else failed.push(smarts);}
+  const aromaticAtom=rdkit.get_qmol('[a]'),aromaticBond=rdkit.get_qmol('[a]:[a]');
+  return {failed,required,aromaticAtom,aromaticBond,delete(){for(const q of [...required,aromaticAtom,aromaticBond])q?.delete();}};
+}
+export interface LeafMol {
+  valid:boolean;
+  /** RDKit canonical SMILES of the molecule exactly as the mol block was parsed (atom order untouched). */
+  smiles:string;
+  /** Number of distinct (overlap-allowed) matches of required query i, counted up to `limit`. */
+  matchCount(queryIndex:number,limit:number):number;
+  /** 1 for every atom that is aromatic after sanitization (query [a]). */
+  aromaticAtoms(atomCount:number):Uint8Array;
+  /** Aromatic bonds as atom pairs (query [a]:[a]). */
+  aromaticBonds():[number,number][];
+  close():void;
+}
+/** Parses a mol block once (sanitized). Atom indices of every result are the atom order of the mol block. Call close() when done. */
+export function openLeafMol(molBlock:string,queries:LeafQueries):LeafMol {
+  const mol=rdkit?rdkit.get_mol(molBlock):null;
+  if (!mol||!mol.is_valid()) {mol?.delete();return {valid:false,smiles:'',matchCount:()=>0,aromaticAtoms:n=>new Uint8Array(n),aromaticBonds:()=>[],close(){}};}
+  const matches=(q:RDMol)=>{const v=JSON.parse(mol.get_substruct_matches(q)) as unknown;return Array.isArray(v)?v as {atoms:number[]}[]:[];}; // no match is the object {}
+  return {
+    valid:true,
+    smiles:mol.get_smiles(),
+    matchCount(i,limit){
+      const q=queries.required[i];if(!q)return 0;
+      if (limit<=1) return mol.get_substruct_match(q)!=='{}'?1:0;
+      return Math.min(limit,matches(q).length);
+    },
+    aromaticAtoms(n){const out=new Uint8Array(n);if(queries.aromaticAtom)for(const m of matches(queries.aromaticAtom))out[m.atoms[0]]=1;return out;},
+    aromaticBonds(){return queries.aromaticBond?matches(queries.aromaticBond).map(m=>[m.atoms[0],m.atoms[1]] as [number,number]):[];},
+    close(){mol.delete();},
+  };
+}

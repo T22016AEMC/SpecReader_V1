@@ -15,11 +15,18 @@ import type {ExperimentalSpectrumData,SpectralPeak} from '../src/types/spectrum'
 beforeAll(()=>initializeRDKit());
 type Mod=ExperimentalSpectrumData['modality'];
 const mk=(mod:Mod,peaks:Partial<SpectralPeak>[]):ExperimentalSpectrumData=>spectrum(mod,peaks.map((p,i)=>({id:`${mod}-${i}`,manualPeak:true,y:50,...p})) as SpectralPeak[]);
-async function runLikeWorker(input:AnalysisInput){
+/**
+ * v1.2.0: with the 1H constraints on, an extremely small budget (16000 steps for 8 formulas) can end with zero candidates, because the strong-evidence
+ * substructures (here: two equal aromatic doublets, J 8.6 Hz → para-disubstituted benzene) apply on every path and the few structures reached in ~1000
+ * steps per formula do not contain it. Tests A and E therefore pass a larger budget as INPUT (measured: 32000 steps → no plausibility rejections yet,
+ * 64000 → both A and E hold, 120000 used for margin); their assertions are unchanged.
+ */
+const SMALL_BUDGET={timeMs:8000,maxStates:16000},BUDGET_FOR_V12={timeMs:8000,maxStates:120000};
+async function runLikeWorker(input:AnalysisInput,budget:{timeMs:number;maxStates:number}=SMALL_BUDGET){
  await initializeRDKit();
  const spectra={...input.spectra};
  if(spectra.IR?.irManualSettings)spectra.IR=refreshIRSnapshot(spectra.IR);
- return executeSixStepAnalysis({...input,spectra},{timeMs:8000,maxStates:16000});
+ return executeSixStepAnalysis({...input,spectra},budget);
 }
 const hasN=(formula:string)=>/N(?![a-z])/.test(formula);
 const smilesHasN=(s:string)=>/N|n/.test(s.replace(/Cl|Br|Na/g,''));
@@ -40,7 +47,7 @@ const acceptanceA=():AnalysisInput=>({extraInput:{},spectra:{
 
 describe('A. no N evidence: nothing with N anywhere in the complete flow',()=>{
  it('final candidates, formulas, element clues, search alphabet and fallback carry no N',async()=>{
-  const r=await runLikeWorker(acceptanceA());
+  const r=await runLikeWorker(acceptanceA(),BUDGET_FOR_V12);
   const trace=r.reasoningTrace!;
   expect(trace.nitrogenEvidence?.mode).toBe('NONE');
   expect(r.rankedCandidates.length).toBeGreaterThan(0);
@@ -59,11 +66,12 @@ describe('A. no N evidence: nothing with N anywhere in the complete flow',()=>{
 });
 describe('E. implausible linkages never reach the final candidates without evidence',()=>{
  it('no O–O, N(OH)2 or N–O–N among final candidates; rejections are recorded',async()=>{
-  const r=await runLikeWorker(acceptanceA());
+  const r=await runLikeWorker(acceptanceA(),BUDGET_FOR_V12);
   for(const c of r.rankedCandidates){const l=linkages(c.smiles);expect(l.peroxide||l.nDiOH||l.nOn).toBe(false);}
   const reasons=r.rejectedCandidates.flatMap(x=>x.violatedConstraints).filter(v=>v.startsWith('PLAUSIBILITY('));
   // Whatever the search proposed and the gate removed is listed with its rule, not silently dropped.
-  for(const v of reasons)expect(v).toMatch(/^PLAUSIBILITY\((PEROXIDE|N_O_N|N_DI_OH|N_O_LINK|CUMULATED_N|GEM_DIOL|ENOL|KETENE|AMINAL)\): /);
+  // v1.2.0: the allowed rule names also include the two v1.2 rules (W5); nothing else in this assertion changed.
+  for(const v of reasons)expect(v).toMatch(/^PLAUSIBILITY\((PEROXIDE|N_O_N|N_DI_OH|N_O_LINK|CUMULATED_N|GEM_DIOL|ENOL|KETENE|AMINAL|HEMIACETAL_ACYCLIC|ORTHOESTER_ACYCLIC)\): /);
   // On this input the search does propose peroxides and gem-diols, so the gate is exercised (deterministic input).
   expect(reasons.length).toBeGreaterThan(0);
   expect(r.solvedConstraintSpace.solverLog.some(s=>s.startsWith('化學合理性檢查剔除候選'))).toBe(true);

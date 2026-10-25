@@ -208,6 +208,8 @@ export function rankCandidates(
     supportingReasons.splice(0);contradictingReasons.splice(0);
     const unknownEvidence:string[]=[];
     for(const entry of scientificScoreLedger.entries){
+      // v1.2 two-way 1H entries carry their own readable line: a shortfall is an objection, a good match supports.
+      if(entry.display){if(entry.weight>0){if((entry.compatibility??0)>=.6)supportingReasons.push(entry.display);else contradictingReasons.push(entry.display);}continue;}
       const note=`${entry.sourceModality} [${entry.observationIds.join(',')}]: ${entry.method}`;
       if(entry.compatibility===null||entry.weight===0)unknownEvidence.push(note+'（資料不足）');
       else if(entry.compatibility>=.6)supportingReasons.push(note);

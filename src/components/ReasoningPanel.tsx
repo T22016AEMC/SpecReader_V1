@@ -1,5 +1,6 @@
 import React from 'react';
 import type {AnalysisProgress,ReasoningTrace,CandidateReasoning} from '../engines/reasoning/types';
+import {v12AssemblyLines} from '../engines/reasoning/assemblyText';
 export function ReasoningPanel({trace,progress,busy}:{trace?:ReasoningTrace;progress:AnalysisProgress|null;busy:boolean}){
  if(!trace&&!progress)return null;
  const locals=busy?progress?.localStructures:trace?.localStructures??progress?.localStructures;
@@ -13,5 +14,5 @@ export function ReasoningPanel({trace,progress,busy}:{trace?:ReasoningTrace;prog
 }
 export function CandidateReasoningDetails({record:r}:{record?:CandidateReasoning}){
  if(!r)return null;
- return <details className="my-2 text-[11px] text-slate-300" data-testid="candidate-reasoning"><summary>候選組裝與驗證證據</summary><p>局部圖：{r.localStructureIds.join('、')||'通用原子／鍵擴展；未指派特定局部圖'}</p><p>組裝提案（不是直接觀測鍵結）：{r.assembly?.operations.join(' → ')??'組裝來源未提供'}</p>{r.evidence.map((e,i)=><p key={i}>{e.status}／{e.modality}：{e.observationIds.join(', ')}；{e.method}</p>)}<p className="text-amber-300">{r.limitations.join('；')}</p></details>;
+ return <details className="my-2 text-[11px] text-slate-300" data-testid="candidate-reasoning"><summary>候選組裝與驗證證據</summary><p>局部圖：{r.localStructureIds.join('、')||'通用原子／鍵擴展；未指派特定局部圖'}</p><p>組裝提案（不是直接觀測鍵結）：{r.assembly?.operations.join(' → ')??'組裝來源未提供'}</p>{r.assembly?.v12&&<div data-testid="candidate-v12-assembly">{v12AssemblyLines(r.assembly.v12).map((t,i)=><p key={i}>{t}</p>)}</div>}{r.evidence.map((e,i)=><p key={i}>{e.status}／{e.modality}：{e.observationIds.length?`${e.observationIds.join(', ')}；`:''}{e.method}</p>)}<p className="text-amber-300">{r.limitations.join('；')}</p></details>;
 }

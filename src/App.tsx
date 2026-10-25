@@ -4,7 +4,7 @@ import {MassExperimentConditions} from './components/MassExperimentConditions';
 import {emptyModeAState,executeAnalysisWorker,type ModeAResult} from './engines/analysisSession';
 import {PeakObservationTable} from './components/PeakObservationTable';
 import {CompositionPanel} from './components/CompositionPanel';
-import {candidateSourceTag} from './engines/enumeration/compositionPanelModel';
+import {candidateSourceTag, zeroCandidateModel} from './engines/enumeration/compositionPanelModel';
 import type {IRManualSettings} from './engines/scientificEngines/irManualBaseline';
 import type {ExtendedSpectrumModality} from './types/spectrum';
 import React, { useMemo, useRef, useState } from "react";
@@ -3301,6 +3301,16 @@ export default function App() {
                       <p className="mx-auto mt-1 max-w-xl text-xs text-slate-400">
                         {modeAOrchestration.generationStatus?.message} 請保留上方局部化學環境假設；搜尋無結果不代表該分子式不存在。
                       </p>
+                      {(() => {
+                        const z = zeroCandidateModel(modeAOrchestration);
+                        return z ? <div data-testid="zero-candidate-explanation" className="mx-auto mt-3 max-w-xl rounded border border-amber-500/40 bg-amber-950/30 p-3 text-left text-xs text-amber-100">
+                          <p className="font-bold" data-testid="zero-candidate-headline">{z.headline}</p>
+                          <p className="mt-2 font-semibold">被擋掉的結構</p>
+                          {z.blockedEmpty ? <p data-testid="zero-candidate-blocked-empty">{z.blockedEmpty}</p> : <ul className="ml-4 list-disc" data-testid="zero-candidate-blocked">{z.blocked.map((x, i) => <li key={i}>{x}</li>)}</ul>}
+                          {z.unfinished.length > 0 && <><p className="mt-2 font-semibold">沒跑完的部分</p><ul className="ml-4 list-disc" data-testid="zero-candidate-unfinished">{z.unfinished.map((x, i) => <li key={i}>{x}</li>)}</ul></>}
+                          {z.suggestions.length > 0 && <><p className="mt-2 font-semibold">建議</p><ul className="ml-4 list-disc" data-testid="zero-candidate-suggestions">{z.suggestions.map((x, i) => <li key={i}>{x}</li>)}</ul></>}
+                        </div> : null;
+                      })()}
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">

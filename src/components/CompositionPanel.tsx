@@ -41,6 +41,38 @@ export function CompositionPanelView({model, stale}: {model: PanelModel; stale: 
           </tr>)}</tbody>
         </table>}
       </details>
+      {model.inventory && <details open data-testid="composition-inventory">
+        <summary className="font-semibold text-slate-200">由 1H 推得的原子清單</summary>
+        {model.inventory.formulas.map(f => <details key={f.formula} open={model.inventory!.formulas.length === 1} data-testid="composition-inventory-formula" data-formula={f.formula} className="mt-1">
+          <summary className="cursor-pointer font-mono text-cyan-300">{f.formula}{f.badges.length > 0 && <span className="ml-2">{f.badges.map(b => <Badge key={b.id} b={b}/>)}</span>}</summary>
+          <p data-testid="composition-inventory-status">{f.statusText}</p>
+          {f.reasonText && <p className="text-amber-300" data-testid="composition-inventory-reason">{f.reasonText}</p>}
+          {f.combinations.length > 0 && <ul className="ml-4 list-disc" data-testid="composition-inventory-combinations">{f.combinations.map((x, i) => <li key={i}>{x}</li>)}</ul>}
+          {f.incompleteReasons.length > 0 && <p className="text-slate-300">未完整原因：{f.incompleteReasons.join('；')}</p>}
+          {f.signals.length > 0 && <table className="mt-1 w-full border-collapse text-left" data-testid="composition-inventory-signals">
+            <thead><tr className="border-b border-slate-800 text-[10px] text-slate-400"><th className="py-1 pr-2">δ (ppm)</th><th className="px-2">積分</th><th className="px-2">最簡比</th><th className="px-2">H 數</th><th className="px-2">多重性</th><th className="px-2">位移類別</th><th className="px-2">每原子 H</th><th className="px-2">原子數</th><th className="px-2">等價</th><th className="px-2">單峰規則</th></tr></thead>
+            <tbody className="divide-y divide-slate-800/60">{f.signals.map((r, i) => <tr key={i}><td className="py-1 pr-2">{r.shift}</td><td className="px-2">{r.integral}</td><td className="px-2">{r.ratio}</td><td className="px-2">{r.hText}</td><td className="px-2">{r.multiplicity}</td><td className="px-2">{r.classes}</td><td className="px-2">{r.hPerAtom || '—'}</td><td className="px-2">{r.atoms || '—'}</td><td className="px-2">{r.equivalence}</td><td className="px-2">{r.singlet}</td></tr>)}</tbody>
+          </table>}
+          {f.preview.length > 0 && <details className="mt-1"><summary className="cursor-pointer text-slate-300">替代解讀預覽（最多 6 個）{f.countsText ? `｜${f.countsText}` : ''}</summary>{f.preview.map((x, i) => <p key={i} data-testid="composition-inventory-preview">{x}</p>)}</details>}
+          {f.voided.length > 0 && <details className="mt-1"><summary className="cursor-pointer text-slate-300">作廢的讀法（{f.voided.length} 種原因）</summary>{f.voided.map((x, i) => <p key={i}>{x.text}</p>)}</details>}
+          {f.aromaticLimited.length > 0 && <ul className="ml-4 list-disc text-amber-300">{f.aromaticLimited.map((x, i) => <li key={i}>{x}</li>)}</ul>}
+        </details>)}
+        <ul className="mt-1 ml-4 list-disc text-[10px] text-slate-400">{model.inventory.notes.map((n, i) => <li key={i}>{n}</li>)}</ul>
+      </details>}
+      {model.constraints && <details data-testid="composition-constraints">
+        <summary className="cursor-pointer font-semibold text-slate-200">實際套用的約束</summary>
+        {model.constraints.formulas.map(f => <div key={f.formula} className="mt-1" data-testid="composition-constraints-formula" data-formula={f.formula}>
+          <p className="font-mono text-cyan-300">{f.formula}</p>
+          <p>{f.stateText}</p>
+          <p className="font-semibold text-slate-300">必含子結構</p>
+          {f.requiredEmptyText ? <p className="text-slate-400">{f.requiredEmptyText}</p> : <ul className="ml-4 list-disc">{f.required.map((x, i) => <li key={i} data-testid="composition-required">{x}</li>)}</ul>}
+          {f.structural.length > 0 && <ul className="ml-4 list-disc">{f.structural.map((x, i) => <li key={i}>{x}</li>)}</ul>}
+          {f.leaf.length > 0 && <ul className="ml-4 list-disc text-slate-300">{f.leaf.map((x, i) => <li key={i}>{x}</li>)}</ul>}
+        </div>)}
+        <p className="mt-1 font-semibold text-slate-300">{model.constraints.exclusionTitle}</p>
+        <ul className="ml-4 list-disc" data-testid="composition-exclusions">{model.constraints.exclusions.map((x, i) => <li key={i}>{x}</li>)}</ul>
+        <p className="mt-1" data-testid="composition-scoring">評分（雙向）：{model.constraints.scoringText}</p>
+      </details>}
       {model.overview && <div data-testid="composition-overview" className="text-slate-300">
         <p>{model.overview.text}</p>{model.overview.prefilterText && <p>{model.overview.prefilterText}</p>}<p>{model.overview.deferredNote}</p>
       </div>}
@@ -70,6 +102,7 @@ export function CompositionPanel({result, stale}: {result: ModeAResult; stale: b
     mode: result.reasoningTrace?.compositionSearch?.mode,
     enumeration: result.solvedConstraintSpace?.searchResult?.enumeration,
     localStructures: result.reasoningTrace?.localStructures ?? [],
+    rejectedCandidates: result.rejectedCandidates,
   });
   return model ? <CompositionPanelView model={model} stale={stale}/> : null;
 }
