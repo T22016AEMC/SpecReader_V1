@@ -31,7 +31,7 @@ export async function pipelineSnapshot(spectra: Spectra, extraInput: Record<stri
     stages: r.reasoningTrace?.stages.length ?? null,
     // Score ledger key fields of the first 8 ranked candidates.
     ledger: r.rankedCandidates.slice(0, 8).map(c => {
-      const l = c.scientificScoreLedger;
+      const l = c.scientificScoreLedger!;
       return {
         smiles: c.smiles, totalScore: round(l.totalScore), meaning: l.scoreMeaning, formulaHardCompatible: l.formulaHardCompatible,
         modalityScores: Object.fromEntries(Object.entries(l.modalityScores).map(([k, v]) => [k, round(v as number | null)])),
