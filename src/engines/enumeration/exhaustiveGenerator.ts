@@ -1,5 +1,6 @@
 import type {DeNovoSearchResult, SearchTermination} from '../scientificEngines/deNovoGraphSearch';
 import type {StructureGenerationRequest, StructureGenerator} from '../composition/structureGenerator';
+import type {AssemblyV12} from '../reasoning/types';
 import {buildAtomInventory} from '../constraints/atomInventory';
 import {inventoryToFragmentSets, type InventorySetInfo} from '../constraints/inventoryAdapter';
 import {requiredFromEvidence} from '../constraints/requiredSubstructures';
@@ -8,6 +9,7 @@ import {V12_CONFIG} from '../constraints/v12Config';
 /** v1.2 (W5): the pipeline applies the strain profile of the v1.2 layer while the flag is on. */
 const pipelineStrain = (v12: boolean) => (v12 ? V12_CONFIG.pipelineStrainProfile : CFG.pipelineStrainProfile);
 import {h1SignalsFromObservations, irAldehydeContext} from '../constraints/v12Evidence';
+import {matchesSMARTS} from '../scientificEngines/rdkitAdapter';
 import {parseFormula} from './problem';
 import {adaptLocalStructures} from './adapter';
 import {ENUMERATION_CONFIG as CFG} from './enumerationConfig';
@@ -30,6 +32,15 @@ const legacyRun = (formula: string | undefined, reason: string, notes: string[] 
  * Requests it cannot express (no formula, unconvertible local structures, no fragments for a large formula, unusable readings)
  * are delegated to `legacy` and the reason is recorded in `search.enumeration`; it never fails the analysis.
  */
+/** The v1.2 provenance of a candidate that came from the flexible-atom path (no integrals, D9) or from the fallback (D10). */
+function flexAssembly(v: V12RunDiagnostic): AssemblyV12 {
+  return {
+    path: v.path === 'FALLBACK' ? 'FALLBACK' : 'FLEX_NO_INTEGRALS', required: v.required.map(r => ({id: r.id, label: r.label})),
+    leafChecks: [...(v.required.length && V12_CONFIG.requiredInFlexPath ? ['REQUIRED' as const] : []), ...(V12_CONFIG.pipelineStrainProfile ? ['STRAIN' as const] : [])],
+    ...(v.path === 'FALLBACK' ? {fallbackReason: v.reason ?? v.inventory?.reason ?? undefined} : {}),
+  };
+}
+
 /** What the v1.2 layer adds to a flexible-atom (v1.1.7) enumeration: leaf substructure filters (D9) and the diagnostics of the layer. */
 interface FlexExt {required?: RequiredSubstructureSpec[]; v12?: V12RunDiagnostic}
 
@@ -40,12 +51,16 @@ export function createExhaustiveGenerator(legacy: StructureGenerator): Structure
       const fallback = async (reason: string, notes: string[] = [], attempt?: EnumerationResult): Promise<DeNovoSearchResult> => {
         // With a shared pool the legacy search only gets what the enumeration attempt left over.
         const req = request.sharedPool && attempt ? {...request, budget: {...request.budget, maxStates: Math.max(0, request.budget.maxStates - attempt.stats.visited), timeMs: Math.max(0, request.budget.timeMs - attempt.stats.elapsedMs)}} : request;
-        const search = await legacy.generateStructures(req);
+        const found = await legacy.generateStructures(req);
+        // v1.2: the strong-evidence substructures hold on this path too; the legacy candidates that lack one are dropped (and counted in the notes).
+        const keep = (s: string) => !ext?.required?.length || ext.required.every(r => matchesSMARTS(s, r.smarts) !== false);
+        const search = ext?.required?.length ? {...found, smiles: found.smiles.filter(keep)} : found;
         const run = legacyRun(formula, reason, notes);
-        if (ext?.v12) { run.v12 = ext.v12; if (ext.v12.path === 'FALLBACK') run.incompleteReasons = ['V12_CONSTRAINTS_FALLBACK']; }
+        if (ext?.required?.length && search.smiles.length < found.smiles.length) run.notes = [...run.notes, `舊搜尋的 ${found.smiles.length - search.smiles.length} 個候選不含強證據要求的子結構，已排除`];
         if (attempt) { run.status = attempt.status; run.incompleteReasons = attempt.incompleteReasons; run.visited = attempt.stats.visited; run.leaves = attempt.stats.leaves; run.elapsedMs = attempt.stats.elapsedMs; }
+        if (ext?.v12) { run.v12 = ext.v12; if (ext.v12.path === 'FALLBACK') run.incompleteReasons = [...run.incompleteReasons, 'V12_CONSTRAINTS_FALLBACK']; }
         const origins: Record<string, CandidateOrigin> = {};
-        for (const s of search.smiles) origins[s] = {source: 'LEGACY', relaxed: false};
+        for (const s of search.smiles) origins[s] = {source: 'LEGACY', relaxed: false, ...(ext?.v12?.path === 'FALLBACK' ? {v12Fallback: true} : {})};
         return {...search, enumeration: emptyDiagnostics(run, origins)};
       };
       if (!formula) return fallback('沒有分子式，維持舊搜尋');
@@ -91,7 +106,7 @@ export function createExhaustiveGenerator(legacy: StructureGenerator): Structure
       };
       const smiles = result.candidates.map(c => c.smiles);
       const origins: Record<string, CandidateOrigin> = {};
-      for (const s of smiles) origins[s] = {source: 'ENUMERATOR', relaxed: false};
+      for (const s of smiles) origins[s] = {source: 'ENUMERATOR', relaxed: false, ...(ext?.v12?.path === 'FALLBACK' ? {v12Fallback: true} : {})};
       // Every reading finished but none contains a molecule with this formula (e.g. a C=O reading for C2H6O): the evidence-derived
       // fragments contradict the formula. The formula is the stronger constraint, so relax to formula-only enumeration when that is
       // small enough (otherwise the legacy search is used); scoring then judges the candidates against the evidence.
@@ -99,7 +114,7 @@ export function createExhaustiveGenerator(legacy: StructureGenerator): Structure
       if (!smiles.length && finished && realReasons.length === 0) {
         if (heavy > CFG.adapter.maxHeavyAtomsWithoutFragments) return fallback(`所有片段讀法都沒有符合分子式的分子，而且重原子數 ${heavy} 太大，無法放寬成純分子式窮舉`, adapted.notes, result);
         relaxed = await enumerateStructures({formula: parsed.counts, forbid: {strain: pipelineStrain(Boolean(ext?.v12)), ...(request.plausibility && CFG.pipelineEarlyPlausibilityPrune ? {plausibility: request.plausibility, plausibilityLeaf: false} : {})}, budget: {timeMs: eb.timeMs, maxStates: eb.maxStates, maxCandidates: eb.maxCandidates ?? CFG.analysis.maxCandidatesPerFormula, shouldCancel: request.budget.shouldCancel}});
-        for (const c of relaxed.candidates) { smiles.push(c.smiles); origins[c.smiles] = {source: 'ENUMERATOR', relaxed: true}; }
+        for (const c of relaxed.candidates) { smiles.push(c.smiles); origins[c.smiles] = {source: 'ENUMERATOR', relaxed: true, ...(ext?.v12?.path === 'FALLBACK' ? {v12Fallback: true} : {})}; }
         run.relaxedToFormulaOnly = {candidates: relaxed.candidates.length, complete: relaxed.status === 'COMPLETE'};
         run.notes = [...run.notes, `所有片段讀法都沒有符合分子式的分子（片段與分子式矛盾）：放寬成只依分子式窮舉，得到 ${relaxed.candidates.length} 個候選（${relaxed.status === 'COMPLETE' ? 'COMPLETE' : 'INCOMPLETE'}）`];
         run.candidates = smiles.length;
@@ -109,15 +124,23 @@ export function createExhaustiveGenerator(legacy: StructureGenerator): Structure
       }
       // Budget-limited enumeration: add what the bounded legacy beam search finds (never fewer candidates than before).
       let supplement: DeNovoSearchResult | null = null;
-      if (!complete && CFG.legacySupplementWhenIncomplete && (realReasons.includes('TIME_BUDGET') || realReasons.includes('STATE_BUDGET'))) {
-        const left = request.sharedPool ? {maxStates: Math.max(0, request.budget.maxStates - result.stats.visited), timeMs: Math.max(0, request.budget.timeMs - result.stats.elapsedMs)} : {maxStates: request.budget.maxStates, timeMs: request.budget.timeMs};
+      const supplementV12 = new Set<string>();
+      // v1.2 (D10 guarantee): the 1H inventory path and the flexible-atom fallback both produced nothing → the legacy search runs once with its own
+      // supplement constants, whatever is left of the shared pool. Only in that case; these candidates are not bound by the 1H constraints.
+      const forceSupplement = fellBack && smiles.length === 0;
+      if (forceSupplement || (!complete && CFG.legacySupplementWhenIncomplete && (realReasons.includes('TIME_BUDGET') || realReasons.includes('STATE_BUDGET')))) {
+        const left = forceSupplement ? {maxStates: CFG.legacySupplement.maxStatesPerRun, timeMs: CFG.legacySupplement.timeMsPerRun} : request.sharedPool ? {maxStates: Math.max(0, request.budget.maxStates - result.stats.visited), timeMs: Math.max(0, request.budget.timeMs - result.stats.elapsedMs)} : {maxStates: request.budget.maxStates, timeMs: request.budget.timeMs};
         const req = {...request, budget: {...request.budget, maxStates: Math.min(left.maxStates, CFG.legacySupplement.maxStatesPerRun), timeMs: Math.min(left.timeMs, CFG.legacySupplement.timeMsPerRun)}};
         supplement = await legacy.generateStructures(req);
         const seen = new Set(smiles);
-        let added = 0;
-        for (const s of supplement.smiles) if (!seen.has(s)) { seen.add(s); smiles.push(s); origins[s] = {source: 'LEGACY_SUPPLEMENT', relaxed: false}; added++; }
-        run.notes = [...run.notes, `窮舉未完成（${run.incompleteReasons.join('、')}）：另以舊 beam 搜尋補充，${supplement.smiles.length} 個候選中 ${added} 個為新（舊搜尋 ${supplement.visited} 步）`];
+        let added = 0, droppedByRequired = 0;
+        // v1.2: strong-evidence substructures hold on every path, so the legacy candidates are filtered by them too.
+        const passesRequired = (s: string) => !ext?.required?.length || ext.required.every(r => matchesSMARTS(s, r.smarts) !== false);
+        for (const s of supplement.smiles) if (!seen.has(s) && !passesRequired(s)) droppedByRequired++;
+        for (const s of supplement.smiles) if (!seen.has(s) && passesRequired(s)) { seen.add(s); smiles.push(s); origins[s] = {source: 'LEGACY_SUPPLEMENT', relaxed: false, ...(fellBack ? {v12Fallback: true} : {})}; added++; if (ext?.v12) supplementV12.add(s); }
+        run.notes = [...run.notes, forceSupplement ? `1H 約束的清單路徑與退回路徑都沒有候選：另以舊 beam 搜尋補充一次，${supplement.smiles.length} 個候選中 ${added} 個為新（這些候選不受 1H 約束）` : `窮舉未完成（${run.incompleteReasons.join('、')}）：另以舊 beam 搜尋補充，${supplement.smiles.length} 個候選中 ${added} 個為新（舊搜尋 ${supplement.visited} 步）`];
         run.legacySupplement = {candidates: supplement.smiles.length, added, visited: supplement.visited};
+        if (droppedByRequired) run.notes = [...run.notes, `舊 beam 補充的候選中 ${droppedByRequired} 個不含強證據要求的子結構，已排除`];
         run.candidates = smiles.length;
       }
       const derivations: NonNullable<DeNovoSearchResult['derivations']> = {};
@@ -127,6 +150,7 @@ export function createExhaustiveGenerator(legacy: StructureGenerator): Structure
           localStructureIds: adapted.setLocalIds[sid] ?? [],
           operations: [`片段組裝窮舉（讀法 ${c.alternativeSetIds.join('、')}；${(adapted.setLocalIds[sid] ?? []).length} 個片段）`],
           observationIds: adapted.setObservationIds[sid] ?? [],
+          ...(ext?.v12 ? {v12: flexAssembly(ext.v12)} : {}),
         };
       }
       if (relaxed) for (const c of relaxed.candidates) derivations[c.smiles] = {localStructureIds: [], operations: ['放寬為只依分子式的窮舉（片段讀法與分子式矛盾）'], observationIds: []};
@@ -137,7 +161,7 @@ export function createExhaustiveGenerator(legacy: StructureGenerator): Structure
         smiles, status: 'BOUNDED', visited: result.stats.visited + visitedExtra + (supplement?.visited ?? 0), termination, complete: run.complete,
         note: `片段組裝窮舉：${result.stats.visited} 步；${run.complete ? 'COMPLETE（在目前分子式與片段約束下所有分支走完）' : `INCOMPLETE（${run.incompleteReasons.join('、')}）`}；${smiles.length} 個去重候選；${incompatibleSets.length}/${result.sets.length} 個片段讀法與分子式不相容`,
         partialHypotheses: [...new Set([...(hints.couplingNotes ?? []), ...(supplement?.partialHypotheses ?? [])])], rejectedByComposition: result.stats.rejected.sanitizeFailed + (supplement?.rejectedByComposition ?? 0),
-        derivations: {...(supplement?.derivations ?? {}), ...derivations}, elapsedMs: result.stats.elapsedMs + elapsedExtra + (supplement?.elapsedMs ?? 0), frontierPeak: supplement?.frontierPeak ?? 0, enumeration: emptyDiagnostics(run, origins),
+        derivations: {...(supplement?.derivations ?? {}), ...Object.fromEntries([...supplementV12].map(s => [s, {...(supplement?.derivations?.[s] ?? {localStructureIds: [], operations: ['舊 beam 搜尋補充'], observationIds: []}), v12: flexAssembly(ext!.v12!)}])), ...derivations}, elapsedMs: result.stats.elapsedMs + elapsedExtra + (supplement?.elapsedMs ?? 0), frontierPeak: supplement?.frontierPeak ?? 0, enumeration: emptyDiagnostics(run, origins),
       };
     }
   };
@@ -151,7 +175,20 @@ const fmtInv = (inv: ReturnType<typeof buildAtomInventory>, patternSets: number,
   status: inv.status, reason: inv.reason, alternatives: inv.alternatives.length, truncated: inv.truncated, patternSets, patternTruncated, incompleteReasons: [...inv.incompleteReasons], ratioSum: inv.ratioSum,
   combinations: inv.kCombinations.map(c => ({k: c.k, extraExchangeable: c.extraExchangeable, ratio: c.ratio})),
   signals: inv.signals.map(x => ({...x, classes: [...x.classes]})), voided: inv.voided, aromaticLimited: inv.aromaticLimited,
+  alternativesPreview: inv.alternatives.slice(0, 6).map(a => ({
+    id: a.id, k: a.k, extraExchangeable: a.extraExchangeable, hasVinyl: a.hasVinyl, zeroHAtoms: {...a.zeroHAtoms},
+    groups: a.groups.map(g => ({observationId: g.observationId, shiftClasses: [...g.shiftClasses], hTotal: g.hTotal, atomCount: g.atomCount, hPerAtom: g.hPerAtom, element: g.element, aromatic: g.aromatic, alkene: g.alkene, exchangeable: g.exchangeable, equivalent: g.equivalent, singletRule: g.singletNoHNeighbors})),
+    rings: a.rings.rings.map(r => ({templateId: r.templateId, ch: r.ch, patterns: r.substituentPositionPatterns.length})),
+  })),
 });
+const fmtConstraints = (inv: ReturnType<typeof buildAtomInventory>, heavyAtoms: number): NonNullable<V12RunDiagnostic['constraints']> | null => {
+  const a = inv.alternatives[0];
+  if (!a) return null;
+  return {
+    pinnedAtoms: heavyAtoms, equivalentGroups: a.groups.filter(g => g.equivalent && g.atomCount > 1 && !g.aromatic).length, aromaticPools: a.groups.filter(g => g.aromatic && g.equivalent && g.atomCount > 1).map(g => g.atomCount),
+    singletGroups: a.groups.filter(g => g.singletNoHNeighbors).length, alkeneGroups: a.groups.filter(g => g.alkene).length, strainProfile: V12_CONFIG.pipelineStrainProfile, symmetryPruning: V12_CONFIG.symmetryPruning,
+  };
+};
 
 /**
  * 1H-constrained generation for one formula: the atom inventory (pinned H per atom, ring templates, equivalence groups, singlet rule,
@@ -169,7 +206,7 @@ async function generateWithInventory(request: StructureGenerationRequest, exhaus
   const h1 = h1SignalsFromObservations(ev.observations);
   const inv = buildAtomInventory({signals: h1.signals, formula: parsed.counts, solvent: h1.solvent, coverageComplete: h1.coverageComplete, ir: irAldehydeContext(ev.observations, ev.irCoversAldehydeRegion), nitrogenAllowed: ev.nitrogenAllowed});
   const diag = (path: V12RunDiagnostic['path'], reason: string | null, patternSets = 0, patternTruncated = false, runs: V12RunDiagnostic['runs'] = [], leafCost: V12RunDiagnostic['leafCost'] = null): V12RunDiagnostic =>
-    ({path, badge: path === 'FALLBACK' ? V12_CONFIG.fallbackBadge : null, reason, inventory: fmtInv(inv, patternSets, patternTruncated), required: requiredDiag, runs, leafCost});
+    ({path, badge: path === 'FALLBACK' ? V12_CONFIG.fallbackBadge : null, reason, inventory: fmtInv(inv, patternSets, patternTruncated), constraints: fmtConstraints(inv, Object.entries(parsed.counts).reduce((s, [e, n]) => s + (e === 'H' ? 0 : n), 0)), required: requiredDiag, runs, leafCost});
   const flexSpecs = V12_CONFIG.requiredInFlexPath ? requiredSpecs : [];
   if (inv.status === 'NOT_AVAILABLE') return exhaustive(request, {required: flexSpecs, v12: diag('FLEX_NO_INTEGRALS', inv.reason)});
 
@@ -246,9 +283,17 @@ async function generateWithInventory(request: StructureGenerationRequest, exhaus
   };
   const derivations: NonNullable<DeNovoSearchResult['derivations']> = {};
   const h1Ids = h1.signals.filter(x => !x.optional).map(x => x.observationId);
+  const shiftOf = new Map(inv.signals.map(x => [x.observationId, x.shiftPpm]));
+  const assemblyOf = (alt: (typeof inv.alternatives)[number], patternLabel: string, ids: string[]): AssemblyV12 => ({
+    path: 'INVENTORY', inventoryAlternativeIds: ids, k: alt.k, extraExchangeable: alt.extraExchangeable, ratio: inv.kCombinations.find(x => x.k === alt.k && x.extraExchangeable === alt.extraExchangeable)?.ratio, patternLabel,
+    signals: alt.groups.map(g => ({shiftPpm: shiftOf.get(g.observationId) ?? 0, hTotal: g.hTotal, atomCount: g.atomCount, hPerAtom: g.hPerAtom, element: g.element, kind: g.aromatic ? 'AROMATIC' as const : g.alkene ? 'ALKENE' as const : g.exchangeable ? 'EXCHANGEABLE' as const : 'SP3' as const, equivalent: g.equivalent && g.atomCount > 1, singlet: g.singletNoHNeighbors})),
+    required: required.map(r => ({id: r.id, label: r.label})),
+    leafChecks: [...(alt.rings.rings.length ? ['AROMATIC' as const] : []), ...(required.length ? ['REQUIRED' as const] : []), ...(alt.groups.some(g => g.equivalent && g.atomCount > 1) ? ['EQUIVALENCE' as const] : []), ...(alt.groups.some(g => g.alkene) ? ['ALKENE' as const] : []), ...(V12_CONFIG.pipelineStrainProfile ? ['STRAIN' as const] : [])],
+  });
   for (const c of result.candidates) {
     const first = info[c.alternativeSetIds[0]];
-    derivations[c.smiles] = {localStructureIds: [], operations: [`1H 原子清單窮舉（k=${first?.k}，額外可交換 H=${first?.extraExchangeable}${first?.patternLabel ? `；${first.patternLabel}` : ''}；讀法 ${c.alternativeSetIds.join('、')}）`], observationIds: h1Ids};
+    const alt = inv.alternatives.find(a => a.id === first?.alternativeId);
+    derivations[c.smiles] = {...(alt ? {v12: assemblyOf(alt, first.patternLabel, [...new Set(c.alternativeSetIds.map(id => info[id]?.alternativeId).filter(Boolean) as string[])])} : {}), localStructureIds: [], operations: [`1H 原子清單窮舉（k=${first?.k}，額外可交換 H=${first?.extraExchangeable}${first?.patternLabel ? `；${first.patternLabel}` : ''}；讀法 ${c.alternativeSetIds.join('、')}）`], observationIds: h1Ids};
   }
   const reasonsMap: Record<string, SearchTermination> = {CANCELLED: 'CANCELLED', TIME_BUDGET: 'TIME_BUDGET', STATE_BUDGET: 'STATE_BUDGET', CANDIDATE_LIMIT: 'OUTPUT_BUDGET'};
   const firstStop = (['CANCELLED', 'TIME_BUDGET', 'STATE_BUDGET', 'CANDIDATE_LIMIT'] as const).find(r => result.incompleteReasons.includes(r));

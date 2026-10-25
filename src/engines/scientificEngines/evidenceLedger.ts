@@ -18,7 +18,9 @@ export interface ScientificEvidence {
   uncertainty:{kind:'UNVALIDATED_MODEL'|'MEASUREMENT';note:string};
   dataCoverage:{min:number|null;max:number|null;complete:boolean};dependency:string[];correlationGroup:string;
 }
-export interface ScoreLedgerEntry {evidenceId:string;observationIds:string[];sourceModality:ScientificEvidence['sourceModality'];compatibility:number|null;weight:number;contribution:number;method:string;limitations:string[]}
+export interface ScoreLedgerEntry {evidenceId:string;observationIds:string[];sourceModality:ScientificEvidence['sourceModality'];compatibility:number|null;weight:number;contribution:number;method:string;limitations:string[];
+ /** v1.2: one readable Traditional-Chinese line for the candidate card (shift, H count, reason, discount); never an internal code. */
+ display?:string}
 export interface CandidateScoreLedger {entries:ScoreLedgerEntry[];modalityScores:Partial<Record<ExtendedSpectrumModality,number|null>>;modalityWeights:Partial<Record<ExtendedSpectrumModality,number>>;totalScore:number;scoreMeaning:'UNCALIBRATED_COMPATIBILITY';formulaHardCompatible:boolean;limitations:string[]}
 function analyte(p:SpectralPeak):boolean {
   return Number.isFinite(p.x)&&Number.isFinite(p.y)&&!p.isPredictedPeak&&!(p.pixelX!==undefined&&p.isCalibrated!==true)&&![p.role,p.signalRole,p.userClassification,p.classificationTag].some(r=>r&&['NOISE','SOLVENT','IMPURITY','WATER','REFERENCE_TMS','ARTIFACT'].includes(r));
@@ -73,18 +75,21 @@ export function bidirectional1H(hObs:ScientificEvidence[],hPred:{shiftPpm:number
     }
     const factor=(p.isExchangeable?SC.exchangeableUnmatchedFactor:1)*(coverageComplete?1:SC.incompleteCoverageUnmatchedFactor);
     const id=`1H:unmatched-predicted:${p.shiftPpm.toFixed(2)}`;
-    out.push({evidenceId:id,observationIds:[id],sourceModality:'1H_NMR',compatibility:0,weight:SC.unmatchedPredictedWeight*factor,contribution:0,method:`預測多出的 1H 環境 δ ${p.shiftPpm.toFixed(2)}（${hOf(p)}H${p.isExchangeable?'，可交換':''}）沒有任何觀測與之配對${coverageComplete?'':'；1H 涵蓋未確認完整，扣分減半'}`,limitations:['雙向評分：預測多出的環境不一定是錯，可能未標記或重疊；未校準權重']});
+    const display=`預測有 ${Number(p.shiftPpm.toFixed(2))} ppm 的 1H 環境（${Number(hOf(p).toFixed(1))}H），實測沒有對應訊號${p.isExchangeable?'（可交換 H，扣分已減輕）':''}${coverageComplete?'':'（1H 涵蓋未確認完整，扣分減半）'}`;
+    out.push({evidenceId:id,observationIds:[id],sourceModality:'1H_NMR',compatibility:0,weight:SC.unmatchedPredictedWeight*factor,contribution:0,method:display,display,limitations:['雙向評分：預測多出的環境不一定是錯，可能未標記或重疊；未校準權重']});
   });
   const nPred=hPred.filter(p=>!p.isExchangeable).length;
   const nObs=hObs.filter((_,i)=>{const j=assignment.get(i);return j===undefined||!hPred[j].isExchangeable;}).length;
   const delta=Math.max(0,nPred-nObs-merged);
   const countId='1H:environment-count';
-  out.push({evidenceId:countId,observationIds:[countId],sourceModality:'1H_NMR',compatibility:Math.exp(-((delta/SC.envCountSigma)**2)),weight:SC.envCountWeight,contribution:0,method:`非可交換 1H 環境數：預測 ${nPred}、觀測 ${nObs}、重疊合併 ${merged}`,limitations:['經驗環境分組；對稱類別以預測器的拓樸分組為準']});
+  const countDisplay=`預測 ${nPred} 種氫環境，實測 ${nObs} 組訊號（不含可交換 H）${merged?`（${merged} 種預測環境與其他環境位移重疊、積分吻合，已視為同一組訊號）`:''}`;
+  out.push({evidenceId:countId,observationIds:[countId],sourceModality:'1H_NMR',compatibility:Math.exp(-((delta/SC.envCountSigma)**2)),weight:SC.envCountWeight,contribution:0,method:countDisplay,display:countDisplay,limitations:['經驗環境分組；對稱類別以預測器的拓樸分組為準']});
   if(integralScale!==null&&total>0){
     const obsH=hObs.reduce((s,_,i)=>{const j=assignment.get(i),v=integralOf(i);return s+((j!==undefined&&hPred[j].isExchangeable)||v==null||!(v>0)?0:v/integralScale);},0);
     const sigma=Math.max(SC.integralTotalSigmaMin,SC.integralTotalSigmaFraction*total);
     const id='1H:integral-total';
-    out.push({evidenceId:id,observationIds:[id],sourceModality:'1H_NMR',compatibility:gaussian(obsH-total,sigma),weight:SC.integralTotalWeight,contribution:0,method:`非可交換 1H 總數：預測 ${total}H、觀測（以配對積分比例換算）${obsH.toFixed(1)}H`,limitations:['積分比例尺由已配對訊號的中位數估計']});
+    const totalDisplay=`預測 H 總數 ${Number(total.toFixed(1))}，實測（依積分比例換算）${Number(obsH.toFixed(1))}（不含可交換 H）`;
+    out.push({evidenceId:id,observationIds:[id],sourceModality:'1H_NMR',compatibility:gaussian(obsH-total,sigma),weight:SC.integralTotalWeight,contribution:0,method:totalDisplay,display:totalDisplay,limitations:['積分比例尺由已配對訊號的中位數估計']});
   }
   for(const e of out)e.contribution=e.weight*(e.compatibility??0);
   return out;

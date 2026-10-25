@@ -15,7 +15,7 @@ export type LeafVerdict =
   | {kind: 'known'; smiles: string}
   /** The molecule was rejected earlier by a check that does not depend on how the atoms are labelled (it can be skipped). */
   | {kind: 'seenRejected'; smiles: string}
-  | {kind: 'rejected'; smiles: string; stage: LeafStage; /** true: the verdict is a property of the molecule alone */ remember: boolean}
+  | {kind: 'rejected'; smiles: string; stage: LeafStage; /** true: the verdict is a property of the molecule alone */ remember: boolean; /** stage 'required': the substructure that is missing */ requiredId?: string}
   | {kind: 'ok'; smiles: string};
 
 export const emptyLeafCost = (): LeafCost => ({leaves: 0, parseMs: 0, checksMs: 0, orbitChecks: 0, orbitMs: 0, requiredMatches: 0});
@@ -41,7 +41,7 @@ export function analyseLeaf(P: Problem, newBonds: NewBond[], queries: LeafQuerie
     if (seen === 'seenRejected') return {kind: 'seenRejected', smiles};
     for (let i = 0; i < P.required.length; i++) {
       cost.requiredMatches++;
-      if (mol.matchCount(i, P.required[i].minMatches) < P.required[i].minMatches) { cost.checksMs += now() - t1; return {kind: 'rejected', smiles, stage: 'required', remember: true}; }
+      if (mol.matchCount(i, P.required[i].minMatches) < P.required[i].minMatches) { cost.checksMs += now() - t1; return {kind: 'rejected', smiles, stage: 'required', remember: true, requiredId: P.required[i].id}; }
     }
     const needOrbits = P.eqGroups.length > 0 || P.pools.length > 0;
     const hasAlkene = P.alkene.some(Boolean);

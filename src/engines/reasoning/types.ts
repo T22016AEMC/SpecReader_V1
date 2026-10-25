@@ -28,7 +28,21 @@ export interface LocalStructureHypothesis {
  status:'LOCAL_HYPOTHESIS';constraintStrength:'SOFT';supportLevel:Support;
  relations:{otherId:string;kind:'SUPPORTED_CONNECTION'|'POSSIBLE_CONNECTION'|'EXCLUDED_BY_VALENCE'|'UNKNOWN';reason:string}[];
 }
-export interface AssemblyDerivation {localStructureIds:string[];operations:string[];observationIds:string[]}
+/** v1.2: where a candidate of the 1H-constraint layer came from (additive; absent for candidates of the v1.1.8 paths). */
+export interface AssemblyV12 {
+ path:'INVENTORY'|'FLEX_NO_INTEGRALS'|'FALLBACK';
+ /** INVENTORY: the atom-inventory reading, its (k, extra exchangeable H) and the groups of atoms it stands for. */
+ inventoryAlternativeIds?:string[];
+ k?:number;extraExchangeable?:number;ratio?:number[];patternLabel?:string;
+ signals?:{shiftPpm:number;hTotal:number;atomCount:number;hPerAtom:number;element:string;kind:'AROMATIC'|'ALKENE'|'EXCHANGEABLE'|'SP3';equivalent:boolean;singlet:boolean}[];
+ /** Required substructures that held for this candidate. */
+ required:{id:string;label:string}[];
+ /** Leaf checks the candidate passed. */
+ leafChecks:('AROMATIC'|'REQUIRED'|'EQUIVALENCE'|'ALKENE'|'STRAIN')[];
+ /** FALLBACK: why the 1H constraints could not be applied. */
+ fallbackReason?:string;
+}
+export interface AssemblyDerivation {localStructureIds:string[];operations:string[];observationIds:string[];v12?:AssemblyV12}
 export interface ReasoningPlan {observations:ObservedEvidence[];hypotheses:ChemicalHypothesis[];localStructures:LocalStructureHypothesis[];userFormula:string|null;unknown:string[];
  /** Competing formula hypotheses (P1a); not a trace stage, so the six-stage contract is unchanged. */
  composition?:import('../composition/types').CompositionInferenceResult;

@@ -150,7 +150,7 @@ export interface RejectionStats {
   /** True when more rejected structures occurred than `maxTrackedRejected`; the by-rule counts may then count a structure twice. */
   approximate: boolean;
   /** v1.2 leaf checks: structures rejected by the aromatic / required-substructure / equivalence checks (absent when none ran). */
-  v12?: {aromaticFailed: number; requiredFailed: number; equivalenceFailed: number; alkeneFailed: number};
+  v12?: {aromaticFailed: number; requiredFailed: number; equivalenceFailed: number; alkeneFailed: number; /** structures missing each required substructure (first one that failed) */ requiredById?: Record<string, number>};
 }
 export interface SetOutcome {
   id: string;
@@ -237,9 +237,17 @@ export interface V12RunDiagnostic {
     incompleteReasons: string[]; ratioSum: number | null;
     combinations: {k: number; extraExchangeable: number; ratio: number[]}[];
     signals: {observationId: string; shiftPpm: number; relativeIntegral: number | null; ratio: number | null; multiplicity: string | null; broad: boolean; classes: string[]; singletRuleApplied: boolean; equivalenceRequired: boolean}[];
-    voided: {reason: string; count: number}[];
+    voided: {kind: string; reason: string; count: number}[];
     aromaticLimited: {k: number; extraExchangeable: number; aromaticCh: number; reason: string}[];
+    /** The first readings (at most 6), for the panel. */
+    alternativesPreview: {
+      id: string; k: number; extraExchangeable: number; hasVinyl: boolean; zeroHAtoms: Record<string, number>;
+      groups: {observationId: string; shiftClasses: string[]; hTotal: number; atomCount: number; hPerAtom: number; element: string; aromatic: boolean; alkene: boolean; exchangeable: boolean; equivalent: boolean; singletRule: boolean}[];
+      rings: {templateId: string; ch: number; patterns: number}[];
+    }[];
   } | null;
+  /** Constraints of the first runnable reading (null without one). */
+  constraints: {pinnedAtoms: number; equivalentGroups: number; aromaticPools: number[]; singletGroups: number; alkeneGroups: number; strainProfile: string | null; symmetryPruning: boolean} | null;
   required: {id: string; smarts: string; label: string; evidenceObservationIds: string[]}[];
   /** One entry per (k, extra exchangeable H) of the inventory path. */
   runs: {k: number; extraExchangeable: number; alternatives: number; sets: number; complete: boolean | null; visited: number; leaves: number; candidates: number; incompleteReasons: IncompleteReason[]}[];
@@ -267,4 +275,6 @@ export interface CandidateOrigin {
   relaxed: boolean;
   /** v1.2 (W7): the (k, extra exchangeable H) readings of the 1H inventory that produced this structure (merged, de-duplicated). */
   v12?: {k: number; extraExchangeable: number}[];
+  /** v1.2 (D10): the structure came from the flexible-atom path because the 1H constraints could not be applied. */
+  v12Fallback?: boolean;
 }

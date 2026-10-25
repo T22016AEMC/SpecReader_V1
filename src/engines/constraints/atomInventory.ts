@@ -72,6 +72,9 @@ export interface InventorySignalSummary {
 }
 /** One way to read the integrals: integer ratio × k (+ unobserved exchangeable H) = the formula's hydrogens. */
 export interface InventoryCombination {k: number; extraExchangeable: number; ratio: number[]; ratioSum: number}
+/** Why a reading was voided: the first three say the reading cannot hold the formula (element counts, hydrogens), the last that no shift class explains a signal. */
+export type VoidKind = 'ELEMENT_SHORTAGE' | 'HYDROGEN_MISMATCH' | 'EXCHANGEABLE_ATOM_SHORTAGE' | 'NO_SHIFT_CLASS';
+export const FORMULA_INCOMPATIBLE_VOIDS: readonly VoidKind[] = ['ELEMENT_SHORTAGE', 'HYDROGEN_MISMATCH', 'EXCHANGEABLE_ATOM_SHORTAGE'];
 export interface AtomInventoryResult {
   status: 'BUILT' | 'NOT_AVAILABLE';
   reason: string | null;
@@ -83,7 +86,7 @@ export interface AtomInventoryResult {
   signals: InventorySignalSummary[];
   ratioSum: number | null;
   /** Readings that could not be used, with how often (formula element shortage, no shift class, …). */
-  voided: {reason: string; count: number}[];
+  voided: {kind: VoidKind; reason: string; count: number}[];
   /** Aromatic CH counts the template library cannot explain (AROMATIC_TEMPLATE_LIMITED). */
   aromaticLimited: {k: number; extraExchangeable: number; aromaticCh: number; reason: string}[];
   /** The 1H coverage is not confirmed complete: scoring halves the penalty for predicted environments that were not observed (stage 3). */
@@ -224,8 +227,8 @@ export function buildAtomInventory(input: AtomInventoryInput): AtomInventoryResu
   kCombinations.sort((a, b) => a.extraExchangeable - b.extraExchangeable || a.k - b.k);
   const ratio = simplest, S = simplest.reduce((a, b) => a + b, 0);
 
-  const voided = new Map<string, number>();
-  const bump = (reason: string) => voided.set(reason, (voided.get(reason) ?? 0) + 1);
+  const voided = new Map<string, {kind: VoidKind; reason: string; count: number}>();
+  const bump = (kind: VoidKind, reason: string) => { const key = `${kind}|${reason}`; const old = voided.get(key); if (old) old.count++; else voided.set(key, {kind, reason, count: 1}); };
   const result: AtomInventoryResult = {...base, status: 'BUILT', kCombinations, ratioSum: S, signals: []};
   const classNotes: string[] = [];
   const classified = signals.map(s => { const c = classifySignal(s, {solvent: input.solvent, formulaElements, nitrogenAllowed, ir}); classNotes.push(...c.notes); return c; });
@@ -236,8 +239,8 @@ export function buildAtomInventory(input: AtomInventoryInput): AtomInventoryResu
   }));
   if (!kCombinations.length) {
     result.reason = `分子式 H=${H} 與積分的整數比總和 S=${S} 不相容：沒有 k∈1…${cfg.maxK}、額外可交換 H∈0…${cfg.maxExtraExchangeable} 使 H − e = k·S`;
-    bump(result.reason);
-    result.voided = [...voided].map(([reason, count]) => ({reason, count}));
+    bump('HYDROGEN_MISMATCH', result.reason);
+    result.voided = [...voided.values()];
     return result;
   }
 
@@ -255,7 +258,7 @@ export function buildAtomInventory(input: AtomInventoryInput): AtomInventoryResu
   };
 
   for (const {k, extraExchangeable: e, ratio: rr} of kCombinations) {
-    const runVoid = (reason: string) => bump(`k=${k}, 額外可交換 H=${e}：${reason}`);
+    const runVoid = (kind: VoidKind, reason: string) => bump(kind, `k=${k}, 額外可交換 H=${e}：${reason}`);
     // Options per signal for this k: n_i = k·r_i hydrogens.
     const optionsPer: Option[][] = [];
     let dead = false;
@@ -289,7 +292,7 @@ export function buildAtomInventory(input: AtomInventoryInput): AtomInventoryResu
         return ca - cb || hPref(a.hPerAtom) - hPref(b.hPerAtom) || (a.element < b.element ? -1 : a.element > b.element ? 1 : 0);
       });
       list.forEach((o, idx) => { o.rank = idx; });
-      if (!list.length) { runVoid(`訊號 ${signals[i].observationId}（${signals[i].shiftPpm} ppm，${n}H）沒有任何位移類別／每原子 H 數可以解釋`); dead = true; break; }
+      if (!list.length) { runVoid('NO_SHIFT_CLASS', `訊號 ${signals[i].observationId}（${signals[i].shiftPpm} ppm，${n}H）沒有任何位移類別／每原子 H 數可以解釋`); dead = true; break; }
       optionsPer.push(list);
     }
     if (dead) continue;
@@ -308,10 +311,10 @@ export function buildAtomInventory(input: AtomInventoryInput): AtomInventoryResu
       if (e > 0) {
         const els = exchangeElements();
         const usable = els.find(el => (input.formula[el] ?? 0) - (need[el] ?? 0) >= e);
-        if (!usable) { runVoid(`額外 ${e} 個可交換 H 沒有足夠的 O／N 原子可放`); return []; }
+        if (!usable) { runVoid('EXCHANGEABLE_ATOM_SHORTAGE', `額外 ${e} 個可交換 H 沒有足夠的 O／N 原子可放`); return []; }
         extraElement = usable; add(usable, e);
       }
-      for (const [el, n] of Object.entries(need)) if (n > (input.formula[el] ?? 0)) { runVoid(`原子清單需要 ${n} 個 ${el}，分子式只有 ${input.formula[el] ?? 0} 個`); return []; }
+      for (const [el, n] of Object.entries(need)) if (n > (input.formula[el] ?? 0)) { runVoid('ELEMENT_SHORTAGE', `原子清單需要 ${n} 個 ${el}，分子式只有 ${input.formula[el] ?? 0} 個`); return []; }
       // Ring combinations for the aromatic CH.
       let plans: RingInstance[][] = [[]];
       let limited = false;
@@ -338,7 +341,7 @@ export function buildAtomInventory(input: AtomInventoryInput): AtomInventoryResu
         result.aromaticLimited.push({k, extraExchangeable: e, aromaticCh: A, reason: `芳香 CH ${A} 個無法由模板庫解釋（${templates.map(t => t.id).join('、')}；最多 ${cfg.maxAromaticRings} 環）`});
         return [];
       }
-      if (!plans.length) { runVoid(`芳香 CH ${A} 個的環模板組合都超出分子式的原子數`); return []; }
+      if (!plans.length) { runVoid('ELEMENT_SHORTAGE', `芳香 CH ${A} 個的環模板組合都超出分子式的原子數`); return []; }
       const out: InventoryAlternative[] = [];
       plans.sort((a, b) => {
         const ra = a.reduce((s, it) => s + templates[it.tIndex].rings, 0), rb = b.reduce((s, it) => s + templates[it.tIndex].rings, 0);
@@ -372,7 +375,7 @@ export function buildAtomInventory(input: AtomInventoryInput): AtomInventoryResu
           if (g.equivalent && g.atomCount > 1) applied.push({id: 'EQUIVALENT_ATOMS', detail: `${g.groupId}：${g.atomCount} 個原子必須拓樸等價`, observationIds: [g.observationId]});
         }
         const hSum = groups.reduce((s, g) => s + g.hTotal, 0) + e;
-        if (hSum !== H) { runVoid(`清單 H 總和 ${hSum} 不等於分子式 H ${H}`); continue; }
+        if (hSum !== H) { runVoid('HYDROGEN_MISMATCH', `清單 H 總和 ${hSum} 不等於分子式 H ${H}`); continue; }
         if (groups.some(g => g.alkene)) applied.push({id: 'ALKENE_CH', detail: `${groups.filter(g => g.alkene).map(g => g.groupId).join('、')}：烯基 CH 必須恰有一個非芳香 C=C 雙鍵`, observationIds: groups.filter(g => g.alkene).map(g => g.observationId)});
         out.push({id: '', k, extraExchangeable: e, extraElement, groups, rings, zeroHAtoms: zero, hasVinyl: groups.some(g => g.alkene), applied, notes: [...classNotes]});
       }
@@ -407,7 +410,7 @@ export function buildAtomInventory(input: AtomInventoryInput): AtomInventoryResu
     }
   }
   if (result.aromaticLimited.length) result.incompleteReasons.push('AROMATIC_TEMPLATE_LIMITED');
-  result.voided = [...voided].map(([reason, count]) => ({reason, count}));
+  result.voided = [...voided.values()];
   if (!result.alternatives.length && !result.reason) result.reason = '所有替代解讀都作廢或無法表達';
   return result;
 }
