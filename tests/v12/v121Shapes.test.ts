@@ -5,7 +5,7 @@ import {ENUMERATION_CONFIG} from '../../src/engines/enumeration/enumerationConfi
 import {V12_CONFIG} from '../../src/engines/constraints/v12Config';
 import {canonNoStereo, fixtureSpectra, loadFixture, SHAPE_BUDGET, type V121Fixture} from '../helpers/v121Golden';
 
-// ACCEPTANCE of the A class on five hand-written generic shapes (tests/fixtures/v121; not predictor output, not any measured spectrum).
+// ACCEPTANCE of the A class on six hand-written generic shapes (S1, G1, E1, G3, S2 and the observation case D1) (tests/fixtures/v121; not predictor output, not any measured spectrum).
 // With NO formula given, the formula of the shape must be searched and the shape's structure must appear in the output. Only "appears" is checked:
 // nothing here says anything about ranking or accuracy. D1 is an observation case: its facts are recorded, nothing is asserted about its target.
 beforeAll(() => initializeRDKit(), 60000);
@@ -17,7 +17,7 @@ const analyse = async (f: V121Fixture) => {
 };
 
 describe('v1.2.1 acceptance without a formula (appearance only)', () => {
-  for (const id of ['S1', 'G1', 'E1', 'G3'] as const) {
+  for (const id of ['S1', 'G1', 'E1', 'G3', 'S2'] as const) {
     it(`${id}: the formula is searched and the structure appears in the output`, async () => {
       const f = loadFixture(id);
       const r = await analyse(f);

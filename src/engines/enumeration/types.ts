@@ -146,7 +146,9 @@ export type IncompleteReason =
   /** v1.2.1 (planning): round 1 stopped at its step cap (the cap is a per-formula limit of the first round, not the analysis budget). */
   | 'ROUND1_STEP_CAP'
   /** v1.2.1 (planning): round 1 found no reading that can hold the formula and did not fall back to the flexible-atom or legacy search (visited = 0). */
-  | 'ROUND1_NO_TEMPLATE_READING';
+  | 'ROUND1_NO_TEMPLATE_READING'
+  /** v1.2.1c (planning): a grade-B formula's round 2 stopped at round2ExploreMaxSteps (an exploration cap, not the analysis budget). */
+  | 'ROUND2_EXPLORE_CAP';
 export interface RejectionStats {
   sanitizeFailed: number;
   duplicatesMerged: number;

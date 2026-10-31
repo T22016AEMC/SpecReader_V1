@@ -73,12 +73,25 @@ export const V12_CONFIG = {
     oxygenAllowedAboveFloor: 1,
     /** Formulas that get a round-1 run; the k round-robin order decides which ones. */
     maxRound1Formulas: 12,
+    /**
+     * v1.2.1c name order. 'ONE_PASS': one queue per k (score, DBE excess, C, H, O), k round-robin. 'TWO_PASS': pass 1 takes one representative per (k, C) in k round-robin
+     * order, pass 2 fills the remaining names with the other O / e variants (the names widen over C first). The default stays ONE_PASS: with TWO_PASS and
+     * representativeOxygen 'EITHER' the S1 target formula (k = 2, O = 2) is not a representative and loses its name (stage 1c report).
+     */
+    nameOrder: 'ONE_PASS' as 'ONE_PASS' | 'TWO_PASS',
+    /** TWO_PASS only. 'EITHER': O = floor and O = k × floor are equal candidates for the representative of a (k, C) key (the order key and the smaller O decide); 'K_FLOOR': k × floor first (every copy of the symmetric unit carries the evidence O). */
+    representativeOxygen: 'EITHER' as 'EITHER' | 'K_FLOOR',
     /** Search steps one formula may use in round 1 (template readings only). */
     round1MaxStatesPerFormula: 150_000,
     /** All round-1 runs together may use at most this fraction of the wall-clock budget (the clock stays the last safety valve). */
     round1TimeFraction: 0.4,
     /** Round 2 (readings with an alkene CH): the best-scored formula of each k, at most this many formulas. */
     maxRound2Formulas: 3,
+    /**
+     * v1.2.1c, grade-B formulas of round 2 (round 1 ended GRAMMAR_EXHAUSTED with no candidate; only run when their k has no grade-A formula): at most this many steps each.
+     * 工程判斷，未查證 (engineering judgement, not verified): 500,000 is about 10 times the round-1 steps of the largest formula that finished with candidates in the five shapes.
+     */
+    round2ExploreMaxSteps: 500_000,
     /** Round-2 choice: composition score + round-1 evidence (weight × 1/(1 + smallest gap between the candidates' topological 1H environments and the observed 1H signals)). */
     round2EvidenceWeight: 0.5,
     round2EvidenceCandidates: 200,

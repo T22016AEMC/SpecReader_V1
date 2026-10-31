@@ -227,7 +227,12 @@ export function inferComposition(input:CompositionInput):CompositionInferenceRes
  }
  list.sort(v121?orderV121:order);
  result.enumeration.droppedByKeepLimit+=Math.max(0,list.length-CFG.maxHypotheses);
- const kept=list.slice(0,CFG.maxHypotheses).map(c=>hypothesis(c.counts,c.mass,c.ion,c.basis,scoreComposition(c.counts,c.mass,c.ion,ctx,true,c.k),c.k));
+ const kept=list.slice(0,CFG.maxHypotheses).map(c=>{
+  const h=hypothesis(c.counts,c.mass,c.ion,c.basis,scoreComposition(c.counts,c.mass,c.ion,ctx,true,c.k),c.k);
+  // v1.2.1c: on the planned 1H-only route k is exact (every formula was enumerated for its own k), so e = H − k·S is exact too.
+  if(v121&&h1Only&&S&&c.k)h.extraExchangeable=(c.counts.H??0)-c.k*S;
+  return h;
+ });
  softmax(kept);
  result.hypotheses=kept;result.enumeration.returned=kept.length;
  result.elementsExcluded=[...excluded].map(([element,reason])=>({element,reason})).sort((a,b)=>a.element.localeCompare(b.element));

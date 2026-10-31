@@ -152,7 +152,7 @@ export async function generateForCompositions(args:{userFormula:string|null;comp
   if(!plan.chosen.length)return null;
   for(const h of hyps)delete h.searchPlan;
   for(const [id,ns] of plan.notSearched){const h=hyps.find(x=>x.id===id);if(h)h.searchPlan={status:'NOT_SEARCHED',order:null,reason:ns.reason,reasonText:ns.text};}
-  const entries=plan.chosen.map(p=>({p,h:p.hypothesis,prepared:prepareSymmetry(p.hypothesis,p.hypothesis.formula,args.hints),search:null as DeNovoSearchResult|null,round2:false,round2State:undefined as FormulaSearchPlan['round2']}));
+  const entries=plan.chosen.map(p=>({p,h:p.hypothesis,prepared:prepareSymmetry(p.hypothesis,p.hypothesis.formula,args.hints),search:null as DeNovoSearchResult|null,round2:false,round2State:undefined as FormulaSearchPlan['round2'],round2Grade:undefined as FormulaSearchPlan['round2Grade']}));
   let usedStates=0,round1Ms=0,cancelled=false;
   const call=(e:(typeof entries)[number],round:1|2,maxStates:number,timeMs:number,cap?:number)=>generator.generateStructures({formula:e.h.formula,hints:e.prepared.hints,budget:{...budget,maxStates,timeMs,maxResults:CFG.maxResultsPerFormula,onProgress:budget.onProgress?p=>budget.onProgress!({...p,visited:usedStates+p.visited}):undefined},unprepared:args.hints,symmetryMultiple:e.h.symmetryMultiple,plausibility:args.plausibility,
    enumerationBudget:{timeMs,maxStates,maxCandidates:eBudget.maxCandidates},sharedPool:args.sharedPool,constraintEvidence:args.constraintEvidence,planning:{round,...(cap!==undefined?{maxStates:cap}:{})}});
@@ -173,20 +173,25 @@ export async function generateForCompositions(args:{userFormula:string|null;comp
   };
   if(!cancelled){
    const pending=entries.filter(e=>e.search?.enumeration?.runs[0]?.planning?.vinylPending);
-   // v1.2.1b: only a formula whose round 1 ended GRAMMAR_EXHAUSTED or found at least one candidate may go to round 2 (a formula that hit the step cap with nothing, or had no template reading, does not).
-   const eligible=(e:(typeof entries)[number])=>{const s=e.search!;return (s.termination==='GRAMMAR_EXHAUSTED'||s.smiles.length>0)&&!s.enumeration!.runs[0].incompleteReasons.includes('ROUND1_NO_TEMPLATE_READING');};
-   for(const e of pending)e.round2State=eligible(e)?'NOT_PICKED':'NOT_ELIGIBLE';
-   const byK=new Map<number,(typeof entries)[number]>();
-   for(const e of pending.filter(eligible)){
-    const k=e.h.symmetryMultiple??0,score=e.h.score+evidence(e.search!),old=byK.get(k);
-    if(!old||score>old.h.score+evidence(old.search!))byK.set(k,e);
+   // v1.2.1c, two grades. A: round 1 found at least one candidate. B: eligible only because round 1 ended GRAMMAR_EXHAUSTED with none. A formula that hit the step cap with nothing,
+   // or had no template reading, is not eligible. Per k the best A formula is picked; a k with no A formula may pick its best B formula, which explores under round2ExploreMaxSteps only.
+   type Entry=(typeof entries)[number];
+   const gradeOf=(e:Entry):'A'|'B'|null=>{const s=e.search!;if(s.enumeration!.runs[0].incompleteReasons.includes('ROUND1_NO_TEMPLATE_READING'))return null;return s.smiles.length>0?'A':s.termination==='GRAMMAR_EXHAUSTED'?'B':null;};
+   for(const e of pending){const g=gradeOf(e);e.round2State=g?'NOT_PICKED':'NOT_ELIGIBLE';e.round2Grade=g??undefined;}
+   const value=(e:Entry)=>e.h.score+evidence(e.search!);
+   const best=new Map<number,Entry>();
+   for(const grade of ['A','B'] as const){
+    const bestOfGrade=new Map<number,Entry>();
+    for(const e of pending.filter(x=>gradeOf(x)===grade)){const k=e.h.symmetryMultiple??0,old=bestOfGrade.get(k);if(!old||value(e)>value(old))bestOfGrade.set(k,e);}
+    for(const [k,e] of bestOfGrade)if(!best.has(k))best.set(k,e);
    }
-   // A k without an eligible formula is skipped; the budget below is divided only among the formulas that run.
-   const picked=[...byK.entries()].sort((a,b)=>a[0]-b[0]).map(x=>x[1]).slice(0,P.maxRound2Formulas);
+   // A k without an eligible formula is skipped. The B formulas run first, each capped, so what they do not use stays in the pool for the A formulas; the pool is divided among the formulas that run.
+   const byK=[...best.entries()].sort((a,b)=>a[0]-b[0]).map(x=>x[1]).slice(0,P.maxRound2Formulas);
+   const picked=[...byK.filter(e=>gradeOf(e)==='B'),...byK.filter(e=>gradeOf(e)==='A')];
    for(let j=0;j<picked.length&&!cancelled;j++){
     const e=picked[j],left=picked.length-j;
     const poolLeft=Math.max(0,eBudget.maxStates-usedStates)/left,timeLeft=Math.max(0,eBudget.timeMs-(performance.now()-started))/left;
-    const s2=await call(e,2,Math.floor(poolLeft),timeLeft);
+    const s2=await call(e,2,Math.floor(poolLeft),timeLeft,gradeOf(e)==='B'?P.round2ExploreMaxSteps:undefined);
     usedStates+=s2.visited;e.round2=true;e.round2State='RAN';
     e.search=e.search!.enumeration?.runs[0]?mergeRounds(e.search!,s2):e.search;
     if(s2.termination==='CANCELLED')cancelled=true;
@@ -197,7 +202,7 @@ export async function generateForCompositions(args:{userFormula:string|null;comp
   const merged:DeNovoSearchResult={smiles:[],status:'BOUNDED',visited:0,note:'',termination:'GRAMMAR_EXHAUSTED',complete:true,partialHypotheses:[],rejectedByComposition:0,derivations:{},formulaSources:{},elapsedMs:0,frontierPeak:0};
   for(const e of entries){
    const search=e.search;if(!search)continue;
-   const h=e.h;h.searched=true;h.searchPlan={status:e.round2?'ROUND_2':'ROUND_1',order:e.p.order,dbe:e.p.dbe,...(e.round2State?{round2:e.round2State}:{})};
+   const h=e.h;h.searched=true;h.searchPlan={status:e.round2?'ROUND_2':'ROUND_1',order:e.p.order,dbe:e.p.dbe,...(e.round2State?{round2:e.round2State}:{}),...(e.round2Grade?{round2Grade:e.round2Grade}:{})};
    const ev=search.enumeration?.runs[0];
    if(ev){enumRuns.push(...search.enumeration!.runs);Object.assign(originsAcc,search.enumeration!.origins);}
    runs.push(finishRun({hypothesisId:h.id,formula:h.formula,maxStates:P.round1MaxStatesPerFormula,timeMs:eBudget.timeMs,visited:search.visited,elapsedMs:search.elapsedMs??0,termination:search.termination,candidates:search.smiles.length,symmetry:e.prepared.symmetry,diagnostic:null},search));
@@ -217,7 +222,7 @@ export async function generateForCompositions(args:{userFormula:string|null;comp
    if(merged.enumeration?.used)merged.complete=merged.enumeration.complete&&merged.complete;
   }
   const r2=entries.filter(e=>e.round2).length;
-  merged.note=`組成假設導引搜尋（兩輪）：第 1 輪 ${entries.length} 個分子式（k 輪流；每個至多 ${P.round1MaxStatesPerFormula} 步）、第 2 輪 ${r2} 個分子式（烯基讀法）；${runs.map(r=>`${r.formula} ${r.visited} states／${r.termination}／${r.candidates} 個`).join('；')}。合計 ${merged.smiles.length} 個去重候選；${plan.notSearched.size} 個分子式未搜尋（原因見面板）。`;
+  merged.note=`組成假設導引搜尋（兩輪）：第 1 輪 ${entries.length} 個分子式（k 輪流；每個至多 ${P.round1MaxStatesPerFormula} 步）、第 2 輪 ${r2} 個分子式（烯基讀法）；${runs.map(r=>`${r.formula} ${r.visited} states／${r.termination}／${r.candidates} 個`).join('；')}。合計 ${merged.smiles.length} 個去重候選；${plan.notSearched.size} 個分子式未搜尋（原因見面板）。${plan.hiddenExchangeable?'IR 有寬 X–H 帶而 ¹H 表沒有寬峰：排序時不計「缺失可交換 H」的先驗扣分（只影響順序，不改分數）。':''}`;
   return {search:merged,runs,mode:'COMPOSITION_HYPOTHESES',note:merged.smiles.length?null:'所有分子式假設都沒有產生候選。'};
  };
  // v1.2.1 (useV121Planning): no formula, no mass → k round-robin choice of the formulas (A3), round 1 without fallback, round 2 for the best formula of each k (A4).

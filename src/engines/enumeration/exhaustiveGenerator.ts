@@ -341,8 +341,9 @@ async function generatePlanned(request: StructureGenerationRequest, c: PlannedCo
   const exception = round === 1 && kinds.vinylException && vinylSets.length > 0;
   const runSets = round === 2 || exception ? vinylSets : plainSets;
   const pending = round === 1 && !exception && vinylSets.length > 0;
-  const cap = round === 1 ? Math.min(request.planning!.maxStates ?? eb.maxStates, eb.maxStates) : eb.maxStates;
-  const capBinding = round === 1 && cap < eb.maxStates;
+  // Round 1 always has a per-formula cap; round 2 has one only for a grade-B formula (v1.2.1c exploration cap).
+  const cap = Math.min(request.planning!.maxStates ?? eb.maxStates, eb.maxStates);
+  const capBinding = cap < eb.maxStates;
   const planning = (visited: number, candidates: number, vinylRun: boolean, elapsedMs = 0): RunPlanning => ({
     round, templateReading: round === 1 ? !exception && plainSets.length > 0 : true, vinylException: exception, vinylPending: pending, vinylRun,
     round1Visited: round === 1 ? visited : 0, round2Visited: round === 2 ? visited : 0, round1Candidates: round === 1 ? candidates : 0,
@@ -386,7 +387,7 @@ async function generatePlanned(request: StructureGenerationRequest, c: PlannedCo
   const otherErrors = result.sets.filter(x => x.error && !FORMULA_INCOMPATIBLE.includes(x.error.code));
   const raw = result.incompleteReasons.filter(r => r !== 'INVALID_ALTERNATIVE_SET');
   // The cap is a round-1 limit, not the analysis budget; in round 2 every budget stop belongs to the alkene readings.
-  const mapped = raw.map((r): IncompleteReason => (round === 1 && capBinding && r === 'STATE_BUDGET' ? 'ROUND1_STEP_CAP' : round === 2 && BUDGET_REASONS.includes(r) ? 'VINYL_READINGS_BUDGET' : r));
+  const mapped = raw.map((r): IncompleteReason => (round === 1 && capBinding && r === 'STATE_BUDGET' ? 'ROUND1_STEP_CAP' : round === 2 && capBinding && r === 'STATE_BUDGET' ? 'ROUND2_EXPLORE_CAP' : round === 2 && BUDGET_REASONS.includes(r) ? 'VINYL_READINGS_BUDGET' : r));
   const extraReasons: IncompleteReason[] = [...inv.incompleteReasons, ...(patternTruncated && !inv.incompleteReasons.includes('INVENTORY_ALTERNATIVES_TRUNCATED') ? ['INVENTORY_ALTERNATIVES_TRUNCATED' as const] : [])];
   const incompleteReasons = [...new Set<IncompleteReason>([...mapped, ...(otherErrors.length ? ['INVALID_ALTERNATIVE_SET' as const] : []), ...(pending ? ['VINYL_READINGS_NOT_RUN' as const] : []), ...extraReasons])];
   const complete = incompleteReasons.length === 0;

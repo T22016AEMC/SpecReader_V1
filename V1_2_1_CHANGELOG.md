@@ -96,3 +96,30 @@
 |---|---|---|---|
 | `tests/goldens/v12.v120.pipeline.json` | 完整擷取 2.8 MB | 刪除；改 `...pipeline.compact.json` | 指令 1b-5。假設表、搜尋清單、每個 run 的終止／步數／候選數／原因碼仍逐項比對；候選集合、排名、評分帳本、面板改為筆數＋雜湊＋樣本；不再逐項比對每個 run 的讀法明細與拒絕統計 |
 | `tests/v12/v121Planning.test.ts`「O above … is scored down」 | G1 的 C10H12O3（k=1，O=3）仍在清單 | 改用 S1，逐一比對同 (k, C, H) 的 O=1 手足，扣分 ＝ 0.5 × max(0, O − (k×下限＋1)) | O 視窗隨 k 縮放後，k≥2 的 O=3 不再扣分並佔去清單位置，G1 清單裡沒有 k=1、O=3 的分子式；斷言的性質（視窗外逐級扣分、不剔除）沒有削弱，反而逐式驗證 |
+
+## 9. 階段 1c（A 類最後補強）
+
+旗標仍是 `useV121Planning`（false ＝ v1.2.0，11 個情境的精簡黃金檔未改）。版本號仍 1.2.0。
+
+| 項 | 變更 |
+|---|---|
+| 1c-1 S2 | 新增合成形狀 S2（S1 去掉 4.75 ppm 的 OH 峰，IR 不變，k=2、額外可交換 H e=2）。每個 (k, C) 鍵內，每個保留的 O 個數除了分數最高者，另外保留「額外可交換 H 的最佳者」（e>0），不再被 e=0 吞掉。IR 有寬 X–H 帶而 ¹H 表沒有寬峰時（`hiddenExchangeableEvidence`），排序鍵不計「缺失可交換 H」的先驗扣分（只影響順序，假設分數不變）。假設新增選填欄位 `extraExchangeable`（H − k·S，只在計畫式 ¹H-only 路徑填） |
+| 1c-2 溶劑 | 測試輔助 `fixtureSpectra` 以前把溶劑與頻率寫在無人讀取的欄位，所有形狀都以溶劑 "Unknown" 執行；現在寫入 `nmrSolvent`／`spectrometerFrequencyMHz`。v1.2.0 黃金檔的情境用 `declareSolvent: false` 保持原輸入 |
+| 1c-3 第 2 輪分級 | A 級＝第 1 輪已有候選；B 級＝只因 `GRAMMAR_EXHAUSTED` 而具資格、0 候選。每個 k 先選 A 級最佳；該 k 沒有 A 級才選 B 級最佳，B 級先跑，單一分子式步數上限 `round2ExploreMaxSteps`＝500,000（工程判斷，未查證），其餘預算留給 A 級。新原因碼 `ROUND2_EXPLORE_CAP` |
+| 1c-4 名額兩輪取 | 新常數 `nameOrder`（`ONE_PASS`＝1b 的順序，預設；`TWO_PASS`＝第一輪每個 (k, C) 只取一個代表 O 變體、第二輪補其餘）與 `representativeOxygen`（`EITHER`／`K_FLOOR`）。**預設維持 `ONE_PASS`**：`TWO_PASS`＋`EITHER` 會讓 S1 的目標分子式失去名額（見 `notes/v1.2.1/P1C_REPORT.md`） |
+
+### 面板文字（旗標 false 時不出現）
+
+| 舊 | 新 | 位置 |
+|---|---|---|
+| （無） | `其中 n 個是探索性的：該 k 沒有第一輪已有候選的分子式，所以只給固定的步數上限（500000），其餘預算留給有候選的 k。` | 搜尋計畫摘要 |
+| （無） | 「未完整」原因 `ROUND2_EXPLORE_CAP`：`第二輪（含烯基）是探索性的：…` | `REASON_LABEL` |
+| `同 O 數只保留分數最高的一個（H、N 的變體不算 O 變體）` | 後面加 `；有額外可交換 H 的變體另外保留分數最高的一個` | 未搜尋原因 |
+| 搜尋說明 | 多一句（只在有「隱藏的可交換 H」證據時）：`IR 有寬 X–H 帶而 ¹H 表沒有寬峰：排序時不計「缺失可交換 H」的先驗扣分…` | 搜尋說明 |
+
+### 既有測試／測試資料因 1c 而改變
+
+| 項目 | 舊 | 新 | 原因 |
+|---|---|---|---|
+| `tests/helpers/v121Golden.ts` `fixtureSpectra` | 溶劑寫在 `solvent`／`frequencyMHz` | 寫入 `nmrSolvent`／`spectrometerFrequencyMHz`；黃金檔情境傳 `declareSolvent: false` | 見 1c-2；黃金檔輸入不變 |
+| `tests/v12/v121Shapes.test.ts` | 驗收迴圈 S1、G1、E1、G3 | 加上 S2 | 指令 1c-1（沒有放寬任何斷言） |

@@ -97,3 +97,15 @@ export function oxygenEvidenceFloor(observations:ObservedEvidence[],nitrogenAllo
  const floor=Math.max(0,...levels.map(l=>l.level));
  return {floor,sources:levels.filter(l=>l.level===floor).map(({text,observationIds})=>({text,observationIds})),strongCarbonyl:co.length>0};
 }
+
+/**
+ * v1.2.1c: evidence that an exchangeable H (O–H／N–H) exists but is NOT in the 1H table: the IR has a broad X–H stretch and no integrated 1H signal is broad
+ * (the project's notion of an exchangeable signal, as in oxygenEvidenceFloor). Then "e = 0 extra exchangeable H" has no better support than e > 0, so the planner
+ * does not charge the missing-exchangeable prior (weights.exchangeableMissing) when it orders the formulas. Never an exclusion; the hypothesis scores are untouched.
+ */
+export function hiddenExchangeableEvidence(observations:ObservedEvidence[]):{present:boolean;observationIds:string[]} {
+ const ir=observations.filter(o=>o.modality==='IR'&&!o.optional&&o.shape==='BROAD'&&o.value>=CFG.irBroadXHRange[0]&&o.value<=CFG.irBroadXHRange[1]);
+ const h1Broad=observations.some(o=>o.modality==='1H_NMR'&&!o.optional&&(o.shape==='BROAD'||o.multiplicity==='br'||o.multiplicity==='br s'));
+ const h1Any=observations.some(o=>o.modality==='1H_NMR'&&!o.optional);
+ return {present:ir.length>0&&h1Any&&!h1Broad,observationIds:ir.map(o=>o.id)};
+}

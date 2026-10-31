@@ -128,6 +128,7 @@ export const REASON_LABEL: Record<IncompleteReason, string> = {
   VINYL_READINGS_NOT_RUN: '含烯基（C=C–H）的讀法尚未執行（第一輪只跑不含烯基的讀法；第二輪只給各 k 最高分的分子式）',
   ROUND1_STEP_CAP: '第一輪達到每個分子式的步數上限（這個上限只屬於第一輪，不是整體預算）',
   ROUND1_NO_TEMPLATE_READING: '第一輪沒有可容納此分子式的模板讀法（沒有退回彈性原子讀法或舊搜尋）',
+  ROUND2_EXPLORE_CAP: '第二輪（含烯基）是探索性的：這個 k 沒有第一輪已有候選的分子式，所以只給固定的步數上限（這個上限不是整體預算）',
 };
 const NITROGEN_LABEL: Record<string, string> = {EVIDENCE: '有 N 專屬證據', EVEN_ION_ONLY: '只有偶電子離子（不足）', NONE: '沒有 N 專屬證據'};
 export const NOT_SEARCHED_LABEL: Record<string, string> = {
@@ -302,12 +303,14 @@ export function planningView(c: CompositionInferenceResult): PlanningView {
   const r1 = plans.filter(p => p.status === 'ROUND_1').length, r2 = plans.filter(p => p.status === 'ROUND_2').length;
   const notEligible = plans.filter(p => p.round2 === 'NOT_ELIGIBLE').length, notPicked = plans.filter(p => p.round2 === 'NOT_PICKED').length;
   // Round 2 takes only formulas whose round 1 ended GRAMMAR_EXHAUSTED or found a candidate; say it when that leaves nobody.
+  const exploring = plans.filter(p => p.status === 'ROUND_2' && p.round2Grade === 'B').length;
+  const exploreNote = exploring > 0 ? `其中 ${exploring} 個是探索性的：該 k 沒有第一輪已有候選的分子式，所以只給固定的步數上限（${V12_CONFIG.planning.round2ExploreMaxSteps}），其餘預算留給有候選的 k。` : '';
   const round2Note = r2 === 0 && notEligible + notPicked > 0 ? `第二輪（含烯基）沒有執行：沒有分子式符合資格（第一輪需走完或至少有 1 個候選；${notEligible} 個第一輪被步數上限打斷且沒有候選）。` : r2 > 0 && notEligible > 0 ? `另有 ${notEligible} 個分子式因第一輪被步數上限打斷且沒有候選，不進第二輪。` : '';
   const counts = new Map<string, number>();
   for (const p of plans) if (p.status === 'NOT_SEARCHED' && p.reason) counts.set(p.reason, (counts.get(p.reason) ?? 0) + 1);
   return {
     title: '搜尋計畫（v1.2.1：k 輪流、兩輪預算）', oxygenText, sulfurText: v.sulfurConsidered ? null : SULFUR_TEXT,
-    summary: `共 ${r1 + r2} 個分子式被搜尋：${r1} 個只跑第一輪（不含烯基的讀法）、${r2} 個也跑了第二輪（含烯基）；${[...counts.values()].reduce((a, b) => a + b, 0)} 個列在清單內但未搜尋。${round2Note}`,
+    summary: `共 ${r1 + r2} 個分子式被搜尋：${r1} 個只跑第一輪（不含烯基的讀法）、${r2} 個也跑了第二輪（含烯基）${exploreNote}；${[...counts.values()].reduce((a, b) => a + b, 0)} 個列在清單內但未搜尋。${round2Note}`,
     notSearched: [...counts].map(([reason, count]) => ({reason, label: NOT_SEARCHED_LABEL[reason] ?? reason, count})),
   };
 }
