@@ -99,7 +99,7 @@ export async function v121GoldenScenarios() {
  * for equality and requires each of them to stay within 10 % (or 500 steps) of the golden. The panel line "葉端檢查：N 個葉" carries the same counter.
  */
 const JITTER_KEYS = new Set(['visited', 'leaves', 'duplicatesMerged']);
-const jitterText = (t: string) => t.replace(/d+ 個葉/g, 'N 個葉');
+const jitterText = (t: string) => t.replace(/[0-9]+ 個葉/g, 'N 個葉');
 export function compareGolden(actual: unknown, golden: unknown, at = '$', problems: string[] = []): string[] {
   if (Array.isArray(actual) && Array.isArray(golden)) {
     if (actual.length !== golden.length) problems.push(`${at}: length ${actual.length} ≠ ${golden.length}`);
