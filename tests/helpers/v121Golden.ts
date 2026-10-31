@@ -28,8 +28,11 @@ export const FIXTURE_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.u
 export const loadFixture = (id: string): V121Fixture => JSON.parse(fs.readFileSync(path.join(FIXTURE_DIR, `${id}.json`), 'utf8'));
 
 /** Peak-table spectra of a fixture: 1H peaks get y, IR is %Transmittance with the covered range marked by end points and CONFIRMED_COMPLETE. */
-export function fixtureSpectra(f: V121Fixture): Spectra {
-  const h1 = {...spectrum('1H_NMR', f.h1.peaks.map((p, i) => ({id: `1H_NMR-${i}`, manualPeak: true, y: 50, x: p.x, integration: p.integration, multiplicity: p.multiplicity, jValues: p.j, ...(p.isBroad ? {isBroad: true, shape: 'broad'} : {})})) as unknown as SpectralPeak[]), solvent: f.h1.solvent} as ExperimentalSpectrumData;
+export function fixtureSpectra(f: V121Fixture, options: {declareSolvent?: boolean} = {}): Spectra {
+  // v1.2.1c: the solvent and the field of the fixture reach the pipeline through `nmrSolvent` / `spectrometerFrequencyMHz`. Before 1c the helper wrote `solvent` / `frequencyMHz`, which
+  // nothing reads, so every shape ran with solvent "Unknown". `declareSolvent: false` keeps that old input for the v1.2.0 golden (captured with it; the flag-false guarantee is "same input, same output").
+  const declare = options.declareSolvent ?? true;
+  const h1 = {...spectrum('1H_NMR', f.h1.peaks.map((p, i) => ({id: `1H_NMR-${i}`, manualPeak: true, y: 50, x: p.x, integration: p.integration, multiplicity: p.multiplicity, jValues: p.j, ...(p.isBroad ? {isBroad: true, shape: 'broad'} : {})})) as unknown as SpectralPeak[]), solvent: f.h1.solvent, ...(declare ? {nmrSolvent: f.h1.solvent, spectrometerFrequencyMHz: f.h1.frequencyMHz} : {})} as unknown as ExperimentalSpectrumData;
   const irPeaks = f.ir.peaks.map(p => ({x: p.x, y: p.y, ...(p.isBroad ? {isBroad: true, shape: 'broad'} : {})}));
   const ir = {...spectrum('IR', irPeaks.map((p, i) => ({id: `IR-${i}`, manualPeak: true, ...p})) as unknown as SpectralPeak[], '%Transmittance'), irYAxisSemantics: 'TRANSMITTANCE_PERCENT', observationCoverage: 'CONFIRMED_COMPLETE'} as unknown as ExperimentalSpectrumData;
   ir.points = [{x: f.ir.coverageCm1[0], y: 99}, {x: f.ir.coverageCm1[1], y: 99}, ...irPeaks.map(p => ({x: p.x, y: p.y}))];
@@ -86,9 +89,9 @@ export async function v121GoldenScenarios() {
       h1OnlyNoFormula: await pipelineSnapshotV121({'1H_NMR': h1Ethyl()}, {}, {timeMs: STEP_ONLY_TIME_MS, maxStates: 60000}),
       userFormulaWithS: await pipelineSnapshotV121({'1H_NMR': h1Ethyl()}, {molecularFormula: 'C9H10O2S'}, {timeMs: STEP_ONLY_TIME_MS, maxStates: 2_000_000}),
     };
-    for (const id of SHAPE_IDS) out[`${id}_noFormula`] = await pipelineSnapshotV121(fixtureSpectra(loadFixture(id)), {}, SHAPE_BUDGET);
+    for (const id of SHAPE_IDS) out[`${id}_noFormula`] = await pipelineSnapshotV121(fixtureSpectra(loadFixture(id), {declareSolvent: false}), {}, SHAPE_BUDGET);
     const s1 = loadFixture('S1');
-    out['S1_withFormula'] = await pipelineSnapshotV121(fixtureSpectra(s1), {molecularFormula: s1.formula}, SHAPE_BUDGET);
+    out['S1_withFormula'] = await pipelineSnapshotV121(fixtureSpectra(s1, {declareSolvent: false}), {molecularFormula: s1.formula}, SHAPE_BUDGET);
     return out;
   } finally { cfg.legacySupplementWhenIncomplete = old; }
 }
