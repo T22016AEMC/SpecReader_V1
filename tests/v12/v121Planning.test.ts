@@ -20,12 +20,13 @@ beforeAll(() => initializeRDKit(), 60000);
 const planning = V12_CONFIG.planning;
 const saved = {...planning};
 afterEach(() => { Object.assign(planning, saved); V12_CONFIG.useV121Planning = true; });
+const withFormulaSlots = () => { planning.maxRound1Formulas = 50; };
 
 const hyp = (formula: string, k: number, score = 0, supported = true): CompositionHypothesis => ({
   id: `comp-${formula}`, formula, counts: parseCounts(formula)!, dbe: 0, monoisotopicMass: 0, massBasis: 'NONE', ionHypothesisId: null, massErrorDa: null, massErrorPpm: null, relativeConfidence: 0, calibrated: false,
   score, support: [], contradiction: [], unknown: [], generatorSupported: supported, unsupportedElements: supported ? [] : ['S'], searched: false, sizeConfirmed: false, symmetryMultiple: k,
 });
-const ok: Feasibility = {feasible: true, reason: null, templateReading: true, vinylException: false, ms: 0};
+const ok: Feasibility = {feasible: true, reason: null, templateReading: true, vinylException: false, dbeNeeded: null, ms: 0};
 const allFeasible = () => ok;
 const evidence = {observations: [], irCoversAldehydeRegion: false, nitrogenAllowed: false};
 const names = (r: ReturnType<typeof planFormulaSearch>) => r.chosen.map(x => x.hypothesis.formula);
@@ -55,7 +56,7 @@ describe('planFormulaSearch (A3, A5)', () => {
   it('with an O floor only O in [floor, floor + 1] is a candidate; the others are listed with a reason', () => {
     const hs = ['C9H12', 'C9H12O', 'C9H12O2', 'C9H12O3', 'C9H12O4'].map(f => hyp(f, 1));
     planning.maxOxygenVariantsPerKey = 5;
-    const r = planFormulaSearch(hs, {floor: 2, sources: []}, evidence, allFeasible);
+    const r = planFormulaSearch(hs, {floor: 2, sources: [], strongCarbonyl: false}, evidence, allFeasible);
     expect(names(r)).toEqual(['C9H12O2', 'C9H12O3']);
     expect([...r.notSearched.values()].map(x => x.reason)).toEqual(['OXYGEN_OUTSIDE_RANGE', 'OXYGEN_OUTSIDE_RANGE', 'OXYGEN_OUTSIDE_RANGE']);
     expect(r.notSearched.get('comp-C9H12O4')?.text).toContain('超過');
@@ -138,7 +139,7 @@ describe('oxygenEvidenceFloor (A2)', () => {
     expect(oxygenEvidenceFloor([...weak, ir(1820, 90), ir(1760, 100), ir(1050, 80)], false)?.floor).toBe(3);
   });
   it('bands that are only range matches (weak bands at 3030, 2965, 1612) do not count', () => {
-    expect(oxygenEvidenceFloor(weak, false)).toEqual({floor: 0, sources: []});
+    expect(oxygenEvidenceFloor(weak, false)).toEqual({floor: 0, sources: [], strongCarbonyl: false});
     // a weak band inside the C=O window is not "strong" either
     expect(oxygenEvidenceFloor([...weak, ir(1715, 20), ir(3350, 10)], false)?.floor).toBe(0);
     // a strong band outside the windows does not help either
@@ -151,6 +152,10 @@ describe('oxygenEvidenceFloor (A2)', () => {
   it('the shapes give the floors the design expected (measured, see the stage report)', () => {
     const floors = Object.fromEntries(['S1', 'G1', 'E1', 'G3', 'D1'].map(id => [id, inferFixture(id).composition.v121?.oxygenFloor?.floor]));
     expect(floors).toEqual({S1: 1, G1: 1, E1: 2, G3: 2, D1: 2});
+  });
+  it('records whether a strong C=O was seen (used by the DBE sort key only)', () => {
+    expect(inferFixture('E1').composition.v121?.oxygenFloor?.strongCarbonyl).toBe(true);
+    expect(inferFixture('S1').composition.v121?.oxygenFloor?.strongCarbonyl).toBe(false);
   });
 });
 
@@ -190,15 +195,23 @@ describe('composition inference with the planning flag (A1, A2)', () => {
     const off = inferFixture('G1').composition;
     expect(off.hypotheses.map(h => h.formula)).not.toContain('C9H12O');
   });
-  it('O above floor + 1 is scored down one step per extra O and is not removed', () => {
-    const c = inferFixture('G1').composition; // floor 1: O = 1 and O = 2 are free, every O above is one step of oxygenExcess
-    const byFormula = new Map(c.hypotheses.map(h => [h.formula, h]));
-    const base = byFormula.get('C10H12O')!, two = byFormula.get('C10H12O2')!, three = byFormula.get('C10H12O3')!;
-    expect(three, 'O = 3 is still in the list (scored down, not removed)').toBeDefined();
-    expect(two.score).toBeCloseTo(base.score, 6);
-    expect(three.score).toBeCloseTo(base.score - COMPOSITION_CONFIG.weights.oxygenExcess, 6);
-    expect(three.contradiction.some(x => x.text.includes('O 下限 1'))).toBe(true);
-    const e1 = inferFixture('E1').composition; // floor 2: O = 2 and 3 are free
+  it('O above the window [floor, k × floor + 1] is scored down one step per extra O and is not removed (S1: floor 1)', () => {
+    const c = inferFixture('S1').composition;
+    const siblings = (k: number, o: number) => c.hypotheses.filter(h => h.symmetryMultiple === k && h.counts.O === o).map(h => ({h, base: c.hypotheses.find(x => x.symmetryMultiple === k && x.counts.C === h.counts.C && x.counts.H === h.counts.H && x.counts.O === 1)})).filter(x => x.base);
+    let checked = 0;
+    for (const [k, o] of [[1, 2], [1, 3], [1, 4], [2, 3], [2, 4], [2, 5], [3, 4], [3, 5]] as const) {
+      const limit = k * 1 + COMPOSITION_CONFIG.weights.oxygenExcess * 0 + V12_CONFIG.planning.oxygenAllowedAboveFloor;
+      for (const {h, base} of siblings(k, o)) {
+        const expected = base!.score - COMPOSITION_CONFIG.weights.oxygenExcess * Math.max(0, o - limit);
+        expect(h.score, `${h.formula} (k=${k})`).toBeCloseTo(expected, 6);
+        checked++;
+      }
+    }
+    expect(checked).toBeGreaterThan(20);
+    // not removed: formulas above the window are still in the list
+    expect(c.hypotheses.some(h => h.symmetryMultiple === 1 && (h.counts.O ?? 0) >= 3)).toBe(true);
+    expect(c.hypotheses.some(h => h.symmetryMultiple === 2 && (h.counts.O ?? 0) >= 4)).toBe(true);
+    const e1 = inferFixture('E1').composition; // floor 2, k = 1: O = 2 and 3 are free
     const e2 = e1.hypotheses.find(h => h.formula === 'C10H12O2')!, e3 = e1.hypotheses.find(h => h.formula === 'C10H12O3')!;
     expect(e3.score).toBeCloseTo(e2.score, 6);
   });

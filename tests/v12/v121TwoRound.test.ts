@@ -6,6 +6,7 @@ import {executeSixStepAnalysis} from '../../src/engines/reasoning/sixStepAnalysi
 import {ENUMERATION_CONFIG} from '../../src/engines/enumeration/enumerationConfig';
 import {V12_CONFIG} from '../../src/engines/constraints/v12Config';
 import {REASON_LABEL} from '../../src/engines/enumeration/compositionPanelModel';
+import {buildCompositionPanel} from '../../src/engines/enumeration/compositionPanelModel';
 import {canonNoStereo, fixtureSpectra, inferFixture, loadFixture, SHAPE_BUDGET} from '../helpers/v121Golden';
 
 // SYNTHETIC logic tests for the two-round search (A4): round 1 = readings without an alkene CH under a step cap, never a fallback;
@@ -86,6 +87,17 @@ describe('round 1 (A4)', () => {
   });
 });
 
+describe('budget margin (1b-1)', () => {
+  it('the round-1 step cap leaves at least a factor 2 above what the S1 two-ring formula needs, and that formula finishes its readings without the cap', async () => {
+    const cap = V12_CONFIG.planning.round1MaxStatesPerFormula;
+    const r = await generator.generateStructures(request('S1', 'C15H16O2', {round: 1, maxStates: cap}));
+    const d = diag(r);
+    expect(d.incompleteReasons).not.toContain('ROUND1_STEP_CAP');
+    expect(d.planning!.round1Visited * 2).toBeLessThanOrEqual(cap);
+    expect(r.smiles.map(canonNoStereo)).toContain(canonNoStereo(loadFixture('S1').targetSmiles));
+  });
+});
+
 describe('round 2 and the merge of the rounds (A4)', () => {
   it('round 2 runs only the alkene readings; the merged run is complete only if both rounds are (S1, C7H8O)', async () => {
     const r1 = await generator.generateStructures(request('S1', 'C7H8O', {round: 1, maxStates: 50_000}));
@@ -156,5 +168,60 @@ describe('the planned pipeline (A3 + A4 + A5 together)', () => {
     const a = await run(), b = await run();
     expect(b).toEqual(a);
     expect(a.length).toBeGreaterThan(5);
+  }, 300000);
+});
+
+describe('round-2 eligibility (1b-2)', () => {
+  const analyse = async (id: string, steps = SHAPE_BUDGET) => {
+    const was = ENUMERATION_CONFIG.legacySupplementWhenIncomplete;
+    ENUMERATION_CONFIG.legacySupplementWhenIncomplete = false;
+    try { return await executeSixStepAnalysis({spectra: fixtureSpectra(loadFixture(id)), extraInput: {}}, steps); } finally { ENUMERATION_CONFIG.legacySupplementWhenIncomplete = was; }
+  };
+  it('only formulas whose round 1 ended GRAMMAR_EXHAUSTED or found a candidate go to round 2; a k without such a formula is skipped and its budget goes to the others (E1)', async () => {
+    const r = await analyse('E1');
+    const runs = r.reasoningTrace!.compositionSearch!.runs;
+    const hyp = (f: string | undefined) => r.compositionInference!.hypotheses.find(h => h.formula === f)!;
+    const round2 = runs.filter(x => x.enumeration!.planning!.round === 2);
+    expect(round2.length).toBeGreaterThan(0);
+    for (const x of round2) {
+      // its round 1 neither stopped on the cap with nothing nor lacked a template reading
+      expect(x.enumeration!.planning!.round1Candidates > 0 || !x.enumeration!.incompleteReasons.includes('ROUND1_STEP_CAP')).toBe(true);
+      expect(x.enumeration!.incompleteReasons).not.toContain('ROUND1_NO_TEMPLATE_READING');
+      expect(hyp(x.formula).searchPlan?.round2).toBe('RAN');
+    }
+    // formulas that stopped on the cap with nothing are not eligible, whatever their score
+    const notEligible = r.compositionInference!.hypotheses.filter(h => h.searchPlan?.round2 === 'NOT_ELIGIBLE');
+    expect(notEligible.length).toBeGreaterThan(0);
+    for (const h of notEligible) {
+      const run = runs.find(x => x.formula === h.formula)!;
+      expect(run.enumeration!.planning!.round).toBe(1);
+      expect(run.candidates).toBe(0);
+      expect(run.termination).not.toBe('GRAMMAR_EXHAUSTED');
+      expect(run.enumeration!.incompleteReasons).toContain('VINYL_READINGS_NOT_RUN');
+    }
+    // a k whose pending formulas are all not eligible has no round-2 run
+    const ksRan = new Set(round2.map(x => hyp(x.formula).symmetryMultiple));
+    const ksPending = new Set(r.compositionInference!.hypotheses.filter(h => h.searchPlan?.round2).map(h => h.symmetryMultiple));
+    expect([...ksPending].some(k => !ksRan.has(k))).toBe(true);
+    // the budget of the skipped ks is not lost: the formulas that ran share what is left (never less than an equal split of 3)
+    const used1 = runs.reduce((a, x) => a + x.enumeration!.planning!.round1Visited, 0);
+    const left = SHAPE_BUDGET.maxStates - used1;
+    expect(round2.length).toBeLessThan(V12_CONFIG.planning.maxRound2Formulas);
+    for (const x of round2) expect(x.enumeration!.planning!.round2Visited).toBeLessThanOrEqual(left);
+  }, 300000);
+  it('nobody eligible: round 2 does not run, the formulas keep VINYL_READINGS_NOT_RUN and the panel says so', async () => {
+    V12_CONFIG.planning.round1MaxStatesPerFormula = 10;
+    const r = await analyse('S1');
+    const runs = r.reasoningTrace!.compositionSearch!.runs;
+    expect(runs.every(x => x.enumeration!.planning!.round === 1)).toBe(true);
+    expect(runs.every(x => x.candidates === 0 && x.termination === 'STATE_BUDGET')).toBe(true);
+    for (const x of runs) {
+      expect(x.enumeration!.incompleteReasons).toContain('VINYL_READINGS_NOT_RUN');
+      expect(x.enumeration!.incompleteReasons).toContain('ROUND1_STEP_CAP');
+    }
+    expect(r.compositionInference!.hypotheses.filter(h => h.searchPlan?.round2 === 'NOT_ELIGIBLE').length).toBe(runs.filter(x => x.enumeration!.planning!.vinylPending).length);
+    const panel = buildCompositionPanel({composition: r.compositionInference, runs, mode: r.reasoningTrace!.compositionSearch!.mode, enumeration: r.solvedConstraintSpace.searchResult?.enumeration, localStructures: [], rejectedCandidates: []})!;
+    expect(panel.planning!.summary).toContain('第二輪（含烯基）沒有執行：沒有分子式符合資格');
+    expect(runs.reduce((a, x) => a + x.enumeration!.planning!.round2Visited, 0)).toBe(0);
   }, 300000);
 });

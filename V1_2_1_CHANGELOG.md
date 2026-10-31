@@ -31,10 +31,11 @@
 
 | 常數 | 值 | 說明 |
 |---|---|---|
-| `planning.maxOxygenVariantsPerKey` | 2 | 每個 (k, C) 鍵保留的 O 變體 |
-| `planning.oxygenAllowedAboveFloor` | 1 | O 下限＋1 以內不扣分、可搜尋 |
-| `planning.maxRound1Formulas` | 18 | 第 1 輪搜尋的分子式數 |
-| `planning.round1MaxStatesPerFormula` | 50 000 | 第 1 輪每個分子式的步數上限 |
+| `planning.maxOxygenVariantsPerKey` | 2 | k=1：每個 (k, C) 鍵保留的 O 變體 |
+| `planning.maxOxygenVariantsPerKeyMultiple` | 3 | k≥2：每個鍵保留的 O 變體（階段 1b） |
+| `planning.oxygenAllowedAboveFloor` | 1 | O 視窗上緣＝k × 下限 ＋ 此值（階段 1b；階段 1 是 下限＋此值） |
+| `planning.maxRound1Formulas` | 12（階段 1：18） | 第 1 輪搜尋的分子式數 |
+| `planning.round1MaxStatesPerFormula` | 150 000（階段 1：50 000） | 第 1 輪每個分子式的步數上限 |
 | `planning.round1TimeFraction` | 0.4 | 第 1 輪合計最多用牆鐘預算的比例（牆鐘仍是最後安全閥） |
 | `planning.maxRound2Formulas` | 3 | 第 2 輪（烯基讀法）的分子式數上限，各 k 一個 |
 | `planning.round2EvidenceWeight` / `round2EvidenceCandidates` | 0.5 / 200 | 第 2 輪選擇的「第 1 輪證據」：1/(1＋候選的拓樸 ¹H 環境數與觀測訊號數的最小差) × 權重 |
@@ -76,3 +77,22 @@
 ## 7. 沒有動的東西（本階段範圍外）
 
 禁含片段清單、B3 烯基位移視窗、B4 缺羰基帶、GEM_DIOL、IR 帶表、版本號。
+
+## 8. 階段 1b（A 類補強）
+
+旗標仍是 `useV121Planning`（false ＝ v1.2.0）。版本號仍 1.2.0。
+
+| 項 | 變更 |
+|---|---|
+| 1b-1 預算 | 以「每個形狀」第 1 輪 ≤ 6 s（步數預算與預設牆鐘兩種條件）、S1 的 C15H16O2 第 1 輪步數餘裕 ≥ 2 倍重新量測（12 格矩陣見 `notes/v1.2.1/P1B_REPORT.md`）；選 `round1MaxStatesPerFormula` 150 000、`maxRound1Formulas` 12 |
+| 1b-2 第 2 輪資格 | 各 k 的第 2 輪候選只從第 1 輪 `GRAMMAR_EXHAUSTED` 或至少 1 個候選的分子式中選（沒有模板讀法者不算）；沒有符合者的 k 不進第 2 輪，預算轉給其他 k；全無符合者時第 2 輪不執行，面板寫明 |
+| 1b-3 排序 | 計畫順序：分數 ↓、DBE 超額 ↑、C ↑、H ↑、O ↑。DBE 超額＝max(0, 分子式 DBE − 證據需要的 DBE)；證據需要的 DBE＝可行讀法中（環模板 DBE 總和＋烯基 C=C 數，C=C 數至少為烯基 CH 原子數的一半）的最小值，＋ `oxygenEvidenceFloor` 有強 C=O 時 +1。只當排序鍵，不是扣分 |
+| 1b-4 O 視窗 | k≥2：O 視窗 [下限, k×下限＋1]、每個 (k, C) 鍵 3 個變體，O＝下限與 O＝k×下限優先；k=1 不變。**「O 變體」改為不同的 O 個數、每個 O 個數只留分數最高的一個分子式**（H、N 的變體不算 O 變體、共用一個名額）——階段 1 的做法是每個 (k, C) 鍵留 N 個分子式，改了優先順序後 O＝下限的 H／N 變體會佔滿名額，把含 O 的變體擠掉（`hotfix117FullFlow` B 的計畫式版本因此失敗過）。`weights.oxygenExcess` 以視窗上緣計算（視窗內不扣）；列舉的 O 上限對每個 k 至少是 k×下限＋1 |
+| 1b-5 黃金檔 | 由 `86e6066` 的完整擷取轉成精簡格式 `tests/goldens/v12.v120.pipeline.compact.json`（2.8 MB → 約 110 KB），非重新擷取 |
+
+### 既有測試／測試資料因 1b 而改變
+
+| 項目 | 舊 | 新 | 原因 |
+|---|---|---|---|
+| `tests/goldens/v12.v120.pipeline.json` | 完整擷取 2.8 MB | 刪除；改 `...pipeline.compact.json` | 指令 1b-5。假設表、搜尋清單、每個 run 的終止／步數／候選數／原因碼仍逐項比對；候選集合、排名、評分帳本、面板改為筆數＋雜湊＋樣本；不再逐項比對每個 run 的讀法明細與拒絕統計 |
+| `tests/v12/v121Planning.test.ts`「O above … is scored down」 | G1 的 C10H12O3（k=1，O=3）仍在清單 | 改用 S1，逐一比對同 (k, C, H) 的 O=1 手足，扣分 ＝ 0.5 × max(0, O − (k×下限＋1)) | O 視窗隨 k 縮放後，k≥2 的 O=3 不再扣分並佔去清單位置，G1 清單裡沒有 k=1、O=3 的分子式；斷言的性質（視窗外逐級扣分、不剔除）沒有削弱，反而逐式驗證 |
