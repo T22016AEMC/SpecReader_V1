@@ -1,0 +1,23 @@
+{
+  "id": "S1",
+  "description": "Symmetric bis-aryl, k=2 (hand-written synthetic; not predictor output)",
+  "targetSmiles": "CC(C)(c1ccc(O)cc1)c1ccc(O)cc1",
+  "formula": "C15H16O2",
+  "h1": {
+    "solvent": "CDCl3", "frequencyMHz": 400,
+    "peaks": [
+      {"x": 7.08, "integration": 4, "multiplicity": "d", "j": [8.6]},
+      {"x": 6.73, "integration": 4, "multiplicity": "d", "j": [8.6]},
+      {"x": 4.75, "integration": 2, "multiplicity": "br s", "isBroad": true},
+      {"x": 1.62, "integration": 6, "multiplicity": "s"}
+    ]
+  },
+  "ir": {
+    "yAxis": "transmittance percent", "coverageCm1": [4000, 450], "calibrated": true, "note": "no absorption in 1650-1850",
+    "peaks": [
+      {"x": 3350, "y": 25, "isBroad": true}, {"x": 3030, "y": 80}, {"x": 2965, "y": 70},
+      {"x": 1612, "y": 60}, {"x": 1510, "y": 20}, {"x": 1440, "y": 65},
+      {"x": 1235, "y": 30}, {"x": 1175, "y": 45}, {"x": 830, "y": 28}, {"x": 560, "y": 60}
+    ]
+  }
+}

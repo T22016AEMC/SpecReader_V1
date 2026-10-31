@@ -1,0 +1,23 @@
+{
+  "id": "E1",
+  "description": "Ester with a strong C=O, k=1 (hand-written synthetic; not predictor output)",
+  "targetSmiles": "CCOC(=O)c1ccc(C)cc1",
+  "formula": "C10H12O2",
+  "h1": {
+    "solvent": "CDCl3", "frequencyMHz": 400,
+    "peaks": [
+      {"x": 7.93, "integration": 2, "multiplicity": "d", "j": [8.2]},
+      {"x": 7.22, "integration": 2, "multiplicity": "d", "j": [8.2]},
+      {"x": 4.36, "integration": 2, "multiplicity": "q", "j": [7.1]},
+      {"x": 2.40, "integration": 3, "multiplicity": "s"},
+      {"x": 1.39, "integration": 3, "multiplicity": "t", "j": [7.1]}
+    ]
+  },
+  "ir": {
+    "yAxis": "transmittance percent", "coverageCm1": [4000, 450], "calibrated": true,
+    "peaks": [
+      {"x": 3030, "y": 85}, {"x": 2980, "y": 70}, {"x": 1715, "y": 8}, {"x": 1610, "y": 55},
+      {"x": 1275, "y": 10}, {"x": 1105, "y": 20}, {"x": 750, "y": 40}
+    ]
+  }
+}

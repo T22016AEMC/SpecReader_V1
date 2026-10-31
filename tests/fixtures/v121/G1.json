@@ -1,0 +1,23 @@
+{
+  "id": "G1",
+  "description": "Single ring plus alkyl, k=1 (hand-written synthetic; not predictor output)",
+  "targetSmiles": "CCc1ccc(OC)cc1",
+  "formula": "C9H12O",
+  "h1": {
+    "solvent": "CDCl3", "frequencyMHz": 400,
+    "peaks": [
+      {"x": 7.10, "integration": 2, "multiplicity": "d", "j": [8.6]},
+      {"x": 6.82, "integration": 2, "multiplicity": "d", "j": [8.6]},
+      {"x": 3.78, "integration": 3, "multiplicity": "s"},
+      {"x": 2.58, "integration": 2, "multiplicity": "q", "j": [7.6]},
+      {"x": 1.21, "integration": 3, "multiplicity": "t", "j": [7.6]}
+    ]
+  },
+  "ir": {
+    "yAxis": "transmittance percent", "coverageCm1": [4000, 450], "calibrated": true,
+    "peaks": [
+      {"x": 3030, "y": 85}, {"x": 2960, "y": 70}, {"x": 1612, "y": 55}, {"x": 1512, "y": 15},
+      {"x": 1245, "y": 18}, {"x": 1178, "y": 40}, {"x": 1038, "y": 35}, {"x": 830, "y": 25}
+    ]
+  }
+}
