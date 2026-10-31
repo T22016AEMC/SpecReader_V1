@@ -300,11 +300,14 @@ export function planningView(c: CompositionInferenceResult): PlanningView {
     : 'O 下限：此路徑沒有 IR 觀測帶可推導（或有質量依據），O 數不受 IR 下限限制';
   const plans = c.hypotheses.map(h => h.searchPlan).filter(Boolean) as NonNullable<CompositionInferenceResult['hypotheses'][number]['searchPlan']>[];
   const r1 = plans.filter(p => p.status === 'ROUND_1').length, r2 = plans.filter(p => p.status === 'ROUND_2').length;
+  const notEligible = plans.filter(p => p.round2 === 'NOT_ELIGIBLE').length, notPicked = plans.filter(p => p.round2 === 'NOT_PICKED').length;
+  // Round 2 takes only formulas whose round 1 ended GRAMMAR_EXHAUSTED or found a candidate; say it when that leaves nobody.
+  const round2Note = r2 === 0 && notEligible + notPicked > 0 ? `第二輪（含烯基）沒有執行：沒有分子式符合資格（第一輪需走完或至少有 1 個候選；${notEligible} 個第一輪被步數上限打斷且沒有候選）。` : r2 > 0 && notEligible > 0 ? `另有 ${notEligible} 個分子式因第一輪被步數上限打斷且沒有候選，不進第二輪。` : '';
   const counts = new Map<string, number>();
   for (const p of plans) if (p.status === 'NOT_SEARCHED' && p.reason) counts.set(p.reason, (counts.get(p.reason) ?? 0) + 1);
   return {
     title: '搜尋計畫（v1.2.1：k 輪流、兩輪預算）', oxygenText, sulfurText: v.sulfurConsidered ? null : SULFUR_TEXT,
-    summary: `共 ${r1 + r2} 個分子式被搜尋：${r1} 個只跑第一輪（不含烯基的讀法）、${r2} 個也跑了第二輪（含烯基）；${[...counts.values()].reduce((a, b) => a + b, 0)} 個列在清單內但未搜尋。`,
+    summary: `共 ${r1 + r2} 個分子式被搜尋：${r1} 個只跑第一輪（不含烯基的讀法）、${r2} 個也跑了第二輪（含烯基）；${[...counts.values()].reduce((a, b) => a + b, 0)} 個列在清單內但未搜尋。${round2Note}`,
     notSearched: [...counts].map(([reason, count]) => ({reason, label: NOT_SEARCHED_LABEL[reason] ?? reason, count})),
   };
 }

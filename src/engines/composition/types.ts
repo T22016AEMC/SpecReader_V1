@@ -62,6 +62,10 @@ export interface FormulaSearchPlan {
  /** Position in the k round-robin search order (1-based); null when not searched. */
  order:number|null;
  reason?:NotSearchedReason;
+ /** DBE parsimony of a searched formula: its DBE, the DBE the evidence needs and the excess (v1.2.1b; sort key only). */
+ dbe?:{dbe:number;needed:number|null;excess:number};
+ /** Alkene readings still pending after round 1: RAN = round 2 ran; NOT_PICKED = eligible but another formula of its k was better (or more than 3 ks); NOT_ELIGIBLE = round 1 stopped on the step cap with no candidate. */
+ round2?:'RAN'|'NOT_PICKED'|'NOT_ELIGIBLE';
  /** Panel wording of the reason, e.g. 同骨架 O 變體超過保留數. */
  reasonText?:string;
 }
@@ -69,6 +73,8 @@ export interface FormulaSearchPlan {
 export interface OxygenEvidenceFloor {
  floor:number;
  sources:{text:string;observationIds:string[]}[];
+ /** A strong C=O band (1650–1800 cm-1) was observed: the formula needs one more DBE than its rings and C=C (v1.2.1b, sort key only). */
+ strongCarbonyl:boolean;
 }
 /** Element-presence clue from IR/NMR/MS evidence, reported even when no formula can be enumerated. */
 export interface ElementClue {

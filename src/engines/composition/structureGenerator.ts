@@ -1,6 +1,6 @@
 import {searchMolecularGraphsAsync,type DeNovoSearchResult,type GraphSearchHints,type GraphSearchProgress,type SearchTermination} from '../scientificEngines/deNovoGraphSearch';
 import {COMPOSITION_CONFIG as CFG} from './compositionConfig';
-import type {CompositionHypothesis,CompositionInferenceResult} from './types';
+import type {CompositionHypothesis,CompositionInferenceResult,FormulaSearchPlan} from './types';
 import type {LocalStructureHypothesis} from '../reasoning/types';
 import {parseCounts} from './goldenRules';
 import {ENUMERATION_CONFIG as ENUM} from '../enumeration/enumerationConfig';
@@ -152,7 +152,7 @@ export async function generateForCompositions(args:{userFormula:string|null;comp
   if(!plan.chosen.length)return null;
   for(const h of hyps)delete h.searchPlan;
   for(const [id,ns] of plan.notSearched){const h=hyps.find(x=>x.id===id);if(h)h.searchPlan={status:'NOT_SEARCHED',order:null,reason:ns.reason,reasonText:ns.text};}
-  const entries=plan.chosen.map(p=>({p,h:p.hypothesis,prepared:prepareSymmetry(p.hypothesis,p.hypothesis.formula,args.hints),search:null as DeNovoSearchResult|null,round2:false}));
+  const entries=plan.chosen.map(p=>({p,h:p.hypothesis,prepared:prepareSymmetry(p.hypothesis,p.hypothesis.formula,args.hints),search:null as DeNovoSearchResult|null,round2:false,round2State:undefined as FormulaSearchPlan['round2']}));
   let usedStates=0,round1Ms=0,cancelled=false;
   const call=(e:(typeof entries)[number],round:1|2,maxStates:number,timeMs:number,cap?:number)=>generator.generateStructures({formula:e.h.formula,hints:e.prepared.hints,budget:{...budget,maxStates,timeMs,maxResults:CFG.maxResultsPerFormula,onProgress:budget.onProgress?p=>budget.onProgress!({...p,visited:usedStates+p.visited}):undefined},unprepared:args.hints,symmetryMultiple:e.h.symmetryMultiple,plausibility:args.plausibility,
    enumerationBudget:{timeMs,maxStates,maxCandidates:eBudget.maxCandidates},sharedPool:args.sharedPool,constraintEvidence:args.constraintEvidence,planning:{round,...(cap!==undefined?{maxStates:cap}:{})}});
@@ -173,17 +173,21 @@ export async function generateForCompositions(args:{userFormula:string|null;comp
   };
   if(!cancelled){
    const pending=entries.filter(e=>e.search?.enumeration?.runs[0]?.planning?.vinylPending);
+   // v1.2.1b: only a formula whose round 1 ended GRAMMAR_EXHAUSTED or found at least one candidate may go to round 2 (a formula that hit the step cap with nothing, or had no template reading, does not).
+   const eligible=(e:(typeof entries)[number])=>{const s=e.search!;return (s.termination==='GRAMMAR_EXHAUSTED'||s.smiles.length>0)&&!s.enumeration!.runs[0].incompleteReasons.includes('ROUND1_NO_TEMPLATE_READING');};
+   for(const e of pending)e.round2State=eligible(e)?'NOT_PICKED':'NOT_ELIGIBLE';
    const byK=new Map<number,(typeof entries)[number]>();
-   for(const e of pending){
+   for(const e of pending.filter(eligible)){
     const k=e.h.symmetryMultiple??0,score=e.h.score+evidence(e.search!),old=byK.get(k);
     if(!old||score>old.h.score+evidence(old.search!))byK.set(k,e);
    }
+   // A k without an eligible formula is skipped; the budget below is divided only among the formulas that run.
    const picked=[...byK.entries()].sort((a,b)=>a[0]-b[0]).map(x=>x[1]).slice(0,P.maxRound2Formulas);
    for(let j=0;j<picked.length&&!cancelled;j++){
     const e=picked[j],left=picked.length-j;
     const poolLeft=Math.max(0,eBudget.maxStates-usedStates)/left,timeLeft=Math.max(0,eBudget.timeMs-(performance.now()-started))/left;
     const s2=await call(e,2,Math.floor(poolLeft),timeLeft);
-    usedStates+=s2.visited;e.round2=true;
+    usedStates+=s2.visited;e.round2=true;e.round2State='RAN';
     e.search=e.search!.enumeration?.runs[0]?mergeRounds(e.search!,s2):e.search;
     if(s2.termination==='CANCELLED')cancelled=true;
    }
@@ -193,7 +197,7 @@ export async function generateForCompositions(args:{userFormula:string|null;comp
   const merged:DeNovoSearchResult={smiles:[],status:'BOUNDED',visited:0,note:'',termination:'GRAMMAR_EXHAUSTED',complete:true,partialHypotheses:[],rejectedByComposition:0,derivations:{},formulaSources:{},elapsedMs:0,frontierPeak:0};
   for(const e of entries){
    const search=e.search;if(!search)continue;
-   const h=e.h;h.searched=true;h.searchPlan={status:e.round2?'ROUND_2':'ROUND_1',order:e.p.order};
+   const h=e.h;h.searched=true;h.searchPlan={status:e.round2?'ROUND_2':'ROUND_1',order:e.p.order,dbe:e.p.dbe,...(e.round2State?{round2:e.round2State}:{})};
    const ev=search.enumeration?.runs[0];
    if(ev){enumRuns.push(...search.enumeration!.runs);Object.assign(originsAcc,search.enumeration!.origins);}
    runs.push(finishRun({hypothesisId:h.id,formula:h.formula,maxStates:P.round1MaxStatesPerFormula,timeMs:eBudget.timeMs,visited:search.visited,elapsedMs:search.elapsedMs??0,termination:search.termination,candidates:search.smiles.length,symmetry:e.prepared.symmetry,diagnostic:null},search));

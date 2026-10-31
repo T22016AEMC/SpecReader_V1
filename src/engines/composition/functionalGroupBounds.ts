@@ -95,5 +95,5 @@ export function oxygenEvidenceFloor(observations:ObservedEvidence[],nitrogenAllo
  if(co.length&&c_o.length)levels.push({level:2,text:`${[...co,...c_o].map(label).join('、')}：強 C=O 與強 C–O 並有（酯／羧酸型）`,observationIds:[...co,...c_o].map(o=>o.id)});
  if(high.length&&low.length&&c_o.length)levels.push({level:3,text:`${[...high,...low,...c_o].map(label).join('、')}：成對的強 C=O 帶與強 C–O（酸酐型）`,observationIds:[...high,...low,...c_o].map(o=>o.id)});
  const floor=Math.max(0,...levels.map(l=>l.level));
- return {floor,sources:levels.filter(l=>l.level===floor).map(({text,observationIds})=>({text,observationIds}))};
+ return {floor,sources:levels.filter(l=>l.level===floor).map(({text,observationIds})=>({text,observationIds})),strongCarbonyl:co.length>0};
 }

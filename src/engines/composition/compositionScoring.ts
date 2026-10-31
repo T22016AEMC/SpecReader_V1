@@ -53,7 +53,7 @@ export function isotopeRatios(counts:ElementCounts):number[] {
 }
 
 /** Sum of uncalibrated log-compatibility terms plus the support / contradiction / unknown reasons behind them. */
-export function scoreComposition(counts:ElementCounts,mass:number,ion:IonHypothesis|null,ctx:ScoringContext,withReasons=true):ScoredComposition {
+export function scoreComposition(counts:ElementCounts,mass:number,ion:IonHypothesis|null,ctx:ScoringContext,withReasons=true,k:number|null=null):ScoredComposition {
  const out:ScoredComposition={score:0,support:[],contradiction:[],unknown:[]};
  // The numeric pass (withReasons=false) ranks every enumerated formula; reasons are built only for the kept ones.
  const reason=(list:CompositionReason[],text:string,ids:string[],source:CompositionReason['source'],strength:CompositionReason['strength']='SOFT')=>{if(withReasons)list.push({text,observationIds:ids,source,strength});};
@@ -118,8 +118,9 @@ export function scoreComposition(counts:ElementCounts,mass:number,ion:IonHypothe
  }
  // v1.2.1 (A2): O above (evidence floor + allowed) is scored down one step per extra O. Never an exclusion.
  if(ctx.oxygenFloor){
-  const limit=ctx.oxygenFloor.floor+V12_CONFIG.planning.oxygenAllowedAboveFloor,O=n(counts,'O');
-  if(O>limit){out.score-=w.oxygenExcess*(O-limit);reason(out.contradiction,`O=${O} 比 IR 證據的 O 下限 ${ctx.oxygenFloor.floor} 多 ${O-ctx.oxygenFloor.floor} 個（超過 +${V12_CONFIG.planning.oxygenAllowedAboveFloor} 起逐級扣分）`,ctx.oxygenFloor.sources.flatMap(x=>x.observationIds),'IR');}
+  // v1.2.1b: the symmetric unit is copied k times, so the free window of O is [floor, k × floor + allowed] (k = 1: [floor, floor + allowed]).
+  const kk=Math.max(1,k??1),limit=kk*ctx.oxygenFloor.floor+V12_CONFIG.planning.oxygenAllowedAboveFloor,O=n(counts,'O');
+  if(O>limit){out.score-=w.oxygenExcess*(O-limit);reason(out.contradiction,`O=${O} 超過 IR 證據的 O 視窗上緣 ${limit}（下限 ${ctx.oxygenFloor.floor}，k=${kk}：k × 下限 ＋ ${V12_CONFIG.planning.oxygenAllowedAboveFloor}；超過起逐級扣分）`,ctx.oxygenFloor.sources.flatMap(x=>x.observationIds),'IR');}
  }
  const nFeature=ctx.features.some(f=>(f.mins.N??0)>0);
  if(n(counts,'N')&&ctx.nitrogenMode==='EVEN_ION_ONLY'){out.score-=w.nitrogenEvenIonOnly*n(counts,'N');reason(out.unknown,`含 ${n(counts,'N')} 個 N：MS 分子離子為偶數名義質量，沒有其他 N 專屬證據，信心降低`,[],'RULE');}

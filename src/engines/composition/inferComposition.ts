@@ -5,6 +5,7 @@ import {COMPOSITION_CONFIG as CFG} from './compositionConfig';
 import {scoreComposition,type ScoringContext} from './compositionScoring';
 import {enumerateFormulas,type EnumerationSpec} from './formulaEnumerator';
 import {planningActive} from './planningGate';
+import {V12_CONFIG} from '../constraints/v12Config';
 import {combineBounds,functionalGroupFeatures,oxygenEvidenceFloor} from './functionalGroupBounds';
 import {commonRangeViolations,dbeOf,formatHill,monoisotopicMass,parseCounts} from './goldenRules';
 import {extractMsEvidence,type MsEvidence} from './msComposition';
@@ -132,7 +133,7 @@ export function inferComposition(input:CompositionInput):CompositionInferenceRes
    const out=enumerateFormulas(spec);
    result.enumeration.enumeratedNodes+=out.nodes;result.enumeration.passedHardFilters+=out.passedHardFilters;result.enumeration.truncatedByNodes||=out.truncated;
    for(const f of out.formulas){
-    const cand:Candidate={formula:formatHill(f.counts),counts:f.counts,mass:f.mass,ion,basis,score:scoreComposition(f.counts,f.mass,ion,ctx,false).score,massErrorDa:ion?f.mass-ion.neutralMass:null,k:k??bestMultiple(f.counts.H??0)};
+    const cand:Candidate={formula:formatHill(f.counts),counts:f.counts,mass:f.mass,ion,basis,score:scoreComposition(f.counts,f.mass,ion,ctx,false,k??bestMultiple(f.counts.H??0)).score,massErrorDa:ion?f.mass-ion.neutralMass:null,k:k??bestMultiple(f.counts.H??0)};
     const old=best.get(cand.formula);
     if(!old||order(cand,old)<0)best.set(cand.formula,cand);
    }
@@ -187,7 +188,9 @@ export function inferComposition(input:CompositionInput):CompositionInferenceRes
     }
     cLo=Math.max(1,cLo);cHi+=CFG.h1OnlyInvisibleCarbonMax;cs.push(cLo,cHi);
     const hs=Array.from({length:CFG.maxExchangeableMissing+1},(_,e)=>k*S!+e);
-    push({caps:{...caps,C:cHi},mins:hetero,carbonRange:[cLo,cHi],hydrogenSet:hs,hydrogenMin:hMin,dbeMin:bounds.dbeMin},null,'NONE',k);
+    // v1.2.1b: the O window of k copies of the unit reaches k × floor + allowed, so the O cap of this k is at least that (Golden Rules still apply inside enumerateFormulas).
+    const oCap=oxygenFloor?Math.max(caps.O??0,k*oxygenFloor.floor+V12_CONFIG.planning.oxygenAllowedAboveFloor):caps.O;
+    push({caps:{...caps,C:cHi,...(oCap!==undefined?{O:oCap}:{})},mins:hetero,carbonRange:[cLo,cHi],hydrogenSet:hs,hydrogenMin:hMin,dbeMin:bounds.dbeMin},null,'NONE',k);
    }
    // Cap the enumerated formulas; rank by prior plausibility (Golden Rules common-range violations, then DBE excess).
    if(best.size>CFG.h1OnlyMaxCandidateFormulas){
@@ -224,7 +227,7 @@ export function inferComposition(input:CompositionInput):CompositionInferenceRes
  }
  list.sort(v121?orderV121:order);
  result.enumeration.droppedByKeepLimit+=Math.max(0,list.length-CFG.maxHypotheses);
- const kept=list.slice(0,CFG.maxHypotheses).map(c=>hypothesis(c.counts,c.mass,c.ion,c.basis,scoreComposition(c.counts,c.mass,c.ion,ctx),c.k));
+ const kept=list.slice(0,CFG.maxHypotheses).map(c=>hypothesis(c.counts,c.mass,c.ion,c.basis,scoreComposition(c.counts,c.mass,c.ion,ctx,true,c.k),c.k));
  softmax(kept);
  result.hypotheses=kept;result.enumeration.returned=kept.length;
  result.elementsExcluded=[...excluded].map(([element,reason])=>({element,reason})).sort((a,b)=>a.element.localeCompare(b.element));

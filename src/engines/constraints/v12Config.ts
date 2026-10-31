@@ -67,12 +67,14 @@ export const V12_CONFIG = {
   planning: {
     /** O variants kept per (k, C) key: only formulas with O in [floor, floor + 1] qualify, best score first. */
     maxOxygenVariantsPerKey: 2,
+    /** k ≥ 2: the O window is [floor, k × floor + oxygenAllowedAboveFloor] and this many O variants are kept per (k, C) key (k = 1 keeps the value above). */
+    maxOxygenVariantsPerKeyMultiple: 3,
     /** O above (evidence floor + this) is scored down per extra O (weights.oxygenExcess) and is not a search candidate. */
     oxygenAllowedAboveFloor: 1,
     /** Formulas that get a round-1 run; the k round-robin order decides which ones. */
-    maxRound1Formulas: 18,
+    maxRound1Formulas: 12,
     /** Search steps one formula may use in round 1 (template readings only). */
-    round1MaxStatesPerFormula: 50_000,
+    round1MaxStatesPerFormula: 150_000,
     /** All round-1 runs together may use at most this fraction of the wall-clock budget (the clock stays the last safety valve). */
     round1TimeFraction: 0.4,
     /** Round 2 (readings with an alkene CH): the best-scored formula of each k, at most this many formulas. */
