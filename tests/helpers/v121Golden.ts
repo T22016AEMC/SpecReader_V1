@@ -1,3 +1,4 @@
+import {createHash} from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -133,3 +134,31 @@ export const canonNoStereo = (smiles: string): string => {
   const flat = smiles.split('/').join('').split(String.fromCharCode(92)).join('').replace(/@+/g, '');
   try { return canonicalizeMolecule(flat).canonical; } catch { return flat; }
 };
+
+// ------------------------------------------------------------------------------------------------ compact golden (v1.2.1b)
+/**
+ * The golden file stores a compact form of the snapshots: the hypothesis table, search list and per-run facts as they are; candidate sets, the ranking,
+ * the score ledger and the panel as counts, a hash and a short sample (the panel as one hash per row, one per other section, and the first 30 rows' text).
+ * Strings are normalised with the same leaf-counter rule as compareGolden before hashing. On a mismatch compareGolden prints the current and the stored value.
+ */
+const hash = (v: unknown): string => createHash('sha1').update(JSON.stringify(v, (_k, x) => (typeof x === 'string' ? jitterText(x) : x))).digest('hex').slice(0, 12);
+const listForm = (items: string[], sample: number) => ({count: items.length, hash: hash(items), sample: items.slice(0, sample)});
+export function compactSnapshot(snap: any): any {
+  const panel = snap.panel as {rows: any[]; [k: string]: unknown} | null;
+  return {
+    mode: snap.mode, compositionStatus: snap.compositionStatus, termination: snap.termination, complete: snap.complete, statusCode: snap.statusCode, enumeration: snap.enumeration,
+    hypotheses: snap.hypotheses.map((h: any) => `${h.formula}|${h.k}|${h.score}|${h.searched ? 1 : 0}|${h.generatorSupported ? 1 : 0}`),
+    searchList: snap.searchList,
+    runs: snap.runs.map((r: any) => ({formula: r.formula, termination: r.termination, visited: r.visited, candidates: r.candidates, incompleteReasons: r.incompleteReasons, complete: r.complete, path: r.path, fallbackReason: r.fallbackReason})),
+    candidateSet: listForm(snap.candidateSet, 20),
+    smiles: listForm(snap.smiles, 5),
+    ranked: listForm(snap.ranked, 20),
+    ledger: {hash: hash(snap.ledger), top: snap.ledger.map((l: any) => `${l.smiles}|${l.totalScore}`)},
+    panel: panel && {
+      rowHashes: panel.rows.map(r => hash(r)),
+      rowsText30: panel.rows.slice(0, 30).map(r => `${r.formula}｜${r.search.text}`),
+      sections: Object.fromEntries(Object.entries(panel).filter(([k]) => k !== 'rows').map(([k, v]) => [k, hash(v)])),
+    },
+  };
+}
+export const compactScenarios = (all: Record<string, unknown>): Record<string, unknown> => Object.fromEntries(Object.entries(all).map(([k, v]) => [k, compactSnapshot(v)]));
