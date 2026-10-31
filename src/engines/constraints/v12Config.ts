@@ -57,6 +57,30 @@ export interface StrongEvidenceRuleDef {
 export const V12_CONFIG = {
   /** D1: true from 1.2.0. With false every path is identical to v1.1.8 (tests/v12/legacyGolden.test.ts sets it in code). */
   useV12Constraints: true as boolean,
+  /**
+   * v1.2.1 (A class: which formulas are searched). true: S needs S-specific evidence, the O count follows the IR evidence, the formulas are chosen by k
+   * round-robin and searched in two rounds. false: every path (including the panel text) is identical to v1.2.0 (tests/v12/v121FlagGolden.test.ts).
+   * Only the no-formula h1-only / no-mass route is affected; a user formula and the MS route keep the v1.2.0 search.
+   */
+  useV121Planning: true as boolean,
+  /** ENGINEERING DEFAULTS, NOT CALIBRATED (chosen from the step counts of the five synthetic shapes S1/G1/E1/G3/D1, not from any measured compound). */
+  planning: {
+    /** O variants kept per (k, C) key: only formulas with O in [floor, floor + 1] qualify, best score first. */
+    maxOxygenVariantsPerKey: 2,
+    /** O above (evidence floor + this) is scored down per extra O (weights.oxygenExcess) and is not a search candidate. */
+    oxygenAllowedAboveFloor: 1,
+    /** Formulas that get a round-1 run; the k round-robin order decides which ones. */
+    maxRound1Formulas: 18,
+    /** Search steps one formula may use in round 1 (template readings only). */
+    round1MaxStatesPerFormula: 50_000,
+    /** All round-1 runs together may use at most this fraction of the wall-clock budget (the clock stays the last safety valve). */
+    round1TimeFraction: 0.4,
+    /** Round 2 (readings with an alkene CH): the best-scored formula of each k, at most this many formulas. */
+    maxRound2Formulas: 3,
+    /** Round-2 choice: composition score + round-1 evidence (weight × 1/(1 + smallest gap between the candidates' topological 1H environments and the observed 1H signals)). */
+    round2EvidenceWeight: 0.5,
+    round2EvidenceCandidates: 200,
+  },
 
   // ---------------------------------------------------------------- inventory (W1), D8
   /** k = H_total / (sum of the simplest integer ratio), tried for 1…maxK. */

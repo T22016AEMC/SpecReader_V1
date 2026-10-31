@@ -4,7 +4,8 @@ import {sourceSpectra} from '../scientificEngines/evidenceLedger';
 import {COMPOSITION_CONFIG as CFG} from './compositionConfig';
 import {scoreComposition,type ScoringContext} from './compositionScoring';
 import {enumerateFormulas,type EnumerationSpec} from './formulaEnumerator';
-import {combineBounds,functionalGroupFeatures} from './functionalGroupBounds';
+import {planningActive} from './planningGate';
+import {combineBounds,functionalGroupFeatures,oxygenEvidenceFloor} from './functionalGroupBounds';
 import {commonRangeViolations,dbeOf,formatHill,monoisotopicMass,parseCounts} from './goldenRules';
 import {extractMsEvidence,type MsEvidence} from './msComposition';
 import {extractNmrEvidence} from './nmrComposition';
@@ -22,6 +23,8 @@ export interface CompositionInput {
 }
 
 const RARE=['F','I','P','Si'] as const;
+/** v1.2.1 (A1): shown in the panel when S is not considered. The enumerator itself can place a divalent S; the composition whitelist does not include it. */
+export const SULFUR_NOT_CONSIDERED='未考慮 S（沒有 S 專屬證據；組成層白名單不含 S）';
 const now=()=>performance.now();
 
 function hypothesis(counts:ElementCounts,mass:number,ion:IonHypothesis|null,basis:MassBasis,scored:ReturnType<typeof scoreComposition>,symmetryMultiple:number|null=null):CompositionHypothesis {
@@ -34,6 +37,9 @@ function hypothesis(counts:ElementCounts,mass:number,ion:IonHypothesis|null,basi
 }
 interface Candidate {formula:string;counts:ElementCounts;mass:number;ion:IonHypothesis|null;basis:MassBasis;score:number;massErrorDa:number|null;k:number|null}
 const order=(a:{score:number;massErrorDa:number|null;formula:string},b:{score:number;massErrorDa:number|null;formula:string})=>b.score-a.score||Math.abs(a.massErrorDa??0)-Math.abs(b.massErrorDa??0)||a.formula.localeCompare(b.formula);
+/** v1.2.1: equal scores are ordered by the element counts (C, then H, then the others, ascending) instead of by the formula string, where C10 would precede C4. */
+const elementOrder=(a:{counts:ElementCounts},b:{counts:ElementCounts})=>{for(const e of ['C','H','N','O','S','F','Cl','Br','I','P','Si'] as const){const d=(a.counts[e]??0)-(b.counts[e]??0);if(d)return d;}return 0;};
+const orderV121=(a:Candidate,b:Candidate)=>b.score-a.score||Math.abs(a.massErrorDa??0)-Math.abs(b.massErrorDa??0)||elementOrder(a,b)||a.formula.localeCompare(b.formula);
 function softmax(list:CompositionHypothesis[]){
  if(!list.length)return;
  const max=Math.max(...list.map(h=>h.score)),exp=list.map(h=>Math.exp(h.score-max)),sum=exp.reduce((a,b)=>a+b,0);
@@ -101,12 +107,19 @@ export function inferComposition(input:CompositionInput):CompositionInferenceRes
  // 1H(+IR) only (v1.1.6): visible carbon environments V = non-optional, non-exchangeable 1H signals.
  const visibleCarbonEnvironments=observations.filter(o=>o.modality==='1H_NMR'&&!o.optional&&o.shape!=='BROAD'&&o.multiplicity!=='br'&&o.multiplicity!=='br s').length;
  const h1Only=!usableIons.length&&!c13Count&&Boolean(S)&&visibleCarbonEnvironments>0;
+ // v1.2.1: planning on → S needs S-specific evidence (hasEvidence), and without a mass the O count follows the IR evidence floor (A1, A2).
+ const v121=planningActive();
+ const sulfurAllowed=!v121||hasEvidence('S');
+ const oxygenFloor=v121&&!usableIons.length?oxygenEvidenceFloor(observations,nitrogen.allowed):null;
+ if(oxygenFloor)ctx.oxygenFloor=oxygenFloor;
+ if(v121&&!usableIons.length)ctx.ignoreRangeMatchedSoftBounds=true;
  if(!usableIons.length&&!c13Count&&!h1Only){
   result.status='INSUFFICIENT_DATA';
   limitations.push(ms?.ions.length?'所有 MS 分子離子假設都被排除，且沒有 ¹³C 訊號；無法界定分子大小，不枚舉分子式。':'沒有可用的分子離子質量，也沒有 ¹³C 訊號；無法界定分子大小，不枚舉分子式。');
   return finish();
  }
  const excluded=new Map<CompositionElement,string>();
+ if(v121){result.v121={oxygenFloor,sulfurConsidered:sulfurAllowed};if(!sulfurAllowed)excluded.set('S',SULFUR_NOT_CONSIDERED);}
  if(!nitrogen.allowed)excluded.set('N',nitrogen.note);
  for(const e of RARE)if(!hasEvidence(e)&&e!=='P')excluded.set(e,'預設禁止；沒有該元素的特定證據（審核決定 7）');
  if(!excluded.has('P'))excluded.set('P','預設禁止；只有高解析質量無法以其他元素解釋時才開放');
@@ -138,7 +151,7 @@ export function inferComposition(input:CompositionInput):CompositionInferenceRes
     const halogenCap=m2Known&&(m2.ratio??0)<CFG.m2HardExclusionPercent?0:m2?.status==='OBSERVED'&&(m2.ratio??0)>=CFG.m2HalogenEvidencePercent?CFG.evidenceCaps.Cl:CFG.defaultCaps.Cl;
     if(halogenCap===0)halogenExcludedBy.push(`${ion.id}（M+2/M=${(m2!.ratio??0).toFixed(1)}% < ${CFG.m2HardExclusionPercent}%）`);
     const bracket=CFG.goldenRule1.find(b=>ion.neutralMass<b.maxMass)??CFG.goldenRule1[CFG.goldenRule1.length-1];
-    const caps:ElementCounts={C:bracket.caps.C,N:nitrogen.allowed?Math.max(bracket.caps.N,bounds.mins.N??0):0,O:Math.max(bracket.caps.O,bounds.mins.O??0),S:hasEvidence('S')?CFG.evidenceCaps.S:CFG.defaultCaps.S,Cl:halogenCap,Br:halogenCap,...rareCaps};
+    const caps:ElementCounts={C:bracket.caps.C,N:nitrogen.allowed?Math.max(bracket.caps.N,bounds.mins.N??0):0,O:Math.max(bracket.caps.O,bounds.mins.O??0),S:hasEvidence('S')?CFG.evidenceCaps.S:(v121?0:CFG.defaultCaps.S),Cl:halogenCap,Br:halogenCap,...rareCaps};
     const spec:EnumerationSpec={neutralMass:ion.neutralMass,toleranceDa:ion.toleranceDa,caps,mins:bounds.mins,carbonRange:[carbonMin,bracket.caps.C],hydrogenMin:hMin,dbeMin:bounds.dbeMin};
     const basis:MassBasis=ion.highResolution?'HRMS':'LOW_RES_MS';
     if(!push(spec,ion,basis)&&ion.highResolution){
@@ -153,9 +166,12 @@ export function inferComposition(input:CompositionInput):CompositionInferenceRes
    result.bounds.carbon=[carbonMin,null];
   }else if(h1Only){
    // H = k·S + e and C = k·V + q with the same k (symmetric unit copied k times), q invisible carbons (v1.1.6).
-   const soft=relaxed?{mins:{} as ElementCounts,dbeMin:0}:combineBounds(features);
+   const soft=relaxed?{mins:{} as ElementCounts,dbeMin:0}:v121?hard:combineBounds(features);
    const hetero:ElementCounts={...soft.mins};delete hetero.C;
-   const caps:ElementCounts={N:nitrogen.allowed?(hetero.N??0)+CFG.noMassExtra.N:0,O:(hetero.O??0)+CFG.noMassExtra.O,S:(hetero.S??0)+CFG.noMassExtra.S,...Object.fromEntries(Object.entries(rareCaps).filter(([e])=>e==='F'||e==='Si'))};
+   // v1.2.1: the enumeration minimum uses HARD bounds only; the caps keep the SOFT ones (and the O floor), so the upper end of the list does not shrink.
+   const capBase:ElementCounts=v121&&!relaxed?{...combineBounds(features).mins}:hetero;delete capBase.C;
+   if(oxygenFloor)capBase.O=Math.max(capBase.O??0,oxygenFloor.floor);
+   const caps:ElementCounts={N:nitrogen.allowed?(capBase.N??0)+CFG.noMassExtra.N:0,O:(capBase.O??0)+CFG.noMassExtra.O,S:sulfurAllowed?(capBase.S??0)+CFG.noMassExtra.S:0,...Object.fromEntries(Object.entries(rareCaps).filter(([e])=>e==='F'||e==='Si'))};
    excluded.set('Cl','沒有質量／同位素資料，無法判斷 Cl');excluded.set('Br','沒有質量／同位素資料，無法判斷 Br');
    if(!excluded.has('I'))excluded.set('I','沒有質量資料時不枚舉 I');
    const cs:number[]=[];
@@ -176,7 +192,7 @@ export function inferComposition(input:CompositionInput):CompositionInferenceRes
    // Cap the enumerated formulas; rank by prior plausibility (Golden Rules common-range violations, then DBE excess).
    if(best.size>CFG.h1OnlyMaxCandidateFormulas){
     const prior=(c:Candidate)=>{const C=c.counts.C??0,dbe=dbeOf(c.counts);return commonRangeViolations(c.counts).length+Math.max(0,dbe-(C/2+1))*0.25;};
-    const ranked=[...best.values()].sort((a,b)=>prior(a)-prior(b)||a.formula.localeCompare(b.formula));
+    const ranked=[...best.values()].sort((a,b)=>prior(a)-prior(b)||(v121?elementOrder(a,b):0)||a.formula.localeCompare(b.formula));
     const cut=ranked.length-CFG.h1OnlyMaxCandidateFormulas;
     for(const c of ranked.slice(CFG.h1OnlyMaxCandidateFormulas))best.delete(c.formula);
     result.enumeration.droppedByKeepLimit+=cut;
@@ -187,7 +203,7 @@ export function inferComposition(input:CompositionInput):CompositionInferenceRes
    limitations.push(`無質量依據，分子大小未確認：只有 ¹H${observations.some(o=>o.modality==='IR')?'與 IR':''}，分子式由 H = k×${S}（＋最多 ${CFG.maxExchangeableMissing} 個可能缺失的可交換氫）、C = 各非交換訊號估計的帶 H 碳數（每訊號 ceil(h/3)～h，共 ${visibleCarbonEnvironments} 個訊號）＋0–${CFG.h1OnlyInvisibleCarbonMax} 個不可見碳列舉，k=1–${CFG.h1OnlyMaxMultiple}；雜原子下限來自 IR／¹H 證據。`);
   }else{
    const cMax=c13Count*CFG.noMassCarbonFactor+CFG.noMassCarbonOffset;
-   const caps:ElementCounts={C:cMax,N:nitrogen.allowed?(bounds.mins.N??0)+CFG.noMassExtra.N:0,O:(bounds.mins.O??0)+CFG.noMassExtra.O,S:(bounds.mins.S??0)+CFG.noMassExtra.S,...Object.fromEntries(Object.entries(rareCaps).filter(([e])=>e==='F'||e==='Si'))};
+   const caps:ElementCounts={C:cMax,N:nitrogen.allowed?(bounds.mins.N??0)+CFG.noMassExtra.N:0,O:(bounds.mins.O??0)+CFG.noMassExtra.O,S:sulfurAllowed?(bounds.mins.S??0)+CFG.noMassExtra.S:0,...Object.fromEntries(Object.entries(rareCaps).filter(([e])=>e==='F'||e==='Si'))};
    excluded.set('Cl','沒有質量／同位素資料，無法判斷 Cl');excluded.set('Br','沒有質量／同位素資料，無法判斷 Br');
    if(!excluded.has('I')&&!caps.I)excluded.set('I','沒有質量資料時不枚舉 I');
    const sum=nmr.h1?.sum,hs=sum?[...new Set(Array.from({length:CFG.h1MaxMultiple},(_,k)=>Array.from({length:CFG.maxExchangeableMissing+1},(_,e)=>(k+1)*sum+e)).flat())].sort((a,b)=>a-b):null;
@@ -206,7 +222,7 @@ export function inferComposition(input:CompositionInput):CompositionInferenceRes
   limitations.push('跨模態硬限制（元素／DBE 下限）使所有分子式被排除，已退回軟證據重算（審核決定 4）。');
   list=run(true);
  }
- list.sort(order);
+ list.sort(v121?orderV121:order);
  result.enumeration.droppedByKeepLimit+=Math.max(0,list.length-CFG.maxHypotheses);
  const kept=list.slice(0,CFG.maxHypotheses).map(c=>hypothesis(c.counts,c.mass,c.ion,c.basis,scoreComposition(c.counts,c.mass,c.ion,ctx),c.k));
  softmax(kept);

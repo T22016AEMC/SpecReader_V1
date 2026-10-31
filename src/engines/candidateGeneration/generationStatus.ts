@@ -4,7 +4,7 @@ import {ChemistryEngine} from '../chemistryEngine';
 import {ENUMERATION_CONFIG as ENUM} from '../enumeration/enumerationConfig';
 import {REASON_LABEL} from '../enumeration/compositionPanelModel';
 /** v1.2 reason codes are shown in words (the v1.1 codes keep their old text in this message). */
-const V12_REASONS=['INVENTORY_ALTERNATIVES_TRUNCATED','AROMATIC_TEMPLATE_LIMITED','VINYL_READINGS_BUDGET','V12_CONSTRAINTS_FALLBACK'] as const;
+const V12_REASONS=['INVENTORY_ALTERNATIVES_TRUNCATED','AROMATIC_TEMPLATE_LIMITED','VINYL_READINGS_BUDGET','V12_CONSTRAINTS_FALLBACK','VINYL_READINGS_NOT_RUN','ROUND1_STEP_CAP','ROUND1_NO_TEMPLATE_READING'] as const;
 const reasonText=(r:string)=>(V12_REASONS as readonly string[]).includes(r)?REASON_LABEL[r as (typeof V12_REASONS)[number]]:r;
 export type GenerationCode='CANCELLED'|'INPUT_MISSING'|'CANDIDATES_FOUND'|'PARTIAL_CANDIDATES'|'FORMULA_NOT_PROVIDED'|'INVALID_FORMULA_FORMAT'|'CHEMICALLY_INVALID_FORMULA'|'SEARCH_LIMIT'|'TIME_BUDGET'|'STATE_BUDGET'|'SEARCH_INCOMPLETE'|'HARD_CONSTRAINT_CONFLICT'|'NO_MATCH_WITHIN_SEARCH'|'EXECUTION_ERROR'|'LOCAL_HYPOTHESES_ONLY';
 export interface GenerationStatus {code:GenerationCode;message:string;userFormula:string|null;inferredFormulas:string[];heavyAtoms:number|null;dbe:number|null;limits:string;termination?:string;partialHypotheses?:string[];}

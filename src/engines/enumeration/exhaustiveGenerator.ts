@@ -5,6 +5,7 @@ import {buildAtomInventory} from '../constraints/atomInventory';
 import {inventoryToFragmentSets, type InventorySetInfo} from '../constraints/inventoryAdapter';
 import {requiredFromEvidence} from '../constraints/requiredSubstructures';
 import {V12_CONFIG} from '../constraints/v12Config';
+import {readingKinds} from '../constraints/readingKinds';
 
 /** v1.2 (W5): the pipeline applies the strain profile of the v1.2 layer while the flag is on. */
 const pipelineStrain = (v12: boolean) => (v12 ? V12_CONFIG.pipelineStrainProfile : CFG.pipelineStrainProfile);
@@ -14,7 +15,7 @@ import {parseFormula} from './problem';
 import {adaptLocalStructures} from './adapter';
 import {ENUMERATION_CONFIG as CFG} from './enumerationConfig';
 import {enumerateStructures} from './enumerate';
-import type {CandidateOrigin, EnumerationDiagnostics, EnumerationResult, EnumerationRunDiagnostic, FragmentAlternativeSet, IncompleteReason, RequiredSubstructureSpec, V12RunDiagnostic} from './types';
+import type {CandidateOrigin, EnumerationDiagnostics, EnumerationResult, EnumerationRunDiagnostic, FragmentAlternativeSet, IncompleteReason, RequiredSubstructureSpec, RunPlanning, V12RunDiagnostic} from './types';
 
 const FORMULA_INCOMPATIBLE = ['FORMULA_ELEMENT_SHORTAGE', 'FORMULA_HYDROGEN_SHORTAGE', 'FORMULA_HYDROGEN_EXCESS', 'VALENCE_PARITY'];
 
@@ -219,6 +220,8 @@ async function generateWithInventory(request: StructureGenerationRequest, exhaus
     if (attempt && out.enumeration?.runs[0]) { out.enumeration.runs[0].visited += attempt.stats.visited; out.enumeration.runs[0].elapsedMs += attempt.stats.elapsedMs; }
     return out;
   };
+  // v1.2.1 two-round search: round 1 = readings without an alkene CH under a step cap, no fallback and no legacy supplement; round 2 = the alkene readings.
+  if (request.planning) return generatePlanned(request, {parsed, inv, eb, requiredSpecs, h1, diag});
   if (!inv.alternatives.length) return fallbackTo(inv.reason ?? '所有替代解讀都作廢或無法表達', null, 0, false, []);
 
   const sets: FragmentAlternativeSet[] = [];
@@ -300,6 +303,118 @@ async function generateWithInventory(request: StructureGenerationRequest, exhaus
   return {
     smiles, status: 'BOUNDED', visited: result.stats.visited, termination: firstStop ? reasonsMap[firstStop] : 'GRAMMAR_EXHAUSTED', complete,
     note: `1H 原子清單窮舉：${result.stats.visited} 步；${complete ? 'COMPLETE（在目前分子式與 1H 約束下所有分支走完）' : `INCOMPLETE（${incompleteReasons.join('、')}）`}；${smiles.length} 個去重候選`,
+    partialHypotheses: [...(request.hints.couplingNotes ?? [])], rejectedByComposition: result.stats.rejected.sanitizeFailed,
+    derivations, elapsedMs: result.stats.elapsedMs, frontierPeak: 0, enumeration: emptyDiagnostics(run, origins),
+  };
+}
+
+// ------------------------------------------------------------------------------------------------ v1.2.1 (useV121Planning)
+interface PlannedContext {
+  parsed: {ok: true; counts: Record<string, number>};
+  inv: ReturnType<typeof buildAtomInventory>;
+  eb: {timeMs: number; maxStates: number; maxCandidates?: number};
+  requiredSpecs: RequiredSubstructureSpec[];
+  h1: ReturnType<typeof h1SignalsFromObservations>;
+  diag: (path: V12RunDiagnostic['path'], reason: string | null, patternSets?: number, patternTruncated?: boolean, runs?: V12RunDiagnostic['runs'], leafCost?: V12RunDiagnostic['leafCost']) => V12RunDiagnostic;
+}
+const BUDGET_REASONS: IncompleteReason[] = ['TIME_BUDGET', 'STATE_BUDGET', 'CANDIDATE_LIMIT', 'ALTERNATIVE_SET_NOT_RUN'];
+
+/**
+ * One round of the planned search for one formula. Round 1 runs the readings without an alkene CH (or, by the alkene exception, the alkene readings)
+ * under the step cap and never falls back to the flexible-atom or legacy search: a formula without a usable reading reports ROUND1_NO_TEMPLATE_READING
+ * (visited 0). Round 2 runs the alkene readings only. A run is complete only when every reading of the formula has run to the end.
+ */
+async function generatePlanned(request: StructureGenerationRequest, c: PlannedContext): Promise<DeNovoSearchResult> {
+  const {parsed, inv, eb} = c;
+  const round = request.planning!.round;
+  const kinds = readingKinds(inv);
+  const sets: FragmentAlternativeSet[] = [];
+  const info: Record<string, InventorySetInfo> = {};
+  let patternTruncated = false;
+  for (const alt of inv.alternatives) {
+    const adapted = inventoryToFragmentSets(alt, {required: c.requiredSpecs});
+    sets.push(...adapted.sets); Object.assign(info, adapted.info);
+    patternTruncated ||= adapted.truncated;
+  }
+  const vinylSet = (id: string) => Boolean(info[id]?.hasVinyl);
+  const plainSets = sets.filter(x => !vinylSet(x.id)), vinylSets = sets.filter(x => vinylSet(x.id));
+  const exception = round === 1 && kinds.vinylException && vinylSets.length > 0;
+  const runSets = round === 2 || exception ? vinylSets : plainSets;
+  const pending = round === 1 && !exception && vinylSets.length > 0;
+  const cap = round === 1 ? Math.min(request.planning!.maxStates ?? eb.maxStates, eb.maxStates) : eb.maxStates;
+  const capBinding = round === 1 && cap < eb.maxStates;
+  const planning = (visited: number, candidates: number, vinylRun: boolean, elapsedMs = 0): RunPlanning => ({
+    round, templateReading: round === 1 ? !exception && plainSets.length > 0 : true, vinylException: exception, vinylPending: pending, vinylRun,
+    round1Visited: round === 1 ? visited : 0, round2Visited: round === 2 ? visited : 0, round1Candidates: round === 1 ? candidates : 0,
+    round1ElapsedMs: round === 1 ? elapsedMs : 0, round2ElapsedMs: round === 2 ? elapsedMs : 0,
+  });
+  const baseNotes = [`1H 原子清單：${inv.alternatives.length} 個替代解讀、${sets.length} 個片段組合（取代型式）；第 ${round} 輪${round === 1 ? (exception ? '（烯基例外：沒有不含烯基的讀法，改跑烯基讀法）' : '（只跑不含烯基的讀法）') : '（烯基讀法）'}`];
+  const emptyResult = (reasons: IncompleteReason[], note: string): DeNovoSearchResult => {
+    const run: EnumerationRunDiagnostic = {
+      used: true, fallbackReason: null, formula: request.formula!, status: 'INVALID_REQUEST', complete: reasons.length === 0, incompleteReasons: reasons, readings: [], incompatibleReadings: 0, candidates: 0, visited: 0, leaves: 0, elapsedMs: 0, rejected: null,
+      conversions: [], notes: [...baseNotes, note], v12: c.diag('INVENTORY', null, sets.length, patternTruncated), planning: planning(0, 0, false),
+    };
+    return {smiles: [], status: 'BOUNDED', visited: 0, termination: 'GRAMMAR_EXHAUSTED', complete: run.complete, note, partialHypotheses: [...(request.hints.couplingNotes ?? [])], rejectedByComposition: 0, derivations: {}, elapsedMs: 0, frontierPeak: 0, enumeration: emptyDiagnostics(run, {})};
+  };
+  const noReading = (): DeNovoSearchResult => round === 1
+    ? emptyResult(['ROUND1_NO_TEMPLATE_READING', ...(vinylSets.length ? ['VINYL_READINGS_NOT_RUN' as const] : [])], '第一輪沒有可容納此分子式的模板讀法；沒有退回彈性原子讀法或舊搜尋')
+    : emptyResult([], '沒有可執行的烯基讀法（都與分子式不相容）');
+  if (!runSets.length) return noReading();
+  const result = await enumerateStructures({
+    formula: parsed.counts, alternatives: runSets,
+    forbid: {...(request.plausibility && CFG.pipelineEarlyPlausibilityPrune ? {plausibility: request.plausibility, plausibilityLeaf: false} : {}), strain: pipelineStrain(true)},
+    symmetryPruning: V12_CONFIG.symmetryPruning,
+    budget: {
+      timeMs: eb.timeMs, maxStates: cap, maxCandidates: eb.maxCandidates ?? CFG.analysis.maxCandidatesPerFormula, shouldCancel: request.budget.shouldCancel,
+      onProgress: request.budget.onProgress ? p => request.budget.onProgress!({visited: p.visited, candidateCount: p.candidates, elapsedMs: p.elapsedMs, frontier: 0}) : undefined,
+    },
+  });
+  if (result.status === 'INVALID_REQUEST') return noReading();
+  const runs: V12RunDiagnostic['runs'] = [];
+  for (const k of inv.kCombinations) {
+    const mine = result.sets.filter(x => info[x.id]?.k === k.k && info[x.id]?.extraExchangeable === k.extraExchangeable);
+    if (!mine.length) continue;
+    const reasons = [...new Set(mine.flatMap(x => x.incompleteReasons))].filter(r => r !== 'INVALID_ALTERNATIVE_SET');
+    const runnable = mine.filter(x => x.complete !== null);
+    runs.push({
+      k: k.k, extraExchangeable: k.extraExchangeable, alternatives: new Set(mine.map(x => info[x.id].alternativeId)).size, sets: mine.length,
+      complete: runnable.length ? runnable.every(x => x.complete === true) : null, visited: mine.reduce((a, x) => a + x.visited, 0), leaves: mine.reduce((a, x) => a + x.leaves, 0),
+      candidates: mine.reduce((a, x) => a + x.newCandidates, 0), incompleteReasons: reasons as IncompleteReason[],
+    });
+  }
+  const incompatibleSets = result.sets.filter(x => x.error && FORMULA_INCOMPATIBLE.includes(x.error.code));
+  const otherErrors = result.sets.filter(x => x.error && !FORMULA_INCOMPATIBLE.includes(x.error.code));
+  const raw = result.incompleteReasons.filter(r => r !== 'INVALID_ALTERNATIVE_SET');
+  // The cap is a round-1 limit, not the analysis budget; in round 2 every budget stop belongs to the alkene readings.
+  const mapped = raw.map((r): IncompleteReason => (round === 1 && capBinding && r === 'STATE_BUDGET' ? 'ROUND1_STEP_CAP' : round === 2 && BUDGET_REASONS.includes(r) ? 'VINYL_READINGS_BUDGET' : r));
+  const extraReasons: IncompleteReason[] = [...inv.incompleteReasons, ...(patternTruncated && !inv.incompleteReasons.includes('INVENTORY_ALTERNATIVES_TRUNCATED') ? ['INVENTORY_ALTERNATIVES_TRUNCATED' as const] : [])];
+  const incompleteReasons = [...new Set<IncompleteReason>([...mapped, ...(otherErrors.length ? ['INVALID_ALTERNATIVE_SET' as const] : []), ...(pending ? ['VINYL_READINGS_NOT_RUN' as const] : []), ...extraReasons])];
+  const complete = incompleteReasons.length === 0;
+  const smiles = result.candidates.map(x => x.smiles);
+  const origins: Record<string, CandidateOrigin> = {};
+  for (const x of result.candidates) {
+    const seen = new Set<string>(), from: {k: number; extraExchangeable: number}[] = [];
+    for (const sid of x.alternativeSetIds) { const i = info[sid]; if (i && !seen.has(`${i.k}/${i.extraExchangeable}`)) { seen.add(`${i.k}/${i.extraExchangeable}`); from.push({k: i.k, extraExchangeable: i.extraExchangeable}); } }
+    origins[x.smiles] = {source: 'ENUMERATOR', relaxed: false, v12: from, round: round === 2 ? 2 : 1};
+  }
+  const run: EnumerationRunDiagnostic = {
+    used: true, fallbackReason: null, formula: request.formula!, status: result.status, complete, incompleteReasons,
+    readings: result.sets.map(x => ({id: x.id, localIds: [], complete: x.complete, error: x.error ? `${x.error.code}：${x.error.message}` : null, newCandidates: x.newCandidates})),
+    incompatibleReadings: incompatibleSets.length, candidates: smiles.length, visited: result.stats.visited, leaves: result.stats.leaves, elapsedMs: result.stats.elapsedMs, rejected: result.stats.rejected,
+    conversions: [], notes: [...baseNotes, runs.map(r => `k=${r.k}, 額外可交換 H=${r.extraExchangeable}`).join('；')],
+    v12: c.diag('INVENTORY', null, sets.length, patternTruncated, runs, result.stats.leafCost ?? null), planning: planning(result.stats.visited, smiles.length, round === 2 || exception, result.stats.elapsedMs),
+  };
+  const derivations: NonNullable<DeNovoSearchResult['derivations']> = {};
+  const h1Ids = c.h1.signals.filter(x => !x.optional).map(x => x.observationId);
+  for (const x of result.candidates) {
+    const first = info[x.alternativeSetIds[0]];
+    derivations[x.smiles] = {localStructureIds: [], operations: [`1H 原子清單窮舉（第 ${round} 輪；k=${first?.k}，額外可交換 H=${first?.extraExchangeable}${first?.patternLabel ? `；${first.patternLabel}` : ''}；讀法 ${x.alternativeSetIds.join('、')}）`], observationIds: h1Ids};
+  }
+  const reasonsMap: Record<string, SearchTermination> = {CANCELLED: 'CANCELLED', TIME_BUDGET: 'TIME_BUDGET', STATE_BUDGET: 'STATE_BUDGET', CANDIDATE_LIMIT: 'OUTPUT_BUDGET'};
+  const firstStop = (['CANCELLED', 'TIME_BUDGET', 'STATE_BUDGET', 'CANDIDATE_LIMIT'] as const).find(r => result.incompleteReasons.includes(r));
+  return {
+    smiles, status: 'BOUNDED', visited: result.stats.visited, termination: firstStop ? reasonsMap[firstStop] : 'GRAMMAR_EXHAUSTED', complete,
+    note: `1H 原子清單窮舉（第 ${round} 輪）：${result.stats.visited} 步；${complete ? 'COMPLETE' : `INCOMPLETE（${incompleteReasons.join('、')}）`}；${smiles.length} 個去重候選`,
     partialHypotheses: [...(request.hints.couplingNotes ?? [])], rejectedByComposition: result.stats.rejected.sanitizeFailed,
     derivations, elapsedMs: result.stats.elapsedMs, frontierPeak: 0, enumeration: emptyDiagnostics(run, origins),
   };

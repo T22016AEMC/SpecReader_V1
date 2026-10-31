@@ -4,7 +4,8 @@ import type {Feature} from './functionalGroupBounds';
 import {commonRangeViolations,dbeOf} from './goldenRules';
 import type {ElementEvidence,IonIsotopes,IsotopeObservation} from './msComposition';
 import type {NmrEvidence} from './nmrComposition';
-import type {CompositionReason,ElementCounts,IonHypothesis} from './types';
+import {V12_CONFIG} from '../constraints/v12Config';
+import type {CompositionReason,ElementCounts,IonHypothesis,OxygenEvidenceFloor} from './types';
 
 export interface ScoringContext {
  nmr:NmrEvidence;
@@ -15,6 +16,10 @@ export interface ScoringContext {
  hardBoundsRelaxed:boolean;
  /** N gating mode (v1.1.6). */
  nitrogenMode:'EVIDENCE'|'EVEN_ION_ONLY'|'NONE';
+ /** v1.2.1 (A2): the O evidence floor; set only when useV121Planning is on, the route has no mass, and IR observations exist. */
+ oxygenFloor?:OxygenEvidenceFloor|null;
+ /** v1.2.1: a feature that only one modality (IR range matching) produced is reported but not scored down (3030/2965 cm-1 read as acid O–H, 1612 as amide I, … inflate the bounds). */
+ ignoreRangeMatchedSoftBounds?:boolean;
 }
 export interface ScoredComposition {score:number;support:CompositionReason[];contradiction:CompositionReason[];unknown:CompositionReason[]}
 
@@ -103,12 +108,18 @@ export function scoreComposition(counts:ElementCounts,mass:number,ion:IonHypothe
  // Functional-group bounds.
  const dbe=dbeOf(counts);
  for(const f of ctx.features){
-  const ok=Object.entries(f.mins).every(([e,v])=>n(counts,e as keyof ElementCounts)>=v!)&&dbe>=f.dbeMin;
+   const ok=Object.entries(f.mins).every(([e,v])=>n(counts,e as keyof ElementCounts)>=v!)&&dbe>=f.dbeMin;
   const need=[...Object.entries(f.mins).map(([e,v])=>`${e}≥${v}`),...(f.dbeMin?[`DBE≥${f.dbeMin}`]:[])].join('、');
   const strength=f.hard&&!ctx.hardBoundsRelaxed?'HARD':'SOFT';
   const src=f.modalities.length===1&&f.modalities[0]==='IR'?'IR':'HYPOTHESIS';
   if(ok)reason(out.support,`${f.label}（${f.modalities.join('＋')}）要求 ${need}，符合`,f.observationIds,src,strength);
+  else if(ctx.ignoreRangeMatchedSoftBounds&&!f.hard)reason(out.unknown,`${f.label}（僅 ${f.modalities.join('＋')} 範圍比對）要求 ${need}，不符合；範圍比對的假官能基不計分（v1.2.1）`,f.observationIds,src,'SOFT');
   else {out.score-=w.softBoundViolation;reason(out.contradiction,`${f.label}（${f.modalities.join('＋')}）要求 ${need}，不符合`,f.observationIds,src,'SOFT');}
+ }
+ // v1.2.1 (A2): O above (evidence floor + allowed) is scored down one step per extra O. Never an exclusion.
+ if(ctx.oxygenFloor){
+  const limit=ctx.oxygenFloor.floor+V12_CONFIG.planning.oxygenAllowedAboveFloor,O=n(counts,'O');
+  if(O>limit){out.score-=w.oxygenExcess*(O-limit);reason(out.contradiction,`O=${O} 比 IR 證據的 O 下限 ${ctx.oxygenFloor.floor} 多 ${O-ctx.oxygenFloor.floor} 個（超過 +${V12_CONFIG.planning.oxygenAllowedAboveFloor} 起逐級扣分）`,ctx.oxygenFloor.sources.flatMap(x=>x.observationIds),'IR');}
  }
  const nFeature=ctx.features.some(f=>(f.mins.N??0)>0);
  if(n(counts,'N')&&ctx.nitrogenMode==='EVEN_ION_ONLY'){out.score-=w.nitrogenEvenIonOnly*n(counts,'N');reason(out.unknown,`含 ${n(counts,'N')} 個 N：MS 分子離子為偶數名義質量，沒有其他 N 專屬證據，信心降低`,[],'RULE');}

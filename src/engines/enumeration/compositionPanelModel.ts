@@ -3,6 +3,7 @@ import type {CompositionSearchRun} from '../composition/structureGenerator';
 import {ENUMERATION_CONFIG as CFG} from './enumerationConfig';
 import {V12_CONFIG} from '../constraints/v12Config';
 import {COMPOSITION_CONFIG} from '../composition/compositionConfig';
+import {SULFUR_NOT_CONSIDERED as SULFUR_TEXT} from '../composition/inferComposition';
 import {exclusionLines, exclusionStats, zeroCandidateExplanation, type ZeroCandidateExplanation} from './exclusionStats';
 import type {CandidateOrigin, EnumerationDiagnostics, EnumerationRunDiagnostic, IncompleteReason, V12RunDiagnostic} from './types';
 
@@ -14,8 +15,11 @@ import type {CandidateOrigin, EnumerationDiagnostics, EnumerationRunDiagnostic, 
 export type BadgeId = 'RELAXED' | 'LEGACY_SUPPLEMENT' | 'INCOMPLETE' | 'V12_FALLBACK';
 export interface PanelBadge {id: BadgeId; text: string}
 export interface ReadingLine {text: string}
+/** v1.2.1: the round badge of a formula row (only present when useV121Planning planned the search). */
+export interface RoundBadge {id: 'ROUND_1' | 'ROUND_2' | 'NOT_SEARCHED'; text: string}
 export interface SearchCell {
   text: string;
+  round?: RoundBadge;
   note: string | null;
   badges: PanelBadge[];
   readings: ReadingLine[];
@@ -84,6 +88,15 @@ export interface PanelModel {
   /** v1.2 sections; null when no formula has a v1.2 diagnostic (flag off or legacy runs). */
   inventory: {formulas: InventoryFormulaView[]; notes: string[]} | null;
   constraints: {formulas: ConstraintsFormulaView[]; scoringText: string; exclusionTitle: string; exclusions: string[]} | null;
+  /** v1.2.1 search plan section (absent when the planning flag was off). */
+  planning?: PlanningView;
+}
+export interface PlanningView {
+  title: string;
+  oxygenText: string;
+  sulfurText: string | null;
+  summary: string;
+  notSearched: {reason: string; label: string; count: number}[];
 }
 export interface PanelInput {
   /** Candidates the downstream gates rejected (their reasons feed the exclusion statistics of section B). */
@@ -111,8 +124,19 @@ export const REASON_LABEL: Record<IncompleteReason, string> = {
   AROMATIC_TEMPLATE_LIMITED: '芳香 CH 超出環模板庫（目前只有苯、萘，有 N 證據時才有吡啶；呋喃、噻吩、吡咯等五員雜環是已知限制）',
   VINYL_READINGS_BUDGET: '含烯基（C=C–H）的讀法在預算內沒有跑完；不含烯基的讀法已完成',
   V12_CONSTRAINTS_FALLBACK: '1H 約束未能套用（已退回）：改用舊的彈性原子讀法',
+  // v1.2.1 (only produced when useV121Planning plans the search)
+  VINYL_READINGS_NOT_RUN: '含烯基（C=C–H）的讀法尚未執行（第一輪只跑不含烯基的讀法；第二輪只給各 k 最高分的分子式）',
+  ROUND1_STEP_CAP: '第一輪達到每個分子式的步數上限（這個上限只屬於第一輪，不是整體預算）',
+  ROUND1_NO_TEMPLATE_READING: '第一輪沒有可容納此分子式的模板讀法（沒有退回彈性原子讀法或舊搜尋）',
 };
 const NITROGEN_LABEL: Record<string, string> = {EVIDENCE: '有 N 專屬證據', EVEN_ION_ONLY: '只有偶電子離子（不足）', NONE: '沒有 N 專屬證據'};
+export const NOT_SEARCHED_LABEL: Record<string, string> = {
+  OXYGEN_OUTSIDE_RANGE: 'O 數在 IR 證據範圍之外', OXYGEN_VARIANT_LIMIT: '同骨架 O 變體超過保留數', K_ROUND_ROBIN_FULL: 'k 輪流名額已滿',
+  H1_INFEASIBLE: '¹H 清單不可行', UNSUPPORTED_ELEMENT: '含生成器不支援的元素', BUDGET_NOT_REACHED: '預算用完',
+};
+export const ROUND_LABEL = {ROUND_1: '第一輪（芳香模板）', ROUND_1_VINYL: '第一輪（烯基例外）', ROUND_2: '第二輪（含烯基）', NOT_SEARCHED: '未搜尋'} as const;
+/** v1.2.1: added to the fixed limitations only when the search was planned. */
+export const PLANNING_LIMITATION = '兩輪搜尋下，烯基讀法只給各 k 第一輪最高分者；其餘分子式只跑了不含烯基的讀法（見「未完整」原因 VINYL_READINGS_NOT_RUN）。';
 export const FIXED_LIMITATIONS = [
   '分子式是假設，不是確認；使用者分子式永遠優先並作為硬限制。',
   '相對信心沒有校準，只表示假設之間的相對比較。',
@@ -143,28 +167,32 @@ export function summaryBadges(runs: (EnumerationRunDiagnostic | undefined)[]): P
 export function candidateSourceTag(origin: CandidateOrigin | undefined): string | null {
   if (!origin) return null;
   const T = CFG.ui.candidateSourceTags;
-  return T[origin.source] + (origin.relaxed ? `｜${T.RELAXED}` : '') + (origin.v12Fallback ? `｜${T.V12_FALLBACK}` : '');
+  return T[origin.source] + (origin.relaxed ? `｜${T.RELAXED}` : '') + (origin.v12Fallback ? `｜${T.V12_FALLBACK}` : '') + (origin.round === 1 ? '｜第一輪' : origin.round === 2 ? `｜${ROUND_LABEL.ROUND_2}` : '');
 }
 
 function searchCell(h: CompositionInferenceResult['hypotheses'][number], run: CompositionSearchRun | undefined, kindOf: Map<string, string>): SearchCell {
   const empty = {badges: [] as PanelBadge[], readings: [] as ReadingLine[], excluded: [] as string[], note: null as string | null};
   if (!run) {
+    if (h.searchPlan?.status === 'NOT_SEARCHED') return {...empty, text: `未搜尋（${h.searchPlan.reasonText ?? NOT_SEARCHED_LABEL[h.searchPlan.reason ?? ''] ?? '原因未記錄'}）`, round: {id: 'NOT_SEARCHED', text: ROUND_LABEL.NOT_SEARCHED}};
     const why = !h.generatorSupported ? `含生成器不支援的元素：${h.unsupportedElements.join('、')}` : '排名在搜尋範圍之外或預算已用完';
     return {...empty, text: `未搜尋（${why}）`};
   }
   const e = run.enumeration;
   if (!e) return {...empty, text: `${run.candidates} 個候選｜舊 beam 搜尋`};
   const badges = runBadges(e);
+  const pl = e.planning;
+  const round: RoundBadge | undefined = pl ? {id: pl.round === 2 ? 'ROUND_2' : 'ROUND_1', text: pl.round === 2 ? ROUND_LABEL.ROUND_2 : pl.vinylException ? ROUND_LABEL.ROUND_1_VINYL : ROUND_LABEL.ROUND_1} : undefined;
   const reasons = e.incompleteReasons.map(r => REASON_LABEL[r] ?? r).join('、');
   const readings: ReadingLine[] = e.readings.map((r, i) => ({
     text: `讀法 ${i + 1}：${r.localIds.map(id => `${id}／${kindOf.get(id.replace(/#\d+$/, '')) ?? '?'}`).join('＋') || '（沒有片段，只依分子式）'}｜${r.complete === true ? '完整' : r.complete === false ? '未完整' : r.error ? '與分子式不相容' : '未執行'}｜候選 ${r.newCandidates}${r.error ? `｜${r.error}` : ''}`,
   }));
   const excluded = (e.excludedLocals ?? []).map(x => `未納入任何讀法：${x.localId}／${x.kind}（原因：${x.reason}）`);
   if (!e.used) return {text: `${e.candidates || run.candidates} 個候選｜舊 beam 搜尋（原因：${e.fallbackReason ?? '未記錄'}）`, note: null, badges, readings, excluded};
+  const withRound = <T extends object>(cell: T): T => (round ? {...cell, round} : cell);
   let text = `${e.candidates} 個候選｜${e.complete ? '完整（COMPLETE）' : `未完整（INCOMPLETE：${reasons || '原因未記錄'}）`}`;
   if (e.legacySupplement) text += `＋舊 beam 搜尋補充 ${e.legacySupplement.added} 個`;
   if (e.relaxedToFormulaOnly) text += '｜片段讀法與分子式矛盾，已放寬為只依分子式';
-  return {text, note: e.complete ? '只相對於目前分子式與片段約束，不代表所有可能結構' : null, badges, readings, excluded};
+  return withRound({text, note: e.complete ? '只相對於目前分子式與片段約束，不代表所有可能結構' : null, badges, readings, excluded});
 }
 
 export const SHIFT_CLASS_LABEL: Record<string, string> = {
@@ -263,6 +291,24 @@ function v12Sections(c: CompositionInferenceResult, runOf: (id: string) => Compo
   };
 }
 
+/** The v1.2.1 section: where the O floor comes from, the S decision, how many formulas ran in which round and why the others did not. */
+export function planningView(c: CompositionInferenceResult): PlanningView {
+  const v = c.v121!;
+  const of = v.oxygenFloor;
+  const oxygenText = of
+    ? `O 下限 ${of.floor}（來源：${of.sources.length ? of.sources.map(x => x.text).join('；') : 'IR 沒有寬 O–H、強 C=O 或強 C–O 的觀測帶'}）；O 超過下限 ＋${V12_CONFIG.planning.oxygenAllowedAboveFloor} 起逐級扣分（只扣分，不剔除）；只有範圍比對的 IR 官能基（例如 1612 cm-1 被比成醯胺 I）不計入下限`
+    : 'O 下限：此路徑沒有 IR 觀測帶可推導（或有質量依據），O 數不受 IR 下限限制';
+  const plans = c.hypotheses.map(h => h.searchPlan).filter(Boolean) as NonNullable<CompositionInferenceResult['hypotheses'][number]['searchPlan']>[];
+  const r1 = plans.filter(p => p.status === 'ROUND_1').length, r2 = plans.filter(p => p.status === 'ROUND_2').length;
+  const counts = new Map<string, number>();
+  for (const p of plans) if (p.status === 'NOT_SEARCHED' && p.reason) counts.set(p.reason, (counts.get(p.reason) ?? 0) + 1);
+  return {
+    title: '搜尋計畫（v1.2.1：k 輪流、兩輪預算）', oxygenText, sulfurText: v.sulfurConsidered ? null : SULFUR_TEXT,
+    summary: `共 ${r1 + r2} 個分子式被搜尋：${r1} 個只跑第一輪（不含烯基的讀法）、${r2} 個也跑了第二輪（含烯基）；${[...counts.values()].reduce((a, b) => a + b, 0)} 個列在清單內但未搜尋。`,
+    notSearched: [...counts].map(([reason, count]) => ({reason, label: NOT_SEARCHED_LABEL[reason] ?? reason, count})),
+  };
+}
+
 export function buildCompositionPanel(input: PanelInput): PanelModel | null {
   const c = input.composition;
   if (!c) return null;
@@ -304,7 +350,8 @@ export function buildCompositionPanel(input: PanelInput): PanelModel | null {
     clues: c.elementClues.map(x => `${x.element} ≥ ${x.minimum}（${x.strength === 'HARD' ? '硬' : '軟'}，${SOURCE_LABEL[x.source] ?? x.source}）：${x.text}`),
     excludedElements: c.elementsExcluded.map(x => `${x.element}：${x.reason}`),
     bounds: boundsText(c),
-    limitations: [...FIXED_LIMITATIONS, ...c.limitations],
+    limitations: [...FIXED_LIMITATIONS, ...(c.v121 ? [PLANNING_LIMITATION] : []), ...c.limitations],
+    ...(c.v121 ? {planning: planningView(c)} : {}),
     ...v12Sections(c, runOf, input.rejectedCandidates ?? []),
   };
 }

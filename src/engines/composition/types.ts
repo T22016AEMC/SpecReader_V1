@@ -53,6 +53,22 @@ export interface CompositionHypothesis {
  sizeConfirmed:boolean;
  /** k of the symmetric-unit hypothesis: total H ≈ k·S (simplest 1H ratio); null without 1H integrals (v1.1.6). */
  symmetryMultiple:number|null;
+ /** v1.2.1: where this formula stands in the planned search (only set when useV121Planning planned the search). */
+ searchPlan?:FormulaSearchPlan;
+}
+export type NotSearchedReason='OXYGEN_OUTSIDE_RANGE'|'OXYGEN_VARIANT_LIMIT'|'K_ROUND_ROBIN_FULL'|'H1_INFEASIBLE'|'UNSUPPORTED_ELEMENT'|'BUDGET_NOT_REACHED';
+export interface FormulaSearchPlan {
+ status:'ROUND_1'|'ROUND_2'|'NOT_SEARCHED';
+ /** Position in the k round-robin search order (1-based); null when not searched. */
+ order:number|null;
+ reason?:NotSearchedReason;
+ /** Panel wording of the reason, e.g. 同骨架 O 變體超過保留數. */
+ reasonText?:string;
+}
+/** The lowest O count the IR/1H evidence supports and the bands it comes from (range-matched IR findings are not counted). */
+export interface OxygenEvidenceFloor {
+ floor:number;
+ sources:{text:string;observationIds:string[]}[];
 }
 /** Element-presence clue from IR/NMR/MS evidence, reported even when no formula can be enumerated. */
 export interface ElementClue {
@@ -77,4 +93,6 @@ export interface CompositionInferenceResult {
  enumeration:{enumeratedNodes:number;passedHardFilters:number;returned:number;truncatedByNodes:boolean;droppedByKeepLimit:number};
  limitations:string[];
  elapsedMs:number;
+ /** v1.2.1 (present only when useV121Planning was on): the O evidence floor (null without IR/1H O evidence basis) and the S decision. */
+ v121?:{oxygenFloor:OxygenEvidenceFloor|null;sulfurConsidered:boolean};
 }
