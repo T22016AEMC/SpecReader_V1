@@ -4,6 +4,7 @@ import {initializeRDKit} from '../src/engines/scientificEngines/rdkitAdapter';
 import {refreshIRSnapshot} from '../src/engines/scientificEngines/irSignalProcessing';
 import {executeSixStepAnalysis} from '../src/engines/reasoning/sixStepAnalysis';
 import {WorkbenchOrchestrator} from '../src/engines/workbenchOrchestrator';
+import {V12_CONFIG} from '../src/engines/constraints/v12Config';
 import {CandidateGenerator} from '../src/engines/candidateGenerator';
 import {StructureParserAdapter} from '../src/engines/chemistryEngine';
 import type {AnalysisInput} from '../src/engines/analysisSession';
@@ -83,7 +84,10 @@ describe('E. implausible linkages never reach the final candidates without evide
  },120000);
 });
 describe('B. real N evidence keeps N available in the complete flow',()=>{
- it('IR C≡N 2229 cm⁻¹: N formulas are hypothesised and searched',async()=>{
+ // v1.2.1: the search of the planned pipeline (k round-robin, 1H-feasible formulas) is a different search; this is the v1.2.0 expectation, kept as it was with the flag off.
+ it('IR C≡N 2229 cm⁻¹: N formulas are hypothesised and searched (useV121Planning = false, as in 1.2.0)',async()=>{
+  V12_CONFIG.useV121Planning=false;
+  try{
   const r=await runLikeWorker({extraInput:{},spectra:{
    '1H_NMR':mk('1H_NMR',[{x:7.62,integration:2,multiplicity:'d',jValues:[8]},{x:7.46,integration:1,multiplicity:'t',jValues:[8]},{x:7.4,integration:2,multiplicity:'t',jValues:[8]}]),
    IR:mk('IR',[{x:3065,y:20},{x:2229,y:60},{x:1598,y:30},{x:760,y:50}]),
@@ -91,6 +95,23 @@ describe('B. real N evidence keeps N available in the complete flow',()=>{
   expect(r.reasoningTrace!.nitrogenEvidence?.mode).toBe('EVIDENCE');
   expect(r.compositionInference!.hypotheses.some(h=>hasN(h.formula))).toBe(true);
   expect(r.reasoningTrace!.compositionSearch!.runs.some(run=>run.formula&&hasN(run.formula))).toBe(true);
+  }finally{V12_CONFIG.useV121Planning=true;}
+ },120000);
+ it('IR C≡N 2229 cm⁻¹ with the planned search (1.2.1): N formulas are hypothesised, and each one is either searched or listed with its reason',async()=>{
+  const r=await runLikeWorker({extraInput:{},spectra:{
+   '1H_NMR':mk('1H_NMR',[{x:7.62,integration:2,multiplicity:'d',jValues:[8]},{x:7.46,integration:1,multiplicity:'t',jValues:[8]},{x:7.4,integration:2,multiplicity:'t',jValues:[8]}]),
+   IR:mk('IR',[{x:3065,y:20},{x:2229,y:60},{x:1598,y:30},{x:760,y:50}]),
+  }});
+  expect(r.reasoningTrace!.nitrogenEvidence?.mode).toBe('EVIDENCE');
+  const nHyps=r.compositionInference!.hypotheses.filter(h=>hasN(h.formula));
+  expect(nHyps.length).toBeGreaterThan(0);
+  // In this shape every N formula that the 200-formula list holds needs more carbon than the 1H signals can place, so the 1H feasibility check (A5) lists them without searching.
+  // What must hold is that nothing is dropped silently: searched, or a stated reason.
+  const runs=r.reasoningTrace!.compositionSearch!.runs;
+  for(const h of nHyps){
+   const searched=runs.some(run=>run.formula===h.formula);
+   expect(searched||(h.searchPlan?.status==='NOT_SEARCHED'&&Boolean(h.searchPlan.reasonText))).toBe(true);
+  }
  },120000);
  it('IR 3400/3330 sharp doublet is N evidence',async()=>{
   const r=await runLikeWorker({extraInput:{},spectra:{

@@ -14,7 +14,7 @@ import {mk} from '../helpers/p1bScenarios';
 // Provenance of v1.2 candidates (assembly), the legacy-supplement guarantee (both paths empty), the readable zero-candidate explanation, and the card
 // source tag. SYNTHETIC inputs; program behaviour only.
 beforeAll(() => initializeRDKit(), 60000);
-afterEach(() => { V12_CONFIG.useV12Constraints = true; });
+afterEach(() => { V12_CONFIG.useV12Constraints = true; V12_CONFIG.useV121Planning = true; });
 
 let counter = 0;
 const h1 = (value: number, integral: number | null, mult: string | null, j: number[] = [], broad = false): ObservedEvidence => ({
@@ -174,11 +174,17 @@ describe('zero-candidate explanation', () => {
     expect(zeroCandidateExplanation(input({runs: [runDiag({v12: undefined})]}))).toBeNull();
     expect(exclusionLines(exclusionStats([runDiag({v12: undefined})]))).toEqual([]);
   });
-  it('real tiny-budget analysis: no candidate survives, and the explanation names the required substructure that removed structures', async () => {
-    const spectra = {
+  const tinySpectra = () => {
+    return {
       '1H_NMR': mk('1H_NMR', [{x: 7.25, integration: 2, multiplicity: 'd', jValues: [8.6]}, {x: 6.78, integration: 2, multiplicity: 'd', jValues: [8.6]}, {x: 4.75, integration: 1, multiplicity: 'br s', isBroad: true, shape: 'broad'}, {x: 1.29, integration: 9, multiplicity: 's'}] as never),
       IR: mk('IR', [{x: 3300, y: 70, isBroad: true, shape: 'broad'}, {x: 3050, y: 20}, {x: 2960, y: 60}, {x: 2870, y: 40}, {x: 1600, y: 40}, {x: 1510, y: 60}, {x: 1385, y: 30}, {x: 1365, y: 35}, {x: 1240, y: 80}, {x: 830, y: 50}] as never),
     };
+  };
+  it('real tiny-budget analysis: no candidate survives, and the explanation names the required substructure that removed structures', async () => {
+    // v1.2.1: this is the v1.2.0 search (eight formulas share 16000 steps). The planned search (k round-robin, feasible formulas only) reaches candidates with the same
+    // budget, so the planned variant of this test follows below with a smaller budget.
+    V12_CONFIG.useV121Planning = false;
+    const spectra = tinySpectra();
     const r = await executeSixStepAnalysis({spectra, extraInput: {}}, {timeMs: 8000, maxStates: 16000});
     expect(r.rankedCandidates.length).toBe(0);
     const z = zeroCandidateModel(r)!;
@@ -189,6 +195,16 @@ describe('zero-candidate explanation', () => {
     expect(z.suggestions).toContain('填入分子式可縮小搜尋範圍');
     const panel = buildCompositionPanel({composition: r.compositionInference, runs: r.reasoningTrace?.compositionSearch?.runs ?? [], mode: r.reasoningTrace?.compositionSearch?.mode, enumeration: r.solvedConstraintSpace.searchResult?.enumeration, localStructures: r.reasoningTrace?.localStructures ?? [], rejectedCandidates: r.rejectedCandidates})!;
     expect(panel.constraints!.exclusions.join('\n')).toMatch(/必含子結構『對位二取代苯/);
+  }, 120000);
+  it('v1.2.1 planned search with a 20-step budget: still no candidate, and the explanation names the budget (no fallback hides the empty result)', async () => {
+    const r = await executeSixStepAnalysis({spectra: tinySpectra(), extraInput: {}}, {timeMs: 8000, maxStates: 20});
+    expect(r.rankedCandidates.length).toBe(0);
+    const z = zeroCandidateModel(r)!;
+    expect(z.headline).toBe('在預算內找不到符合 1H 約束與強證據的結構');
+    expect(z.unfinished.length).toBeGreaterThan(0);
+    expect(z.unfinished.join()).toMatch(/步數預算/);
+    expect(z.suggestions).toContain('填入分子式可縮小搜尋範圍');
+    expect(r.reasoningTrace?.compositionSearch?.runs.every(x => x.enumeration?.used && x.enumeration.fallbackReason === null)).toBe(true);
   }, 120000);
   it('flag off: no explanation object (the old text stays)', async () => {
     V12_CONFIG.useV12Constraints = false;
