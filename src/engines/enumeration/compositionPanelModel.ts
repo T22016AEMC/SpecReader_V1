@@ -136,7 +136,7 @@ export const NOT_SEARCHED_LABEL: Record<string, string> = {
 };
 export const ROUND_LABEL = {ROUND_1: '第一輪（芳香模板）', ROUND_1_VINYL: '第一輪（烯基例外）', ROUND_2: '第二輪（含烯基）', NOT_SEARCHED: '未搜尋'} as const;
 /** v1.2.1: added to the fixed limitations only when the search was planned. */
-export const PLANNING_LIMITATION = '兩輪搜尋下，烯基讀法只給各 k 第一輪最高分者；其餘分子式只跑了不含烯基的讀法（見「未完整」原因 VINYL_READINGS_NOT_RUN）。';
+export const PLANNING_LIMITATION = '兩輪搜尋下，烯基讀法只給各 k 第一輪最高分者；其餘分子式只跑了不含烯基的讀法（各分子式的「未完整」原因會寫明）。';
 export const FIXED_LIMITATIONS = [
   '分子式是假設，不是確認；使用者分子式永遠優先並作為硬限制。',
   '相對信心沒有校準，只表示假設之間的相對比較。',
