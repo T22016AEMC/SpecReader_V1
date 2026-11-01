@@ -1,4 +1,5 @@
 import {test,expect} from '@playwright/test';
+import {openTab} from './helpers/ui';
 test('六步驟 Worker 顯示實際階段、可取消並保留局部資訊；重新分析繪製完整圖',async({page})=>{
  test.setTimeout(90000);let workers=0;const errors:string[]=[],externalCalls:string[]=[];
  page.on('worker',()=>workers++);page.on('pageerror',e=>errors.push(e.message));
@@ -19,6 +20,7 @@ test('六步驟 Worker 顯示實際階段、可取消並保留局部資訊；重
  await expect(page.getByTestId('analysis-control')).toHaveAttribute('data-result-current','false');expect(workers).toBe(1);
  await page.getByRole('button',{name:'開始分析',exact:true}).click();
  await expect(page.getByTestId('analysis-control')).toHaveAttribute('data-result-current','true',{timeout:45000});
+ await openTab(page,'預測結構');
  const graph=page.getByTestId('molecular-depiction').first();await expect(graph).toHaveAttribute('data-formula','C2H6O',{timeout:15000});
  await expect(graph).toHaveAttribute('data-atom-count','3');await expect(graph.locator('svg')).toBeVisible();
  expect(Number(await graph.getAttribute('data-bond-count'))).toBe(2);await expect(graph.getByRole('alert')).toHaveCount(0);

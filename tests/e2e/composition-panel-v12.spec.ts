@@ -1,4 +1,5 @@
 import {test,expect,type Page} from '@playwright/test';
+import {openTab} from './helpers/ui';
 // v1.2.0 1H-constraint sections of the composition panel (docs/P1C_PANEL_DESIGN.md), the candidate-card provenance and the no-candidate explanation.
 // useV12Constraints is true by default in 1.2.0, so these run the real flow. SYNTHETIC peak tables only; the tests check wording and behaviour, never chemical accuracy.
 async function analyse(page:Page,h1:string,formula:string,ir?:string){
@@ -15,6 +16,7 @@ const ETHER_FREE_CSV='ppm,intensity,integration,multiplicity,J\n6.84,90,4,s,\n3.
 test('1H 原子清單區段預設展開、約束區段預設收合；訊號表、必含子結構與固定評分句；候選卡片顯示組裝來歷',async({page})=>{
  test.setTimeout(150000);const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  await analyse(page,ETHER_FREE_CSV,'C8H10O2');
+ await openTab(page,'分子式與搜尋');
  const panel=page.getByTestId('composition-panel');
  await expect(panel).not.toHaveAttribute('open','');
  await page.getByTestId('composition-panel-summary').click();
@@ -39,6 +41,7 @@ test('1H 原子清單區段預設展開、約束區段預設收合；訊號表�
  const text=await panel.innerText();
  expect(text).not.toMatch(/ARO_CH|ALKYL_CH|VINYL_READINGS_BUDGET|V12_CONSTRAINTS_FALLBACK|INVENTORY_ALTERNATIVES_TRUNCATED/);
  // candidate card: provenance in readable Chinese
+ await openTab(page,'預測結構');
  const reasoning=page.getByTestId('candidate-reasoning').first();
  await reasoning.locator('summary').click();
  const assembly=reasoning.getByTestId('candidate-v12-assembly');
@@ -56,6 +59,7 @@ test('1H 約束退回：摘要列出現琥珀色徽章、原因文字；候選�
  test.setTimeout(150000);const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  // H = 12 cannot be explained by the integrals 3:2:2 (S = 7, k ≤ 3, up to 2 unobserved OH): the inventory is unusable
  await analyse(page,'ppm,intensity,integration,multiplicity,J\n2.3,100,3,s,\n7.1,90,2,d,2\n7.0,90,2,d,2','C7H12');
+ await openTab(page,'分子式與搜尋');
  const summary=page.getByTestId('composition-panel-summary');
  const badge=summary.getByTestId('composition-badge').filter({hasText:'1H 約束未能套用（已退回）'});
  await expect(badge).toHaveCount(1);await expect(badge).toHaveAttribute('data-badge','V12_FALLBACK');await expect(badge).toHaveClass(/amber/);
@@ -72,6 +76,7 @@ test('沒有任何候選時，候選區域顯示中文說明：主句、被擋�
  test.setTimeout(170000);const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  // a strong C≡N band (the nitrile is then a required substructure on every path) in a formula without N: nothing can satisfy it
  await analyse(page,'ppm,intensity,integration,multiplicity,J\n2.3,100,3,s,\n7.1,90,2,d,2\n7.0,90,2,d,2','C14H24O2','wavenumber,relative intensity\n2230,100\n2950,40');
+ await openTab(page,'預測結構');
  const z=page.getByTestId('zero-candidate-explanation');
  await expect(z).toBeVisible();
  await expect(page.getByTestId('zero-candidate-headline')).toHaveText('在預算內找不到符合 1H 約束與強證據的結構');

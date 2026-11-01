@@ -1,4 +1,5 @@
 import {test,expect} from '@playwright/test';
+import {openTab} from './helpers/ui';
 test('正式桌面首頁、雙模式、API 與本地 WASM 資源',async({page,request})=>{
   const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
   const health=await request.get('/api/health');expect(health.status()).toBe(200);
@@ -33,6 +34,7 @@ test('Mode A CSV、人工標峰、校正頁與候選排名',async({page})=>{
   await page.getByRole('button',{name:/^第 2 頁.*座標校正/}).click();
   await page.getByRole('button',{name:/^第 3 頁.*化學判讀/}).click();await page.getByLabel('分子式（選填）',{exact:true}).fill('C3H6O');await page.getByRole('button',{name:'開始分析',exact:true}).click();await expect(page.getByTestId('analysis-control')).toHaveAttribute('data-result-current','true',{timeout:45000});
   await expect(page.getByText('化學判讀與結構推論（Interpretation）',{exact:false}).first()).toBeVisible();
+  await openTab(page,'預測結構');
   await expect(page.getByText('模型相容度：',{exact:false}).first()).toBeVisible({timeout:30000});
   expect(errors).toEqual([]);
 });

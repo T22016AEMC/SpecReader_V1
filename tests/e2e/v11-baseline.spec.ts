@@ -1,4 +1,5 @@
 import {test,expect} from '@playwright/test';
+import {openTab} from './helpers/ui';
 test('IR 五點控制、拖曳、校正預覽與重新分析',async({page})=>{
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto('/');
@@ -15,6 +16,7 @@ test('IR 五點控制、拖曳、校正預覽與重新分析',async({page})=>{
  await page.getByRole('button',{name:'套用 IR 設定',exact:true}).click();
  await expect(page.getByTestId('ir-draft-status')).toContainText('正式設定');
  await page.getByRole('button',{name:/^第 3 頁.*化學判讀/}).click();await page.getByRole('button',{name:'開始分析',exact:true}).click();await expect(page.getByTestId('analysis-control')).toHaveAttribute('data-result-current','true',{timeout:45000});
+ await openTab(page,'預測結構');
  await expect(page.getByText('De novo 搜尋狀態與界限',{exact:true})).toBeVisible();
  expect(errors).toEqual([]);
 });
