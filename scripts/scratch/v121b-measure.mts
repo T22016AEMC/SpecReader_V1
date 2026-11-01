@@ -15,6 +15,8 @@ const repeats = Number(process.argv[3] ?? 3);
 const outFile = process.argv[4];
 const ids = (process.argv[5] ?? 'S1,G1,E1,G3,D1,S2,S3').split(',');
 await initializeRDKit();
+// Diagnostics: V121B_OFF=forbiddenFragments,vinylWindows,carbonylBand switches those sub-switches off (A/B timing on one machine).
+for (const k of (process.env.V121B_OFF ?? '').split(',').filter(Boolean)) (V12_CONFIG.planning as any)[k] = false;
 const out: any[] = [];
 for (const id of ids) {
   const f = loadFixture(id);
@@ -48,12 +50,12 @@ for (const id of ids) {
       targetInOutput: smiles.includes(targetCanon), targetRanked: r.rankedCandidates.some(c => canonNoStereo(c.smiles) === targetCanon), outputCount: smiles.length,
       searchedFormulas: runs.length, round1Ms: perRun.reduce((s: number, x: any) => s + x.round1Ms, 0), round2Ms: perRun.reduce((s: number, x: any) => s + x.round2Ms, 0), round1Visited: runs.reduce((s: number, x: any) => s + (x.enumeration?.planning?.round1Visited ?? 0), 0),
       round2Formulas: perRun.filter((x: any) => x.round === 2).length,
-      forbidden: stats.forbidden, exclusionTotal: stats.total,
+      forbidden: (stats.forbidden ?? []), exclusionTotal: stats.total,
       inventoryAlternatives: runs.map((x: any) => (x.enumeration?.v12?.inventory?.alternatives ?? null)),
       perRun,
     };
     out.push(rec);
-    console.log(`${id} ${mode} #${rep}: total ${rec.totalMs} ms, R1 ${rec.round1Ms} ms, R2 ${rec.round2Ms} ms, R1 steps ${rec.round1Visited}, target rank ${rec.targetRank} searched=${rec.targetSearched} inOutput=${rec.targetInOutput}, runs=${rec.searchedFormulas}, forbidden=${stats.forbidden.map((x: any) => `${x.id}:${x.count}`).join(',') || '-'}`);
+    console.log(`${id} ${mode} #${rep}: total ${rec.totalMs} ms, R1 ${rec.round1Ms} ms, R2 ${rec.round2Ms} ms, R1 steps ${rec.round1Visited}, target rank ${rec.targetRank} searched=${rec.targetSearched} inOutput=${rec.targetInOutput}, runs=${rec.searchedFormulas}, forbidden=${(stats.forbidden ?? []).map((x: any) => `${x.id}:${x.count}`).join(',') || '-'}`);
   }
 }
 const meta = {node: process.version, platform: process.platform, mode, repeats, analysis: ENUMERATION_CONFIG.analysis, legacySupplementWhenIncomplete: ENUMERATION_CONFIG.legacySupplementWhenIncomplete, useV121Planning: V12_CONFIG.useV121Planning, planning: V12_CONFIG.planning};

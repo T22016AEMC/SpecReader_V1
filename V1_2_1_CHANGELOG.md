@@ -123,3 +123,54 @@
 |---|---|---|---|
 | `tests/helpers/v121Golden.ts` `fixtureSpectra` | 溶劑寫在 `solvent`／`frequencyMHz` | 寫入 `nmrSolvent`／`spectrometerFrequencyMHz`；黃金檔情境傳 `declareSolvent: false` | 見 1c-2；黃金檔輸入不變 |
 | `tests/v12/v121Shapes.test.ts` | 驗收迴圈 S1、G1、E1、G3 | 加上 S2 | 指令 1c-1（沒有放寬任何斷言） |
+
+## 10. 階段 2B（B 類：合理性、烯基視窗、缺羰基帶）
+
+旗標：全部掛在 `planningActive()`（`useV121Planning` ＆ `useV12Constraints` ＆ `useExhaustiveEnumerator`）之下；`useV121Planning = false` 的輸出（含面板文字）仍等於 v1.2.0 黃金檔，`useV12Constraints = false` 的黃金檔不變。版本號仍 1.2.0。
+另在 `V12_CONFIG.planning` 加三個子開關（預設 true，只供測試與診斷，不在 UI）：`forbiddenFragments`（B1、B2）、`vinylWindows`（B3）、`carbonylBand`（B4）。關掉其中一個，只有對應規則不執行。
+範圍：B1／B2（合理性）與 B4（評分）不限路徑；**B3 只在「無分子式」路徑**（使用者自填分子式與 MS 路徑的烯基視窗維持 v1.2.0 的 4.5–7.5 ppm、每原子 1 或 2 個 H）。
+沒有使用 `benchmark\` 的任何檔案；所有新增的禁含片段、窗、門檻、權重，凡無文獻出處者，出處欄寫「工程判斷，未查證」。
+
+| 項 | 內容 | 位置 |
+|---|---|---|
+| 共通 | 新檔 `constraints/forbiddenFragments.ts`（`ForbiddenFragment {id, smarts, label, reason, source, stage}`）；葉端新階段 `forbidden`（放在必含子結構之後、芳香／等價之前，命中的分子會被記住）；下游閘規則 `FORBIDDEN_<id>`；舊 beam 補充的候選套同一份清單（`legacySupplement.droppedByForbidden(ById)`）；命中統計 `rejected.v12.forbiddenById`，面板與「沒有候選」說明共用 `exclusionStats().forbidden`；沒有其他葉端檢查的集合也走葉端管線（只為了禁含檢查，其計時不計入 `leafCost`） | `enumeration/leafChecks.ts`、`enumerate.ts`、`exclusionStats.ts`、`exhaustiveGenerator.ts`、`structurePlausibility.ts`、`rdkitAdapter.ts` |
+| B1 | 苯環（小寫 c）對位以 ≤ 4 個原子的橋、間位以 ≤ 3 個原子的橋相連者禁含；7 條 SMARTS（PARA_BRIDGE_1…4、META_BRIDGE_1…3）。[2.2] 對／間環芳烷（路徑經過第二個環）與雜芳環不擋，列為已知限制。出處：工程判斷，未查證 | `forbiddenFragments.ts` |
+| B2 | 環狀 C(OH)(OR)(OR)：`[CX4;R]([OX2H1])([OX2][#6])[OX2][#6]`；GEM_DIOL 維持一律擋、無例外；與 HEMIACETAL_ACYCLIC／ORTHOESTER_ACYCLIC 以環內／環外分開，不重疊 | `forbiddenFragments.ts` |
+| B3 | `ShiftClassDef.hPerAtomWindows`；`VINYL_CH`：=CH₂（2H）基本窗 4.5–6.0、放寬窗 6.0–6.5 ppm；=CH（1H）基本窗 4.5–7.5、放寬窗 7.5–7.8 ppm；放寬窗只在 `IrAldehydeContext.conjugatedCarbonyl === true` 時允許（false 與 null 都不放寬）。共軛 C=O 脈絡由 `irAldehydeContext` 產生：影像 IR、校正可信、強度已知，1630–1735 cm⁻¹ 有 ≥ 最強帶 50% 的帶＝true，否則 false；峰表型（非影像）IR、校正不可信、強度未知、沒有 IR＝null。其餘 7 個位移類別不變。出處：工程判斷，未查證 | `v12Config.ts`、`shiftClasses.ts`、`atomInventory.ts`、`v12Evidence.ts`、`searchPlanning.ts`、`exhaustiveGenerator.ts`、`sixStepAnalysis.ts` |
+| B4 | 影像 IR 缺羰基帶扣分：候選含酯 1710–1750、共軛酮 1650–1700、醯胺 1630–1680、醌 1650–1690、酸酐 1740–1870、醯鹵 1770–1815 cm⁻¹ 的羰基類別，而這些窗的聯集內沒有 ≥ 最強帶 50% 的帶時，加一筆 `IR:carbonyl-missing:<類別>`（compatibility 0、權重 0.8 × `irDataQuality`、帶 `display`）；扣分不剔除。啟用條件：影像 IR；`irCalibrationTrusted`（來源為使用者校正且未失敗；分段線性 ≥ 3 個使用者點且窗口在最小與最大點之間；三點最小平方最大殘差 ≤ 0.5% 軸跨度；兩點一律不可信）；`irImageRangeCovered`（有描線曲線 ≥ 50 點、換算後涵蓋窗口）。峰表型 IR 不啟用，既有 0.2 的舊規則一字不動。權重 0.8、3 個點、0.5%、50% 都是工程判斷，未查證 | `carbonylClasses.ts`（新）、`evidenceLedger.ts`、`irSignalProcessing.ts`、`v12Config.ts` |
+
+### 新常數（全部未校準）
+
+| 常數 | 值 | 出處 |
+|---|---|---|
+| `BRIDGE_LIMITS` | 對位 ≤ 4、間位 ≤ 3 個橋原子 | 工程判斷，未查證 |
+| `planning.forbiddenFragments`／`vinylWindows`／`carbonylBand` | true／true／true | 診斷用子開關 |
+| `shiftClasses[VINYL_CH].hPerAtomWindows` | 2H：4.5–6.0（放寬 6.0–6.5）；1H：4.5–7.5（放寬 7.5–7.8） | 工程判斷，未查證 |
+| `conjugatedCarbonylIr` | 1630–1735 cm⁻¹、≥ 最強帶的 50% | 工程判斷，未查證 |
+| `irMissingBand.weight` | 0.8（× `irDataQuality`） | 未校準，工程判斷，未查證 |
+| `irMissingBand.strongRelativeIntensity`／`minCurvePoints`／`minUserCalibrationPoints` | 0.5／50／3 | 工程判斷，未查證 |
+| 三點殘差上限 | 0.5% 軸跨度（沿用 `AXIS_CALIBRATION_CONFIG.linearityResidualFractionOfSpan`） | 工程判斷，未查證 |
+| 六個羰基窗 | 見上表 | 規劃者放寬的窗；與 Coates, *Interpretation of Infrared Spectra, A Practical Approach*, Table 9（文章第 13 頁）核對，結果見 `notes/v1.2.1/P2B_REPORT.md` §4 |
+
+### 面板文字（旗標 false 或對應子開關 false 時全部不出現）
+
+| 舊 | 新 | 位置 |
+|---|---|---|
+| （無） | `禁含片段『…』排除了 N 個`（每條有命中的規則一行，零命中不列）；其後固定一行 `禁含片段的出處：工程判斷，未查證`；葉端統計行多 `、禁含片段 N` | 「被排除的結構（全部分子式合計）」、「沒有候選」說明、各分子式的葉端統計 |
+| （無） | 區塊「影像 IR 缺羰基帶檢查」：`已啟用（校正可信、描線涵蓋羰基窗）…` 或 `未啟用（原因：不是影像 IR／校正不可信／沒有涵蓋羰基窗的描線／峰強度未知）`，並列六個窗 | 組成面板，搜尋計畫之後 |
+| （無） | 搜尋計畫區塊多一句烯基視窗：`烯基 CH₂ 的視窗為 4.5–6.0 ppm（6.0–6.5 需要 IR 共軛 C=O）；=CH 上限 7.5 ppm（有共軛 C=O 時 7.8）…` | 搜尋計畫（只在無分子式的計畫式搜尋） |
+| 訊號表「類別」欄 | 放寬發生時加註 `（烯基視窗已依 IR 共軛 C=O 放寬）` | 原子清單的訊號表 |
+| 候選卡片「實測支持與矛盾」 | 缺羰基帶時多一行 `IR（影像）：候選含酯羰基，但在 1710–1750 cm⁻¹ 沒有強帶（校正可信、描線涵蓋該範圍）；已扣分，未剔除` | 候選卡片 |
+
+### 既有測試因 B 類而改變的地方（舊斷言 → 新斷言 → 原因）
+
+規劃者預先核准的 7 項中，4 項沒有失敗（B3 限定在無分子式路徑後，它們走的是使用者自填分子式的路徑）；其餘 3 項如下。清單以外沒有既有測試失敗。
+
+| 測試 | 舊斷言 | 新斷言 | 原因 |
+|---|---|---|---|
+| #1 `tests/v12/enumeratorC1.test.ts` › C1 everything together（C9H10O） | 窮舉器輸出＝暴力參考解 `['CC1(C)Oc2ccc1cc2']` | 暴力參考解 `bruteForceV12.ts` 也套同一份禁含清單（清單由測試傳入，檔案仍不 import `src/engines`），兩邊都是 `[]`；另加一個測試：兩邊都關掉禁含清單時，參考解與窮舉器仍都是原來那一個分子 | 該分子是對位橋 2 個原子的環（B1 要禁的結構）；斷言方向沒有放寬，兩邊以同一份規格比對 |
+| #5 `tests/v12/stage3.test.ts` › W7（C10H10O，DMSO-d6，9.2 ppm 1H／1.3 ppm 9H） | `{timeMs: 15000, maxStates: 3_000_000}`；`path === 'INVENTORY'` 等斷言 | 斷言一字不動；預算改為 `{timeMs: STEP_ONLY_TIME_MS, maxStates: 3_000_000}` | 失敗原因**不是 B3**（此輸入走使用者分子式路徑，烯基視窗不變）。惟一的庫存候選要到第二個讀法約 0.7 M 步才找到，剛好落在 15 秒牆鐘邊緣：關掉子開關或把旗標關掉，同一台機器上也會有一次找不到；改步數預算後結果與機器速度無關。輸入的光譜與分子式沒有改 |
+| #6 `tests/v12/v121TwoRound.test.ts` › round-2 eligibility（E1） | E1 至少有 1 個分子式進第 2 輪 | 改用 G1，斷言一字不動（第 2 輪有分子式、有不合資格者、某個 k 沒有第 2 輪、第 2 輪分子式少於 3 個） | B3 後 E1 沒有含烯基的替代解讀，第 2 輪無事可做（E1 在第 1 輪就讀完）。G1 仍有烯基讀法，且四項條件都成立（第 2 輪 1 個、不合資格 8 個） |
+| #2 `atomInventory.test.ts`、#3 `generatorV12.test.ts` C4、#4 `stage3.test.ts` W4、#7 `p1bPipeline.test.ts` flow (i) | — | 不需修改 | 2A 的原型把 B3 同時用在使用者自填分子式路徑才會失敗；B3 限定在無分子式路徑後這四項照舊通過 |
+
+新增測試檔：`tests/v12/v121bForbidden.test.ts`、`v121bBridges.test.ts`、`v121bVinyl.test.ts`、`v121bCarbonyl.test.ts`、`v121bPanel.test.ts`。
