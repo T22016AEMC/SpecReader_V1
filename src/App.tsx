@@ -3,6 +3,12 @@ import {AnalysisBar,ResultPanels,ResultTabBar,type ResultTabId} from './ui/Resul
 import {DataCheckBar,type IrVersionInfo} from './ui/DataCheckBar';
 import {InputSummaryTab,type InputSummaryRow} from './ui/InputSummaryTab';
 import {buildDataCheck} from './ui/dataCheck';
+import {PredictionTab} from './ui/PredictionTab';
+import type {CandidateView} from './ui/ConclusionCard';
+import {CandidateEvidence} from './ui/CandidateEvidence';
+import {conclusionBullets,pickTopWarning,searchStatusSentence} from './ui/conclusion';
+import {fmtScoreOf100,shortenNumbers} from './ui/format';
+import type {ObservationLike} from './ui/obsLabel';
 import type {AnalysisProgress} from './engines/reasoning/types';
 import {MassExperimentConditions} from './components/MassExperimentConditions';
 import {emptyModeAState,executeAnalysisWorker,type ModeAResult} from './engines/analysisSession';
@@ -806,6 +812,92 @@ export default function App() {
     analysisBusy ||
     completedAnalysis?.result.generationStatus?.code === "CANCELLED" ||
     (!completedAnalysis && !!analysisProgress);
+  // 「預測結構」分頁（P4）：結論卡、警告、搜尋狀態一句、約束摘要
+  const generationInfo = modeAOrchestration.generationStatus;
+  const topWarning =
+    completedAnalysis && rankedCandidates.length > 0
+      ? pickTopWarning({
+          dataCheck,
+          generationCode: generationInfo?.code,
+          scores: rankedCandidates.map((c) => c.scoreBreakdown.totalScore),
+        })
+      : null;
+  const traceObservations = modeAOrchestration.reasoningTrace?.observations as unknown as ObservationLike[] | undefined;
+  const candidateViews: CandidateView[] = rankedCandidates.map((cand) => {
+    const record = modeAOrchestration.reasoningTrace?.candidates.find((r) => r.candidateId === cand.id);
+    const graphInfo = validatedGraphs.find((vg) => vg.candidate.id === cand.id)?.graphValidation;
+    const originTag = candidateSourceTag(candidateOrigins?.[cand.smiles]);
+    return {
+      id: cand.id,
+      rank: cand.rank,
+      name: cand.name,
+      formula: cand.molecularFormula,
+      scoreText: fmtScoreOf100(cand.scoreBreakdown.totalScore),
+      bullets: conclusionBullets({
+        evidence: record?.evidence ?? [],
+        observations: traceObservations,
+        userFormula: generationInfo?.userFormula ?? null,
+        candidateFormula: cand.molecularFormula,
+      }),
+      // 句尾「有界搜尋／未校準相容度…」只在區塊標題講一次；「候選來源：…」字串不變
+      sourceLine: `來源：${cand.sourceProvenance || cand.candidateOrigin}${originTag ? `｜候選來源：${originTag}` : ""}`,
+      selected: (selectedCandidate?.id || rankedCandidates[0]?.id) === cand.id,
+      onSelect: () => setSelectedCandidateId(cand.id),
+      onSendToModeB: () => {
+        setModeBStructureInput(cand.smiles);
+        handleExecuteModeBPrediction(cand.smiles);
+        setPrimaryMode("MODE_B");
+      },
+      structure: () => <StructureRenderer2D smiles={cand.smiles} formula={cand.molecularFormula} compact />,
+      reasoning: () => <CandidateReasoningDetails record={record} />,
+      evidence: () => <CandidateEvidence cand={cand} graphInfo={graphInfo} modalityCount={activeEvidenceSummary.modalitiesWithData.length} />,
+    };
+  });
+  const searchInfo = {
+    code: generationInfo?.code as string | undefined,
+    sentence: searchStatusSentence(generationInfo?.code, rankedCandidates.length, generationInfo?.message),
+    fullText: shortenNumbers(`${generationInfo?.message ?? ""} ${generationInfo?.limits ?? ""}`),
+    compositionSource: `組成來源：${generationInfo?.userFormula ? `使用者指定 ${generationInfo.userFormula}（完整候選硬限制）` : "未指定；不以前置猜測分子式限制搜尋"}；候選卡分子式由各自分子圖計算。`,
+  };
+  const constraintItems: { label: string; value: string }[] = (() => {
+    if (!completedAnalysis) return [];
+    const c = modeAReport.constraints;
+    const items: { label: string; value: string }[] = [];
+    const num = (v: unknown, d = 1) => String(Number(Number(v).toFixed(d)));
+    if (bundle.userSuppliedFormula) items.push({ label: "使用者指定分子式", value: bundle.userSuppliedFormula });
+    if (c.estimatedMolecularWeight) items.push({ label: "標稱分子量", value: `${num(c.estimatedMolecularWeight)} Da` });
+    const range = solvedConstraintSpace.unsaturationRange;
+    if (range) items.push({ label: "不飽和度範圍 (IHD / DBE)", value: `${num(range[0])} – ${num(range[1])}` });
+    if (c.nitrogenRuleParity && c.nitrogenRuleParity !== "UNKNOWN") items.push({ label: "氮規則奇偶性", value: String(c.nitrogenRuleParity) });
+    const h = c.estimatedProtonCount, cc = c.estimatedCarbonEnvironmentCount;
+    if (h !== undefined || cc !== undefined) {
+      items.push({ label: "¹H 積分 / ¹³C 環境數", value: `${h !== undefined ? `${num(h)}H` : "—"} / ${cc !== undefined ? `${num(cc)}C` : "—"}` });
+    }
+    if (c.aromaticSubstitutionPattern && !/^UNKNOWN/.test(String(c.aromaticSubstitutionPattern))) items.push({ label: "芳環取代型態", value: String(c.aromaticSubstitutionPattern) });
+    return items;
+  })();
+  const zeroCandidateNode = (
+    <div className="rounded-xl border border-dashed border-slate-800 bg-slate-950/60 p-8 text-center">
+      <FlaskConical className="mx-auto h-8 w-8 text-cyan-400" />
+      <h3 className="mt-2 text-sm font-bold text-slate-100">目前尚無收斂之完整候選分子結構</h3>
+      <p className="mx-auto mt-1 max-w-xl text-xs text-slate-400">
+        {modeAOrchestration.generationStatus?.message} 請保留上方局部化學環境假設；搜尋無結果不代表該分子式不存在。
+      </p>
+      {(() => {
+        const z = zeroCandidateModel(modeAOrchestration);
+        return z ? <div data-testid="zero-candidate-explanation" className="mx-auto mt-3 max-w-xl rounded border border-amber-500/40 bg-amber-950/30 p-3 text-left text-xs text-amber-100">
+          <p className="font-bold" data-testid="zero-candidate-headline">{z.headline}</p>
+          <p className="mt-2 font-semibold">被擋掉的結構</p>
+          {z.blockedEmpty ? <p data-testid="zero-candidate-blocked-empty">{z.blockedEmpty}</p> : <ul className="ml-4 list-disc" data-testid="zero-candidate-blocked">{z.blocked.map((x, i) => <li key={i}>{x}</li>)}</ul>}
+          {z.unfinished.length > 0 && <><p className="mt-2 font-semibold">沒跑完的部分</p><ul className="ml-4 list-disc" data-testid="zero-candidate-unfinished">{z.unfinished.map((x, i) => <li key={i}>{x}</li>)}</ul></>}
+          {z.suggestions.length > 0 && <><p className="mt-2 font-semibold">建議</p><ul className="ml-4 list-disc" data-testid="zero-candidate-suggestions">{z.suggestions.map((x, i) => <li key={i}>{x}</li>)}</ul></>}
+        </div> : null;
+      })()}
+    </div>
+  );
+  const deNovoNode = (
+    <details className="text-xs text-slate-400"><summary>De novo 搜尋狀態與界限</summary><p>獨立原子／鍵枚舉目前支援中性 C/N/O/F/Cl/Br，至多九重原子、450 ms／36 候選；不支援的較大組成會保留局部環境假設，資料庫命中不代表答案正確。</p>{solvedConstraintSpace.solverLog.filter(s=>s.startsWith('De novo')).map((s,i)=><p key={i}>{shortenNumbers(s)}</p>)}</details>
+  );
   const analysisStatusText = analysisError
     ? "分析失敗；輸入已保留，舊結果供參考。"
     : analysisStale
@@ -1546,7 +1638,7 @@ export default function App() {
           {dataCheck.unprovided.length < 6 && (
             <DataCheckBar check={dataCheck} irVersion={irVersionInfo} onGoCalibration={() => setModeAPage("PAGE_2_CALIBRATION")} />
           )}
-          <div className="border-b border-slate-800 bg-slate-950">
+          <div className="no-print border-b border-slate-800 bg-slate-950">
             <div className="mx-auto flex h-12 max-w-[1600px] items-center gap-4 px-4">
               <AnalysisBar
                 runs={analysisRuns}
@@ -1568,6 +1660,7 @@ export default function App() {
                 onChange={setResultTab}
                 badges={{
                   candidates: completedAnalysis ? rankedCandidates.length : undefined,
+                  predWarn: topWarning !== null,
                   inputWarn: dataCheck.warnCount,
                 }}
               />
@@ -3239,269 +3332,19 @@ export default function App() {
                       <button type="button" onClick={() => setResultTab("pred")} className="inline-flex items-center gap-1.5 rounded-lg bg-cyan-600 px-4 py-2 text-sm font-bold text-white hover:bg-cyan-500">看預測結構 <ArrowRight className="h-4 w-4" /></button>
                     </div>
                   </>),
-                  pred: (<>
-                    <div>
-                      <button type="button" onClick={() => setResultTab("fg")} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-medium text-slate-200 hover:bg-slate-700"><ArrowLeft className="h-3.5 w-3.5" /> 回圖譜官能基</button>
-                    </div>
-                    {processInPred && <ReasoningPanel trace={completedAnalysis?.result.reasoningTrace} progress={analysisProgress} busy={analysisBusy}/>}
-                    {!completedAnalysis && !analysisBusy && <p className="rounded-xl border border-dashed border-slate-800 p-6 text-center text-xs text-slate-400">尚未分析。按上方「開始分析」後，這裡會列出候選結構。</p>}
-                    {completedAnalysis&&<>
-                <p data-testid="generation-status" data-code={modeAOrchestration.generationStatus?.code}>{modeAOrchestration.generationStatus?.message} {modeAOrchestration.generationStatus?.limits}</p>
-                <p className="text-xs text-slate-400">組成來源：{modeAOrchestration.generationStatus?.userFormula?`使用者指定 ${modeAOrchestration.generationStatus.userFormula}（完整候選硬限制）`:'未指定；不以前置猜測分子式限制搜尋'}；候選卡分子式由各自分子圖計算。</p>
-                {/* 量化結構約束與分子式收斂指標列 */}
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-                  <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-3">
-                    <div className="text-[11px] text-slate-400">
-                      使用者指定分子式
-                    </div>
-                    <div className="mt-1 font-mono text-base font-bold text-cyan-300">
-                      {bundle.userSuppliedFormula || "未指定（選填）；組成見各候選"}
-                    </div>
-                  </div>
-                  <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-3">
-                    <div className="text-[11px] text-slate-400">
-                      標稱分子量 (MW)
-                    </div>
-                    <div className="mt-1 font-mono text-base font-bold text-slate-100">
-                      {modeAReport.constraints.estimatedMolecularWeight
-                        ? `${modeAReport.constraints.estimatedMolecularWeight} Da`
-                        : "NOT PROVIDED"}
-                    </div>
-                  </div>
-                  <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-3">
-                    <div className="text-[11px] text-slate-400">
-                      不飽和度範圍 (IHD / DBE)
-                    </div>
-                    <div className="mt-1 font-mono text-base font-bold text-amber-300">
-                      {solvedConstraintSpace.unsaturationRange[0]} –{" "}
-                      {solvedConstraintSpace.unsaturationRange[1]}
-                    </div>
-                  </div>
-                  <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-3">
-                    <div className="text-[11px] text-slate-400">
-                      氮規則奇偶性 (N-Rule)
-                    </div>
-                    <div className="mt-1 font-mono text-base font-bold text-emerald-300">
-                      {modeAReport.constraints.nitrogenRuleParity || "UNKNOWN"}
-                    </div>
-                  </div>
-                  <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-3">
-                    <div className="text-[11px] text-slate-400">
-                      ¹H 積分 / ¹³C 環境數
-                    </div>
-                    <div className="mt-1 font-mono text-sm font-bold text-slate-100">
-                      {modeAReport.constraints.estimatedProtonCount !== undefined
-                        ? `${modeAReport.constraints.estimatedProtonCount}H`
-                        : "—"}{" "}
-                      /{" "}
-                      {modeAReport.constraints
-                        .estimatedCarbonEnvironmentCount !== undefined
-                        ? `${modeAReport.constraints.estimatedCarbonEnvironmentCount}C`
-                        : "—"}
-                    </div>
-                  </div>
-                  <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-3">
-                    <div className="text-[11px] text-slate-400">
-                      芳環取代型態
-                    </div>
-                    <div className="mt-1 font-mono text-xs font-bold text-violet-300">
-                      {modeAReport.constraints.aromaticSubstitutionPattern ||
-                        "UNKNOWN / NONE"}
-                    </div>
-                  </div>
-                </div>
-                {/* 第二部分：候選結構生成、正反證據鏈與排序 (Candidate Structures) */}
-                {/* =========================================================== */}
-                <div className="rounded-xl border border-slate-800 bg-slate-900/90 p-4 space-y-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
-                    <div>
-                      <h2 className="text-sm font-bold text-slate-100">
-                        2. 候選結構生成與排序（Candidate Structures &amp; Evidence Ranking）
-                      </h2>
-                      <p className="text-xs text-slate-400">
-                        依據分子式與已校正光譜之官能基約束生成候選異構物，並完整列出每個候選結構的支持證據、反對證據、相關峰位與不確定性。
-                      </p>
-                    </div>
-                    <span className="rounded bg-emerald-950/70 px-2.5 py-1 font-mono text-xs font-bold text-emerald-300">
-                      共生成 {rankedCandidates.length} 個候選結構
-                    </span>
-                  </div>
-
-                  <details className="text-xs text-slate-400"><summary>De novo 搜尋狀態與界限</summary><p>獨立原子／鍵枚舉目前支援中性 C/N/O/F/Cl/Br，至多九重原子、450 ms／36 候選；不支援的較大組成會保留局部環境假設，資料庫命中不代表答案正確。</p>{solvedConstraintSpace.solverLog.filter(s=>s.startsWith('De novo')).map((s,i)=><p key={i}>{s}</p>)}</details>
-                  {rankedCandidates.length === 0 ? (
-                    <div className="rounded-xl border border-dashed border-slate-800 bg-slate-950/60 p-8 text-center">
-                      <FlaskConical className="mx-auto h-8 w-8 text-cyan-400" />
-                      <h3 className="mt-2 text-sm font-bold text-slate-100">
-                        目前尚無收斂之完整候選分子結構
-                      </h3>
-                      <p className="mx-auto mt-1 max-w-xl text-xs text-slate-400">
-                        {modeAOrchestration.generationStatus?.message} 請保留上方局部化學環境假設；搜尋無結果不代表該分子式不存在。
-                      </p>
-                      {(() => {
-                        const z = zeroCandidateModel(modeAOrchestration);
-                        return z ? <div data-testid="zero-candidate-explanation" className="mx-auto mt-3 max-w-xl rounded border border-amber-500/40 bg-amber-950/30 p-3 text-left text-xs text-amber-100">
-                          <p className="font-bold" data-testid="zero-candidate-headline">{z.headline}</p>
-                          <p className="mt-2 font-semibold">被擋掉的結構</p>
-                          {z.blockedEmpty ? <p data-testid="zero-candidate-blocked-empty">{z.blockedEmpty}</p> : <ul className="ml-4 list-disc" data-testid="zero-candidate-blocked">{z.blocked.map((x, i) => <li key={i}>{x}</li>)}</ul>}
-                          {z.unfinished.length > 0 && <><p className="mt-2 font-semibold">沒跑完的部分</p><ul className="ml-4 list-disc" data-testid="zero-candidate-unfinished">{z.unfinished.map((x, i) => <li key={i}>{x}</li>)}</ul></>}
-                          {z.suggestions.length > 0 && <><p className="mt-2 font-semibold">建議</p><ul className="ml-4 list-disc" data-testid="zero-candidate-suggestions">{z.suggestions.map((x, i) => <li key={i}>{x}</li>)}</ul></>}
-                        </div> : null;
-                      })()}
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-                      {rankedCandidates.map((cand) => {
-                        const isSelected =
-                          (selectedCandidate?.id || rankedCandidates[0]?.id) ===
-                          cand.id;
-                        const graphInfo = validatedGraphs.find(
-                          (vg) => vg.candidate.id === cand.id
-                        )?.graphValidation;
-
-                        return (
-                          <div
-                            key={cand.id}
-                            onClick={() => setSelectedCandidateId(cand.id)}
-                            className={`cursor-pointer flex flex-col justify-between rounded-xl border p-4 transition ${
-                              isSelected
-                                ? "border-cyan-500 bg-slate-950 shadow-lg"
-                                : "border-slate-800 bg-slate-950/60 hover:border-slate-700"
-                            }`}
-                          >
-                            <div>
-                              <div className="flex items-center justify-between gap-2">
-                                <span
-                                  className={`rounded px-2 py-0.5 font-mono text-xs font-bold ${
-                                    cand.rank === 1
-                                      ? "bg-emerald-500 text-slate-950"
-                                      : "bg-slate-800 text-slate-300"
-                                  }`}
-                                >
-                                  Rank #{cand.rank}
-                                </span>
-                                <span className="font-mono text-lg font-extrabold text-cyan-300">
-                                  模型相容度：{cand.scoreBreakdown.totalScore}/100（非機率）
-                                </span>
-                              </div>
-
-                              <h3 className="mt-2 text-sm font-bold text-slate-100">
-                                {cand.name}
-                              </h3>
-                              <p className="text-xs text-amber-200" data-testid="candidate-source">來源：{cand.sourceProvenance || cand.candidateOrigin}{candidateSourceTag(candidateOrigins?.[cand.smiles])?`｜候選來源：${candidateSourceTag(candidateOrigins?.[cand.smiles])}`:''} · 有界搜尋／未校準相容度，資訊不足不能確認完整結構。</p>
-                              {cand.scientificScoreLedger&&<details className="text-xs text-slate-400"><summary>實測支持與矛盾證據</summary>{cand.scientificScoreLedger.entries.filter(e=>e.compatibility!==null).slice(0,24).map(e=><p key={e.evidenceId}>{e.sourceModality} · {e.evidenceId} · {(e.compatibility??0)>=.6?'支持':(e.compatibility??0)<.3?'矛盾／模型無法解釋':'弱相容'} · {e.method}</p>)}</details>}
-                              <div className="font-mono text-xs text-slate-400">
-                                IUPAC: {cand.iupacName} |{" "}
-                                <strong className="text-cyan-300">
-                                  {cand.molecularFormula}
-                                </strong>{" "}
-                                (IHD={cand.unsaturationIndex})
-                              </div>
-
-                              <div className="my-3">
-                                <CandidateReasoningDetails record={modeAOrchestration.reasoningTrace?.candidates.find(r=>r.candidateId===cand.id)}/>
-                                <StructureRenderer2D
-                                  smiles={cand.smiles}
-                                  formula={cand.molecularFormula}
-                                  compact
-                                />
-                              </div>
-
-                              {graphInfo && (
-                                <div className="mb-3 rounded-lg border border-emerald-500/20 bg-emerald-950/20 p-2 font-mono text-[11px] text-emerald-300">
-                                  ✓ 拓撲化合價檢驗通過 | 重原子數:{" "}
-                                  {graphInfo.heavyAtomCount} | 環數:{" "}
-                                  {graphInfo.ringCount}
-                                </div>
-                              )}
-
-                              {cand.nmrConsistencyAnalysis && (
-                                <div className="mb-3 rounded-lg border border-violet-500/30 bg-violet-950/20 p-2.5 text-[11px] space-y-1">
-                                  <div className="flex items-center justify-between font-mono font-bold text-violet-200">
-                                    <span>
-                                      NMR 科學一致性 ({cand.nmrConsistencyAnalysis.overallStatus})
-                                    </span>
-                                    <span>
-                                      {cand.nmrConsistencyAnalysis.overallScore}%
-                                    </span>
-                                  </div>
-                                  <div className="text-slate-300">
-                                    <span className="text-cyan-300 font-semibold">
-                                      ¹H 積分/活潑氫：
-                                    </span>
-                                    總氫 {cand.nmrConsistencyAnalysis.protonIntegrationConsistency.computedTotalH}H（碳上 {cand.nmrConsistencyAnalysis.protonIntegrationConsistency.computedCarbonAttachedH}H + 可交換 {cand.nmrConsistencyAnalysis.protonIntegrationConsistency.computedExchangeableH}H）· {cand.nmrConsistencyAnalysis.protonIntegrationConsistency.status}
-                                  </div>
-                                  <div className="text-slate-300">
-                                    <span className="text-amber-300 font-semibold">
-                                      ¹³C 對稱與弛豫：
-                                    </span>
-                                    預期 {cand.nmrConsistencyAnalysis.carbonSymmetryAndCountConsistency.expectedUniqueCarbons} 組不等價碳（含 {cand.nmrConsistencyAnalysis.carbonSymmetryAndCountConsistency.quaternaryCarbonsCount} 個四級碳）
-                                  </div>
-                                </div>
-                              )}
-
-                              {/* 支持證據 */}
-                              <div className="space-y-1.5 text-xs">
-                                <div className="font-semibold text-emerald-300">
-                                  支持證據与相關峰位 ({cand.supportingReasons.length})：
-                                </div>
-                                <ul className="list-disc space-y-1 pl-4 text-[11px] text-slate-300">
-                                  {cand.supportingReasons.map((r, i) => (
-                                    <li key={i}>{r}</li>
-                                  ))}
-                                </ul>
-
-                                {/* 反對證據 */}
-                                <div className="mt-2 font-semibold text-rose-300">
-                                  反對證據 / 排他矛盾點 (
-                                  {cand.contradictingReasons.length})：
-                                </div>
-                                {cand.contradictingReasons.length > 0 ? (
-                                  <ul className="list-disc space-y-1 pl-4 text-[11px] text-rose-200/90">
-                                    {cand.contradictingReasons.map((r, i) => (
-                                      <li key={i}>{r}</li>
-                                    ))}
-                                  </ul>
-                                ) : (
-                                  <div className="text-[11px] text-slate-400">
-                                    目前提供的實驗證據中無直接排他矛盾。
-                                  </div>
-                                )}
-
-                                {/* 不確定性說明 */}
-                                <div className="mt-2 rounded border border-amber-500/20 bg-amber-950/20 p-2 text-[11px] text-amber-200/90">
-                                  <span className="font-semibold text-amber-300">
-                                    不確定性評估：
-                                  </span>
-                                  {activeEvidenceSummary.modalitiesWithData
-                                    .length <= 1
-                                    ? "目前僅依賴有限模態或分子式生成同分異構物候選，位置異構物（如鄰/間/對位）仍具不確定性，建議補充 ¹H/¹³C NMR 裂分與對稱性證據。"
-                                    : "已結合多模態光譜進行交叉排他評分；若排名相近，建議對照下方跨譜驗證矩陣。"}
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className="mt-4 flex gap-2 border-t border-slate-800 pt-3">
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setModeBStructureInput(cand.smiles);
-                                  handleExecuteModeBPrediction(cand.smiles);
-                                  setPrimaryMode("MODE_B");
-                                }}
-                                className="w-full rounded-lg border border-amber-500/40 bg-amber-950/40 py-1.5 text-xs font-semibold text-amber-200 hover:bg-amber-900/50"
-                              >
-                                送入 Mode B 獨立預測其理論光譜 →
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-                    </>}
-                  </>),
+                  pred: (<PredictionTab
+                    onBack={() => setResultTab("fg")}
+                    onGoCalibration={() => setModeAPage("PAGE_2_CALIBRATION")}
+                    warning={topWarning}
+                    processCard={processInPred ? <ReasoningPanel trace={completedAnalysis?.result.reasoningTrace} progress={analysisProgress} busy={analysisBusy}/> : null}
+                    hasResult={!!completedAnalysis}
+                    busy={analysisBusy}
+                    candidates={candidateViews}
+                    zeroCandidate={zeroCandidateNode}
+                    search={searchInfo}
+                    constraintItems={constraintItems}
+                    deNovo={deNovoNode}
+                  />),
                   formula: (<>
                     {!completedAnalysis && <p className="rounded-xl border border-dashed border-slate-800 p-6 text-center text-xs text-slate-400">尚未分析。分析後，這裡會列出分子式假設與搜尋計畫。</p>}
                     {completedAnalysis&&<CompositionPanel result={completedAnalysis.result} stale={analysisStale}/>}

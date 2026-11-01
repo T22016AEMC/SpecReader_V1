@@ -4,6 +4,8 @@ import {openTab} from './helpers/ui';
 // Synthetic engineering fixtures only (hand-written peak tables, a canvas-drawn axis box with a curve); no experimental spectrum, no benchmark data.
 const drawImage = (page: Page) => page.evaluate(() => { const c = document.createElement('canvas'); c.width = 1000; c.height = 600; const x = c.getContext('2d')!; x.fillStyle = 'white'; x.fillRect(0, 0, 1000, 600); x.strokeStyle = 'black'; x.strokeRect(80, 40, 870, 490); x.strokeStyle = '#1455dd'; x.lineWidth = 2; x.beginPath(); for (let px = 82; px <= 948; px++) { const y = 115 + 90 * Math.exp(-Math.pow((px - 280) / 60, 2)) + 150 * Math.exp(-Math.pow((px - 650) / 12, 2)); if (px === 82) x.moveTo(px, y); else x.lineTo(px, y); } x.stroke(); return c.toDataURL('image/png'); });
 const ir = 'wavenumber,relative intensity\n3350,70\n2920,30\n1715,80\n1050,100';
+// the shape of the hand-written fixture S1 (a phenol-like pattern, no carbonyl band), %Transmittance
+const irPhenol = 'wavenumber,%Transmittance\n' + [[4000, 99], [3350, 25], [3030, 80], [2965, 70], [1612, 60], [1510, 20], [1440, 65], [1235, 30], [1175, 45], [830, 28], [560, 60], [450, 99]].map(r => r.join(',')).join('\n');
 
 async function analyseEthanolLike(page: Page) {
   await page.goto('/');
@@ -125,5 +127,63 @@ test('預設分頁：分析中與取消後停在「預測結構」並看到分�
   await expect(page.getByRole('tab', {name: /圖譜官能基/})).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByTestId('six-step-reasoning')).toHaveCount(1);
   await expect(page.getByTestId('result-panel-diag').getByTestId('six-step-reasoning')).toHaveCount(1);
+  expect(errors).toEqual([]);
+});
+
+test('預測結構：前 3 名結論卡、其餘精簡列、最重要的一則警告、原地展開支持與矛盾、沒有 3 位以上小數', async ({page}) => {
+  test.setTimeout(150000); const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
+  await page.goto('/');
+  await page.locator('input[type=file]').nth(0).setInputFiles({name: 'conclusion-ir.csv', mimeType: 'text/csv', buffer: Buffer.from(irPhenol)});
+  const image = await drawImage(page);
+  await page.locator('input[type=file]').nth(1).setInputFiles({name: 'conclusion-1h.png', mimeType: 'image/png', buffer: Buffer.from(image.split(',')[1], 'base64')});
+  await page.getByLabel('氘代溶劑').selectOption('CDCl3');
+  await page.locator('select').filter({has: page.locator('option', {hasText: '500 MHz'})}).selectOption('500');
+  await page.getByRole('button', {name: /^第 3 頁.*化學判讀/}).click();
+  await page.getByLabel('分子式（選填）', {exact: true}).fill('C15H16O2');
+  await page.getByRole('button', {name: '開始分析', exact: true}).click();
+  await expect(page.getByTestId('analysis-control')).toHaveAttribute('data-result-current', 'true', {timeout: 120000});
+  await openTab(page, '預測結構');
+  const panel = page.getByTestId('result-panel-pred');
+  // the tab badge carries the candidate count and a ⚠ while a warning is open
+  const total = Number((await page.getByRole('tab', {name: /預測結構/}).innerText()).match(/\d+/)![0]);
+  expect(total).toBeGreaterThan(3);
+  await expect(page.getByRole('tab', {name: /預測結構/})).toContainText('⚠');
+  // exactly three conclusion cards, the rest are compact rows
+  await expect(panel.getByTestId('conclusion-card')).toHaveCount(3);
+  await expect(panel.getByTestId('compact-candidate')).toHaveCount(total - 3);
+  // the top warning is the calibration one (an uncalibrated ¹H image outranks the other warnings) and links back to page 2
+  await expect(panel.getByTestId('top-warning')).toHaveAttribute('data-kind', 'calibration');
+  await expect(panel.getByTestId('top-warning')).toContainText('¹H 未經校正——排名可能不可靠');
+  await expect(panel.getByTestId('top-warning').getByRole('button', {name: '回第 2 頁校正'})).toBeVisible();
+  // each card: whole-number compatibility, a structure drawing, 1-3 reason lines, the source line, the collapsed reasoning
+  for (const card of await panel.getByTestId('conclusion-card').all()) {
+    await expect(card).toContainText(/模型相容度：\d+\/100/);
+    await expect(card.getByTestId('molecular-depiction')).toBeVisible();
+    const lines = await card.locator('ul > li').count();
+    expect(lines).toBeGreaterThanOrEqual(1); expect(lines).toBeLessThanOrEqual(3);
+    await expect(card.getByTestId('candidate-source')).toContainText('候選來源：');
+    await expect(card.getByTestId('candidate-source')).not.toContainText('有界搜尋／未校準相容度');
+    await expect(card.getByTestId('candidate-reasoning')).not.toHaveAttribute('open', '');
+  }
+  // the sentence about the bounded search is said once, in the block heading
+  await expect(panel.getByTestId('conclusion-block').locator('h2 + p')).toContainText('有界搜尋');
+  // nothing is open by default; the one-sentence search status keeps its data-code; the full text and the constraint summary are collapsed
+  await expect(panel.locator('details[open]')).toHaveCount(0);
+  await expect(panel.getByTestId('generation-status')).toHaveAttribute('data-code', /.+/);
+  await expect(panel.getByTestId('conclusion-card').first().getByTestId('candidate-evidence')).toHaveCount(0);
+  // 展開支持與矛盾 opens in place (no tab switch) and toggles
+  await panel.getByRole('button', {name: '展開支持與矛盾'}).first().click();
+  await expect(panel.getByTestId('conclusion-card').first().getByTestId('candidate-evidence')).toBeVisible();
+  await expect(page.getByRole('tab', {name: /預測結構/})).toHaveAttribute('aria-selected', 'true');
+  await panel.getByRole('button', {name: '收合支持與矛盾'}).first().click();
+  await expect(panel.getByTestId('candidate-evidence')).toHaveCount(0);
+  // a compact row opens to the full evidence, with its own drawing
+  await panel.getByTestId('compact-candidate').first().getByRole('button', {name: '展開支持與矛盾'}).click();
+  await expect(panel.getByTestId('compact-candidate').first().getByTestId('molecular-depiction')).toBeVisible();
+  await expect(panel.getByTestId('compact-candidate').first().getByTestId('candidate-evidence')).toBeVisible();
+  // number format and wording of the whole tab
+  const text = await panel.innerText();
+  expect(text.match(/\d+\.\d{3,}/g)).toBeNull();
+  expect(text).not.toMatch(/可信度\s*\d+%/);
   expect(errors).toEqual([]);
 });
