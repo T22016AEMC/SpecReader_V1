@@ -1,0 +1,304 @@
+[
+ {
+  "name": "[1280x720] page 1 no horizontal scroll",
+  "value": "1280 <= 1280",
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1 document does not scroll (only <main> does)",
+  "value": "scrollHeight 720 vs innerHeight 720",
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1 <main> scrollbar width (offsetWidth - clientWidth >= 12)",
+  "value": 14,
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1 <main> overflow-y",
+  "value": "scroll",
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1 vertical scrollers outside <main> (excluding dialogs)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1 fixed header (title + step bar) unchanged after scrolling the content 647 px",
+  "value": "{\"top\":0,\"bottom\":175,\"height\":175} -> {\"top\":0,\"bottom\":175,\"height\":175}",
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 2 (numeric files) no horizontal scroll",
+  "value": "1280 <= 1280",
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 2 (numeric files) document does not scroll (only <main> does)",
+  "value": "scrollHeight 720 vs innerHeight 720",
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 2 (numeric files) <main> scrollbar width (offsetWidth - clientWidth >= 12)",
+  "value": 14,
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 2 (numeric files) <main> overflow-y",
+  "value": "scroll",
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 2 (numeric files) vertical scrollers outside <main> (excluding dialogs)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 2 (numeric files) fixed header (title + step bar) unchanged after scrolling the content 633 px",
+  "value": "{\"top\":0,\"bottom\":175,\"height\":175} -> {\"top\":0,\"bottom\":175,\"height\":175}",
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 3 no horizontal scroll",
+  "value": "1280 <= 1280",
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 3 document does not scroll (only <main> does)",
+  "value": "scrollHeight 720 vs innerHeight 720",
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 3 <main> scrollbar width (offsetWidth - clientWidth >= 12)",
+  "value": 14,
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 3 <main> overflow-y",
+  "value": "scroll",
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 3 vertical scrollers outside <main> (excluding dialogs)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 3 fixed header (title + step bar) unchanged after scrolling the content 800 px",
+  "value": "{\"top\":0,\"bottom\":175,\"height\":175} -> {\"top\":0,\"bottom\":175,\"height\":175}",
+  "ok": true
+ },
+ {
+  "name": "[1280x720] print: <main> does not clip (overflow visible, clientHeight == scrollHeight)",
+  "value": {
+   "mainOverflowY": "visible",
+   "mainClientH": 3838,
+   "mainScrollH": 3838,
+   "appHeight": 4013,
+   "docScrollH": 4013,
+   "innerH": 720
+  },
+  "ok": true
+ },
+ {
+  "name": "[1280x720] print: the page is taller than one screen (content flows)",
+  "value": "docScrollH 4013 > innerH 720",
+  "ok": true
+ },
+ {
+  "name": "print: PDF page count of the result page (more than 1 = content flows over pages)",
+  "value": 5,
+  "ok": true
+ },
+ {
+  "name": "[1280x720] Mode B no horizontal scroll",
+  "value": "1280 <= 1280",
+  "ok": true
+ },
+ {
+  "name": "[1280x720] Mode B document does not scroll (only <main> does)",
+  "value": "scrollHeight 720 vs innerHeight 720",
+  "ok": true
+ },
+ {
+  "name": "[1280x720] Mode B <main> scrollbar width (offsetWidth - clientWidth >= 12)",
+  "value": 14,
+  "ok": true
+ },
+ {
+  "name": "[1280x720] Mode B <main> overflow-y",
+  "value": "scroll",
+  "ok": true
+ },
+ {
+  "name": "[1280x720] Mode B vertical scrollers outside <main> (excluding dialogs)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720] Mode B content shorter than the viewport (fixed-area check done on the long pages)",
+  "value": "n/a"
+ },
+ {
+  "name": "[1280x720] page errors",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1 no horizontal scroll",
+  "value": "1920 <= 1920",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1 document does not scroll (only <main> does)",
+  "value": "scrollHeight 1080 vs innerHeight 1080",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1 <main> scrollbar width (offsetWidth - clientWidth >= 12)",
+  "value": 14,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1 <main> overflow-y",
+  "value": "scroll",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1 vertical scrollers outside <main> (excluding dialogs)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1 fixed header (title + step bar) unchanged after scrolling the content 248 px",
+  "value": "{\"top\":0,\"bottom\":137,\"height\":137} -> {\"top\":0,\"bottom\":137,\"height\":137}",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 2 (numeric files) no horizontal scroll",
+  "value": "1920 <= 1920",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 2 (numeric files) document does not scroll (only <main> does)",
+  "value": "scrollHeight 1080 vs innerHeight 1080",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 2 (numeric files) <main> scrollbar width (offsetWidth - clientWidth >= 12)",
+  "value": 14,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 2 (numeric files) <main> overflow-y",
+  "value": "scroll",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 2 (numeric files) vertical scrollers outside <main> (excluding dialogs)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 2 (numeric files) fixed header (title + step bar) unchanged after scrolling the content 281 px",
+  "value": "{\"top\":0,\"bottom\":137,\"height\":137} -> {\"top\":0,\"bottom\":137,\"height\":137}",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 3 no horizontal scroll",
+  "value": "1920 <= 1920",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 3 document does not scroll (only <main> does)",
+  "value": "scrollHeight 1080 vs innerHeight 1080",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 3 <main> scrollbar width (offsetWidth - clientWidth >= 12)",
+  "value": 14,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 3 <main> overflow-y",
+  "value": "scroll",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 3 vertical scrollers outside <main> (excluding dialogs)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 3 fixed header (title + step bar) unchanged after scrolling the content 800 px",
+  "value": "{\"top\":0,\"bottom\":137,\"height\":137} -> {\"top\":0,\"bottom\":137,\"height\":137}",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] print: <main> does not clip (overflow visible, clientHeight == scrollHeight)",
+  "value": {
+   "mainOverflowY": "visible",
+   "mainClientH": 3807,
+   "mainScrollH": 3807,
+   "appHeight": 3944,
+   "docScrollH": 3944,
+   "innerH": 1080
+  },
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] print: the page is taller than one screen (content flows)",
+  "value": "docScrollH 3944 > innerH 1080",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] Mode B no horizontal scroll",
+  "value": "1920 <= 1920",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] Mode B document does not scroll (only <main> does)",
+  "value": "scrollHeight 1080 vs innerHeight 1080",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] Mode B <main> scrollbar width (offsetWidth - clientWidth >= 12)",
+  "value": 14,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] Mode B <main> overflow-y",
+  "value": "scroll",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] Mode B vertical scrollers outside <main> (excluding dialogs)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] Mode B content shorter than the viewport (fixed-area check done on the long pages)",
+  "value": "n/a"
+ },
+ {
+  "name": "[1920x1080] page errors",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "drag: the baseline handle moves inside the scrolling <main> (after scrolling it 120 px)",
+  "value": "data-y 153.5 -> 177.70677891223247",
+  "ok": true
+ },
+ {
+  "name": "zoom: zoom in and reset work inside <main>",
+  "value": "scrollHeight while zoomed 1892",
+  "ok": true
+ },
+ {
+  "name": "drag/zoom page errors",
+  "value": [],
+  "ok": true
+ }
+]

@@ -24,7 +24,6 @@ import {
   GitBranch,
   History as HistoryIcon,
   Layers,
-  Microscope,
   Play,
   Plus,
   Ruler,
@@ -1211,68 +1210,87 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
+    <div className="sr-app flex h-[100dvh] flex-col overflow-hidden bg-slate-950 text-slate-100">
       {/* ===================================================================== */}
-      {/* 頂部主導覽列：明確區分 Mode A 與 Mode B 兩個獨立模式                   */}
+      {/* 頂部主導覽列（v1.2.2：64 px、圖示＋HTML 文字、分段式模式切換）          */}
+      {/* 標題列與步驟列固定在上方；<main> 是唯一的捲動區                        */}
       {/* ===================================================================== */}
-      <header className="sticky top-0 z-30 border-b border-slate-800/90 bg-slate-950/95 backdrop-blur-md">
-        <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-3 px-4 py-2.5">
-          {/* Logo 與系統名稱 */}
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-cyan-500/40 bg-cyan-950/60 text-cyan-300 shadow-sm">
-              <Microscope className="h-5 w-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-base font-extrabold tracking-tight text-slate-50">
-                  SpecReader
+      <header className="relative z-30 shrink-0 border-b border-slate-800/90 bg-slate-950/95 backdrop-blur-md">
+        <div className="mx-auto flex h-16 max-w-[1600px] items-center gap-4 px-4">
+          {/* Logo 圖示與名稱（字標用 HTML 文字，不放整張字標圖） */}
+          <div className="flex min-w-0 shrink-0 items-center gap-3">
+            <img
+              src="/logo/specreader-icon-96.png"
+              width={40}
+              height={40}
+              alt=""
+              className="h-10 w-10 shrink-0 rounded-xl border border-slate-800/80"
+            />
+            <div className="min-w-0">
+              <div className="flex items-baseline gap-2">
+                <span className="text-xl font-extrabold leading-none tracking-tight text-[color:var(--sr-brand-navy)]">
+                  Spec<span className="text-[color:var(--sr-brand-blue)]">Reader</span>
                 </span>
-                <span className="rounded border border-cyan-500/30 bg-cyan-950/50 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-cyan-300">
-                  DETERMINISTIC DUAL-MODE WORKBENCH
+                <span
+                  title="DETERMINISTIC DUAL-MODE WORKBENCH"
+                  className="rounded bg-slate-800 px-1.5 py-px font-mono text-[10px] font-semibold text-slate-400"
+                >
+                  v{typeof __APP_VERSION__ === "string" ? __APP_VERSION__ : ""}
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400">
-                Mode A（實驗證據 → 官能基判讀 → 候選結構推論）｜Mode B（輸入結構 → 預測光譜）
+              <p className="mt-1 hidden truncate text-xs text-slate-400 min-[1100px]:block">
+                規則與證據導向的多光譜結構解析工作台
               </p>
             </div>
           </div>
 
-          {/* 兩大核心獨立模式切換 + 輔助資料庫/測試 */}
-          <nav className="flex flex-wrap items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900/90 p-1">
+          {/* 模式切換：Mode A／B 為主，其餘為次；可見文字縮短，可存取名稱保留完整字串 */}
+          <nav
+            aria-label="工作模式"
+            className="mx-auto flex items-center gap-1 rounded-xl border border-slate-800 bg-slate-800/60 p-1"
+          >
             <button
               type="button"
               onClick={() => setPrimaryMode("MODE_A")}
-              className={`inline-flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-bold transition ${
+              title="Mode A：實驗證據 → 官能基判讀 → 候選結構推論"
+              className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
                 primaryMode === "MODE_A"
-                  ? "bg-cyan-600 text-white shadow-sm"
+                  ? "bg-slate-900 text-blue-300 shadow-sm ring-1 ring-slate-800"
                   : "text-slate-300 hover:bg-slate-800 hover:text-slate-100"
               }`}
             >
               <GitBranch className="h-3.5 w-3.5" />
-              <span>Mode A：實驗證據 → 官能基判讀 → 候選結構推論</span>
+              <span>
+                Mode A：實驗證據
+                <span className="sr-only"> → 官能基判讀 → 候選結構推論</span>
+              </span>
             </button>
 
             <button
               type="button"
               onClick={() => setPrimaryMode("MODE_B")}
-              className={`inline-flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-bold transition ${
+              title="Mode B：輸入結構 → 預測光譜"
+              className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
                 primaryMode === "MODE_B"
-                  ? "bg-amber-500 text-slate-950 shadow-sm"
+                  ? "bg-slate-900 text-blue-300 shadow-sm ring-1 ring-slate-800"
                   : "text-slate-300 hover:bg-slate-800 hover:text-slate-100"
               }`}
             >
               <Sparkles className="h-3.5 w-3.5" />
-              <span>Mode B：輸入結構 → 預測光譜</span>
+              <span>
+                Mode B：輸入結構
+                <span className="sr-only"> → 預測光譜</span>
+              </span>
             </button>
 
-            <span className="mx-1 h-4 w-px bg-slate-800" />
+            <span className="mx-1 h-4 w-px bg-slate-700" />
 
             <button
               type="button"
               onClick={() => setPrimaryMode("PROJECTS")}
-              className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition ${
+              className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-xs font-normal transition ${
                 primaryMode === "PROJECTS"
-                  ? "bg-slate-800 text-cyan-300 border border-cyan-500/40"
+                  ? "bg-slate-900 text-blue-300 shadow-sm ring-1 ring-slate-800"
                   : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"
               }`}
             >
@@ -1283,9 +1301,9 @@ export default function App() {
             <button
               type="button"
               onClick={() => setPrimaryMode("HISTORY")}
-              className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition ${
+              className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-xs font-normal transition ${
                 primaryMode === "HISTORY"
-                  ? "bg-slate-800 text-cyan-300 border border-cyan-500/40"
+                  ? "bg-slate-900 text-blue-300 shadow-sm ring-1 ring-slate-800"
                   : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"
               }`}
             >
@@ -1296,9 +1314,9 @@ export default function App() {
             <button
               type="button"
               onClick={() => setPrimaryMode("SETTINGS")}
-              className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition ${
+              className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-xs font-normal transition ${
                 primaryMode === "SETTINGS"
-                  ? "bg-slate-800 text-cyan-300 border border-cyan-500/40"
+                  ? "bg-slate-900 text-blue-300 shadow-sm ring-1 ring-slate-800"
                   : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"
               }`}
             >
@@ -1307,19 +1325,18 @@ export default function App() {
             </button>
           </nav>
 
-          {/* 右側狀態與匯出報告 */}
-          <div className="flex items-center gap-2">
+          {/* 右側：匯出報告 */}
+          <div className="flex shrink-0 items-center gap-2">
             <button
               type="button"
               onClick={() => setIsExportModalOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-cyan-500/40 bg-cyan-950/60 px-3 py-1.5 text-xs font-semibold text-cyan-200 hover:bg-cyan-900/60"
+              className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs font-semibold text-slate-200 hover:bg-slate-800"
             >
-              <Download className="h-3.5 w-3.5 text-cyan-400" />
+              <Download className="h-3.5 w-3.5 text-slate-400" />
               匯出報告
             </button>
           </div>
         </div>
-
         {/* =================================================================== */}
         {/* Mode A 專屬三頁式依序工作流切換列 (取代舊版 7 階段導覽列)           */}
         {/* =================================================================== */}
@@ -1427,7 +1444,8 @@ export default function App() {
       {/* ===================================================================== */}
       {/* 主內容區                                                              */}
       {/* ===================================================================== */}
-      <main className="mx-auto w-full max-w-[1600px] flex-1 px-4 py-5">
+      <main className="sr-main-scroll min-h-0 flex-1 overflow-y-scroll">
+      <div className="mx-auto w-full max-w-[1600px] px-4 py-5">
         {/* =================================================================== */}
         {/* MODE A：實驗證據 → 官能基判讀 → 候選結構推論                        */}
         {/* =================================================================== */}
@@ -3836,6 +3854,7 @@ export default function App() {
             </div>
           </div>
         )}
+      </div>
       </main>
 
       {/* 報告匯出 Modal */}

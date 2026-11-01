@@ -940,7 +940,7 @@ export const SpectrumViewer: React.FC<SpectrumViewerProps> = ({
                     y1={py}
                     x2={svgWidth - padRight}
                     y2={py}
-                    stroke="#1e293b"
+                    stroke="var(--sr-plot-grid)"
                     strokeDasharray="3 3"
                     strokeWidth={1}
                   />
@@ -948,7 +948,7 @@ export const SpectrumViewer: React.FC<SpectrumViewerProps> = ({
                     x={padLeft - 8}
                     y={py + 4}
                     textAnchor="end"
-                    fill="#64748b"
+                    fill="var(--sr-plot-tick-y)"
                     fontSize={10}
                     fontFamily="IBM Plex Mono, monospace"
                   >
@@ -967,7 +967,7 @@ export const SpectrumViewer: React.FC<SpectrumViewerProps> = ({
                     y1={padTop}
                     x2={px}
                     y2={svgHeight - padBottom}
-                    stroke="#1e293b"
+                    stroke="var(--sr-plot-grid)"
                     strokeDasharray="3 3"
                     strokeWidth={1}
                   />
@@ -975,7 +975,7 @@ export const SpectrumViewer: React.FC<SpectrumViewerProps> = ({
                     x={px}
                     y={svgHeight - padBottom + 16}
                     textAnchor="middle"
-                    fill="#94a3b8"
+                    fill="var(--sr-plot-tick-x)"
                     fontSize={10}
                     fontFamily="IBM Plex Mono, monospace"
                   >
@@ -993,7 +993,7 @@ export const SpectrumViewer: React.FC<SpectrumViewerProps> = ({
               y1={svgHeight - padBottom}
               x2={svgWidth - padRight}
               y2={svgHeight - padBottom}
-              stroke="#475569"
+              stroke="var(--sr-plot-axis)"
               strokeWidth={1.5}
             />
             <line
@@ -1001,7 +1001,7 @@ export const SpectrumViewer: React.FC<SpectrumViewerProps> = ({
               y1={padTop}
               x2={padLeft}
               y2={svgHeight - padBottom}
-              stroke="#475569"
+              stroke="var(--sr-plot-axis)"
               strokeWidth={1.5}
             />
 
@@ -1044,7 +1044,7 @@ export const SpectrumViewer: React.FC<SpectrumViewerProps> = ({
             {spectrum.modality !== "MS" && polylinePoints && (
               <polyline
                 fill="none"
-                stroke={spectrum.isSimulated ? "#f59e0b" : "#22d3ee"}
+                stroke={spectrum.isSimulated ? "#f59e0b" : "var(--sr-plot-curve)"}
                 strokeWidth={1.9}
                 points={polylinePoints}
               />
@@ -1135,7 +1135,7 @@ export const SpectrumViewer: React.FC<SpectrumViewerProps> = ({
                     cy={py}
                     r={isSelected ? 5.5 : 4}
                     fill={dotColor}
-                    stroke="#020617"
+                    stroke="var(--sr-plot-halo)"
                     strokeWidth={1.2}
                   />
                   {showPeakLabels && (
@@ -1150,12 +1150,12 @@ export const SpectrumViewer: React.FC<SpectrumViewerProps> = ({
                         textAnchor="middle"
                         fill={
                           isSolvent
-                            ? "#d8b4fe"
+                            ? "var(--sr-plot-label-solvent)"
                             : isNoise
-                              ? "#94a3b8"
+                              ? "var(--sr-plot-label-noise)"
                               : isSelected
-                                ? "#fda4af"
-                                : "#e2e8f0"
+                                ? "var(--sr-plot-label-selected)"
+                                : "var(--sr-plot-label)"
                         }
                         fontSize={10}
                         fontWeight={600}
@@ -1182,7 +1182,7 @@ export const SpectrumViewer: React.FC<SpectrumViewerProps> = ({
               x={svgWidth / 2}
               y={svgHeight - 6}
               textAnchor="middle"
-              fill="#94a3b8"
+              fill="var(--sr-plot-unit)"
               fontSize={11}
               fontFamily="IBM Plex Mono, monospace"
             >
