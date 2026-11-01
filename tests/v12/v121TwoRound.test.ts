@@ -177,8 +177,8 @@ describe('round-2 eligibility (1b-2)', () => {
     ENUMERATION_CONFIG.legacySupplementWhenIncomplete = false;
     try { return await executeSixStepAnalysis({spectra: fixtureSpectra(loadFixture(id)), extraInput: {}}, steps); } finally { ENUMERATION_CONFIG.legacySupplementWhenIncomplete = was; }
   };
-  it('only formulas whose round 1 ended GRAMMAR_EXHAUSTED or found a candidate go to round 2; a k without such a formula is skipped and its budget goes to the others (E1)', async () => {
-    const r = await analyse('E1');
+  it('only formulas whose round 1 ended GRAMMAR_EXHAUSTED or found a candidate go to round 2; a k without such a formula is skipped and its budget goes to the others (G1; was E1 before v1.2.1 B3, which leaves E1 with no alkene reading)', async () => {
+    const r = await analyse('G1');
     const runs = r.reasoningTrace!.compositionSearch!.runs;
     const hyp = (f: string | undefined) => r.compositionInference!.hypotheses.find(h => h.formula === f)!;
     const round2 = runs.filter(x => x.enumeration!.planning!.round === 2);
