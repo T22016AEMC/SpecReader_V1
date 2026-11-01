@@ -295,7 +295,21 @@ export default function App() {
     text: string;
   } | null>(null);
 
+  // 第 2 頁：IR 基線面板要放進圖正下方的容器（SpectrumViewer 以 portal 渲染）；預覽表預設只列前幾筆
+  const [irPanelHost, setIrPanelHost] = useState<HTMLElement | null>(null);
+  const [showAllPreviewRows, setShowAllPreviewRows] = useState(false);
+  const PREVIEW_ROWS_COLLAPSED = 4;
   const [uploadStatusMsg, setUploadStatusMsg] = useState<string | null>(null);
+  // 標記清單各列「明細」的展開狀態放在這裡，離開第 1 頁再回來時不會自動收起
+  const [openObsIds, setOpenObsIds] = useState<ReadonlySet<string>>(() => new Set());
+  const handleToggleObsDetail = (id: string, open: boolean) =>
+    setOpenObsIds((prev) => {
+      if (prev.has(id) === open) return prev;
+      const next = new Set(prev);
+      if (open) next.add(id);
+      else next.delete(id);
+      return next;
+    });
   const [autoDetectOnUpload, setAutoDetectOnUpload] = useState<boolean>(true);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [historyRecords, setHistoryRecords] = useState<AnalysisHistoryRecord[]>(
@@ -1462,125 +1476,93 @@ export default function App() {
       {/* 主內容區                                                              */}
       {/* ===================================================================== */}
       <main className="sr-main-scroll min-h-0 flex-1 overflow-y-scroll">
-      <div className="mx-auto w-full max-w-[1600px] px-4 py-5">
+      <div className="mx-auto w-full max-w-[1600px] px-4 py-3">
         {/* =================================================================== */}
         {/* MODE A：實驗證據 → 官能基判讀 → 候選結構推論                        */}
         {/* =================================================================== */}
         {primaryMode === "MODE_A" && (
-          <div className="space-y-5">
-            {/* 頂部一級輸入證據列：分子式、其他化學證據、六大光譜模態與測試樣品快速切換 */}
-            <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-4 space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
-                <div>
-                  <h2 className="text-sm font-bold text-slate-100">
-                    Mode A 輸入證據中心（分子式與各類光譜處於同一層級，可單獨輸入分子式、單一光譜或任意組合）
-                  </h2>
-                  <p className="text-xs text-slate-400">
-                    支援 IR、¹H NMR、¹³C NMR、MS、MS/MS、ToF-SIMS、分子式及其他化學證據。不強迫所有模態皆完成才可分析。
-                  </p>
-                </div>
-                <div className="flex flex-wrap items-center gap-1.5">
+          <div className="space-y-3">
+            {/* 頂部輸入證據列（緊湊單行）：分子式、其他化學證據備註、有效輸入摘要；每一頁都在 */}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-slate-800 bg-slate-900/80 px-3 py-2">
+              <span
+                title="分子式與各類光譜處於同一層級，可單獨輸入分子式、單一光譜或任意組合；不強迫所有模態皆完成才可分析。"
+                className="text-xs font-bold text-slate-100"
+              >
+                Mode A 輸入證據中心
+              </span>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="text"
+                  value={molecularFormulaInput}
+                  onChange={(e) => setMolecularFormulaInput(e.target.value)}
+                  aria-label="分子式（選填）"
+                  placeholder="分子式（選填，按開始分析後使用）"
+                  title="已知或實驗測定的分子式（一級輸入證據）；按開始分析後才會使用"
+                  className="w-60 rounded-lg border border-cyan-500/40 bg-slate-950 px-2.5 py-1 font-mono text-xs text-slate-100 focus:border-cyan-500 focus:outline-none"
+                />
+                {molecularFormulaInput && (
                   <button
                     type="button"
-                    onClick={handleResetToEmptyUnknownSample}
-                    className={`rounded-lg border px-2.5 py-1 text-xs font-semibold transition ${
-                      activePresetId === ""
-                        ? "border-emerald-500 bg-emerald-950/60 text-emerald-200"
-                        : "border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700 hover:text-slate-200"
-                    }`}
+                    onClick={() => setMolecularFormulaInput("")}
+                    className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-[11px] text-slate-400 hover:text-slate-200"
                   >
-                    重置空白未知物 (Empty Unknown)
+                    清除
                   </button>
-
-                </div>
+                )}
               </div>
-
-              {/* 第一層級化學證據輸入：分子式 (Molecular Formula) 與其他化學資訊 */}
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-12">
-                <div className="md:col-span-4 rounded-lg border border-cyan-500/30 bg-slate-950/90 p-3">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-cyan-300">
-                      一級輸入證據：已知或實驗測定分子式 (Molecular Formula)
-                    </label>
-                    <span className="rounded bg-cyan-950 px-1.5 py-0.5 font-mono text-[10px] text-cyan-300">
-                      FIRST-CLASS INPUT
-                    </span>
-                  </div>
-                  <div className="mt-1.5 flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={molecularFormulaInput}
-                      onChange={(e) => setMolecularFormulaInput(e.target.value)}
-                      aria-label="分子式（選填）" placeholder="輸入實驗分子式（選填；按開始分析後使用）"
-                      className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 font-mono text-xs text-slate-100 focus:border-cyan-500 focus:outline-none"
-                    />
-                    {molecularFormulaInput && (
-                      <button
-                        type="button"
-                        onClick={() => setMolecularFormulaInput("")}
-                        className="rounded border border-slate-700 bg-slate-900 px-2 py-1.5 text-[11px] text-slate-400 hover:text-slate-200"
-                      >
-                        清除
-                      </button>
-                    )}
-                  </div>
-
-                </div>
-
-                <div className="md:col-span-5 rounded-lg border border-slate-800 bg-slate-950/90 p-3">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-slate-200">
-                      其他化學證據與實驗條件備註 (Chemical Notes / Chemical Tests)
-                    </label>
-                    <span className="font-mono text-[10px] text-slate-400">
-                      選填輔助證據
-                    </span>
-                  </div>
-                  <input
-                    type="text"
-                    value={chemicalNotesInput}
-                    onChange={(e) => setChemicalNotesInput(e.target.value)}
-                    placeholder="例如：FeCl3 呈色陽性(酚類)、NaHCO3 冒泡(羧酸)、D2O 交換消失峰、元素分析結果..."
-                    className="mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs text-slate-100 focus:border-cyan-500 focus:outline-none"
-                  />
-                  <div className="mt-1.5 text-[11px] text-slate-400">
-                    輸入之化學試劑反應或樣品來源備註將連同光譜與分子式一併納入第 3 頁判讀紀錄。
-                  </div>
-                </div>
-
-                <div className="md:col-span-3 rounded-lg border border-slate-800 bg-slate-950/90 p-3 flex flex-col justify-between">
-                  <div>
-                    <div className="text-xs font-bold text-slate-200">
-                      當前有效推論輸入摘要
-                    </div>
-                    <div className="mt-1 font-mono text-[11px] text-cyan-300">
-                      {activeEvidenceSummary.hasFormula
-                        ? `✓ 分子式: ${molecularFormulaInput.trim()}`
-                        : "○ 分子式: 未提供"}
-                    </div>
-                    <div className="mt-0.5 font-mono text-[11px] text-emerald-300">
-                      ✓ 已提供光譜:{" "}
-                      {activeEvidenceSummary.modalitiesWithData.length > 0
-                        ? activeEvidenceSummary.modalitiesWithData.join(", ")
-                        : "無 (僅依分子式或待上傳)"}
-                    </div>
-                  </div>
-                  {modeAPage !== "PAGE_3_INTERPRETATION" && (
-                    <button
-                      type="button"
-                      onClick={() => setModeAPage("PAGE_3_INTERPRETATION")}
-                      className="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-cyan-600/90 px-3 py-1.5 text-xs font-semibold text-white hover:bg-cyan-500"
-                    >
-                      直接前往第 3 頁檢視判讀結果
-                      <ArrowRight className="h-3.5 w-3.5" />
-                    </button>
-                  )}
-                </div>
+              <input
+                type="text"
+                value={chemicalNotesInput}
+                onChange={(e) => setChemicalNotesInput(e.target.value)}
+                aria-label="其他化學證據備註（選填）"
+                placeholder="其他化學證據備註（選填）：FeCl3 呈色、D2O 交換、元素分析…"
+                title="化學試劑反應或樣品來源備註，會連同光譜與分子式一併納入判讀紀錄"
+                className="min-w-[200px] flex-1 rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1 text-xs text-slate-100 focus:border-cyan-500 focus:outline-none"
+              />
+              <span className="font-mono text-[11px] text-slate-300">
+                <span className="text-cyan-300">
+                  {activeEvidenceSummary.hasFormula
+                    ? `✓ 分子式 ${molecularFormulaInput.trim()}`
+                    : "○ 分子式未提供"}
+                </span>
+                <span className="mx-1.5 text-slate-600">·</span>
+                <span className="text-emerald-300">
+                  光譜：
+                  {activeEvidenceSummary.modalitiesWithData.length > 0
+                    ? activeEvidenceSummary.modalitiesWithData.join("、")
+                    : "尚無"}
+                </span>
+              </span>
+              <div className="ml-auto flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={handleResetToEmptyUnknownSample}
+                  className={`rounded-lg border px-2.5 py-1 text-xs font-semibold transition ${
+                    activePresetId === ""
+                      ? "border-emerald-500 bg-emerald-950/60 text-emerald-200"
+                      : "border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700 hover:text-slate-200"
+                  }`}
+                >
+                  重置空白未知物
+                </button>
+                {modeAPage === "PAGE_1_SIGNAL_MARKING" && (
+                  <button
+                    type="button"
+                    onClick={() => setModeAPage("PAGE_3_INTERPRETATION")}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-cyan-600/90 px-2.5 py-1 text-xs font-semibold text-white hover:bg-cyan-500"
+                  >
+                    直接前往第 3 頁檢視判讀結果
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </button>
+                )}
               </div>
             </div>
 
-            {uploadStatusMsg && (
-              <div className="rounded-xl border border-cyan-500/40 bg-cyan-950/30 px-4 py-2.5 text-xs text-cyan-200">
+            {uploadStatusMsg && modeAPage === "PAGE_1_SIGNAL_MARKING" && (
+              <div
+                title={uploadStatusMsg}
+                className="truncate rounded-lg border border-cyan-500/40 bg-cyan-950/30 px-3 py-1 text-[11px] text-cyan-200"
+              >
                 {uploadStatusMsg}
               </div>
             )}
@@ -1589,24 +1571,14 @@ export default function App() {
             {/* 第 1 頁：訊號標記 (Signal Marking)                              */}
             {/* =============================================================== */}
             {modeAPage === "PAGE_1_SIGNAL_MARKING" && (
-              <div className="space-y-5">
-                {/* 第 1 頁工作說明與前往第 2 頁按鈕 */}
-                <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-cyan-500/30 bg-slate-900/90 px-4 py-3">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="rounded bg-cyan-500 px-2 py-0.5 font-mono text-[11px] font-extrabold text-slate-950">
-                        MODE A · 第 1 頁
-                      </span>
-                      <h1 className="text-base font-bold text-slate-50">
-                        訊號標記（Signal Marking）— 保留原圖與真實曲線，由使用者手動點選訊號位置
-                      </h1>
-                    </div>
-                    <p className="mt-0.5 text-xs text-slate-300">
-                      已全面停用 AI 自動尋峰寫入正式實驗證據。請選擇光譜模態並上傳檔案，直接在原始圖片或真實數值曲線上點擊標記峰頂或吸收谷底（圖片於此階段僅記錄原始像素座標，不要求先校正）。
-                    </p>
-                  </div>
+              <div className="space-y-3">
+                {/* 一句說明＋自動尋峰勾選＋下一步（步驟列已有「第 1 頁 訊號標記」，這裡不再放第二個標題） */}
+                <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+                  <p className="text-xs text-slate-300">
+                    點圖上的峰頂或谷底標記。圖片此階段只記像素位置，不需先校正；AI 自動尋峰不會寫入正式證據。
+                  </p>
                   <div className="flex flex-wrap items-center gap-2">
-                    <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs text-slate-200">
+                    <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1 text-xs text-slate-200">
                       <input
                         type="checkbox"
                         checked={autoDetectOnUpload}
@@ -1618,7 +1590,7 @@ export default function App() {
                     <button
                       type="button"
                       onClick={() => setModeAPage("PAGE_2_CALIBRATION")}
-                      className="inline-flex items-center gap-1.5 rounded-lg bg-cyan-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-cyan-500"
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-cyan-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-cyan-500"
                     >
                       <span>下一步：前往第 2 頁座標校正</span>
                       <ArrowRight className="h-4 w-4" />
@@ -1626,121 +1598,88 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* 六大光譜模態選擇與檔案上傳卡片 (IR, 1H, 13C, MS, MS/MS, ToF-SIMS) */}
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+                {/* 六個光譜標籤 (IR, 1H, 13C, MS, MS/MS, ToF-SIMS)：已載入顯示檔名／標記數／校正狀態，未載入只留「＋加入」。
+                    六個 input[type=file] 的 DOM 順序固定（E2E 依序號操作），而且網頁一載入就存在。 */}
+                <div className="flex flex-wrap gap-1.5" role="group" aria-label="光譜檔案">
                   {ALL_EXTENDED_MODALITIES.map((card) => {
                     const spec = getSpectrumForModality(card.id);
                     const isFocused = focusedModality === card.id;
-                    const isImg =
-                      spec &&
-                      (spec.sourceType === "IMAGE_EXPERIMENTAL" ||
-                        spec.digitizedFromImage);
-                    const isCalibrated =
-                      spec &&
-                      (!isImg || SpectrumParser.isSpectrumCalibrated(spec));
+                    const cal = spec ? calibrationStatus(spec) : null;
+                    const calText = cal ? calibrationCardText(cal) : null;
 
                     return (
                       <div
                         key={card.id}
-                        onClick={() => handleSelectModality(card.id)}
-                        className={`cursor-pointer rounded-xl border p-3 transition flex flex-col justify-between ${
+                        className={`flex items-center gap-1.5 rounded-lg border py-1 pl-1 pr-1.5 text-xs transition ${
                           isFocused
-                            ? "border-cyan-500 bg-slate-900 shadow-md"
+                            ? "border-cyan-500 bg-slate-900 shadow-sm"
                             : "border-slate-800 bg-slate-900/60 hover:border-slate-700"
                         }`}
                       >
-                        <div>
-                          <div className="flex items-center justify-between gap-1">
-                            <span className="font-mono text-xs font-bold text-cyan-300">
-                              {card.shortLabel}
-                            </span>
-                            <span
-                              className={`rounded px-1.5 py-0.5 font-mono text-[10px] font-semibold ${
-                                spec
-                                  ? "border border-emerald-500/30 bg-emerald-950/50 text-emerald-300"
-                                  : "border border-slate-700 bg-slate-800 text-slate-400"
-                              }`}
-                            >
-                              {spec ? `${spec.peaks.length} 標記` : "未載入"}
-                            </span>
-                          </div>
-                          <div className="mt-1 text-[11px] font-medium text-slate-200">
-                            {card.title}
-                          </div>
-                          <div className="mt-0.5 font-mono text-[10px] text-slate-400">
-                            {card.axisDesc}
-                          </div>
-
-                          {spec ? (
-                            <div className="mt-2 rounded border border-slate-800 bg-slate-950/90 p-2 font-mono text-[10px] space-y-1">
-                              <div className="truncate text-slate-300">
-                                {spec.fileName}
-                              </div>
-                              <div className="flex items-center justify-between">
-                                <span className="text-slate-400">型態:</span>
-                                <span className="text-cyan-300">
-                                  {isImg ? "原始圖片" : `數值(${spec.sourceFormat})`}
-                                </span>
-                              </div>
-                              <div className="flex items-center justify-between">
-                                <span className="text-slate-400">座標狀態:</span>
-                                <span
-                                  className={
-                                    isCalibrated
-                                      ? "text-emerald-300 font-bold"
-                                      : "text-amber-300 font-bold"
-                                  }
-                                >
-                                  {isCalibrated ? "已具備物理座標" : "原始像素(待校正)"}
-                                </span>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="mt-2 rounded border border-dashed border-slate-800 bg-slate-950/40 p-2.5 text-center text-[11px] text-slate-500">
-                              尚未提供此光譜
-                            </div>
-                          )}
-                        </div>
-
-                        <div
-                          className="mt-2.5 flex flex-wrap items-center gap-1.5"
-                          onClick={(e) => e.stopPropagation()}
+                        <button
+                          type="button"
+                          onClick={() => handleSelectModality(card.id)}
+                          aria-pressed={isFocused}
+                          title={`${card.title}（${card.axisDesc}）`}
+                          className="flex min-w-0 items-center gap-2 rounded-md px-1.5 py-0.5 text-left"
                         >
-                          <label className="flex-1 inline-flex cursor-pointer items-center justify-center gap-1 rounded-lg border border-slate-700 bg-slate-800 px-2 py-1 text-[11px] font-medium text-slate-200 hover:bg-slate-700">
-                            <Upload className="h-3 w-3 text-cyan-400" />
-                            <span>上傳圖/數值</span>
-                            <input
-                              type="file"
-                              accept=".csv,.txt,.jdx,.dx,.jcamp,.xls,.xlsx,.png,.jpg,.jpeg,.webp"
-                              className="hidden"
-                              onChange={(e) =>
-                                handleFileUpload(card.id, e.target.files?.[0])
-                              }
-                            />
-                          </label>
-                          {!spec ? (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleInitEmptyModalitySpectrum(card.id)
-                              }
-                              className="rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-[11px] text-slate-300 hover:border-cyan-500/40 hover:text-cyan-200"
-                            >
-                              + 手動表
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                updateSpectrumForModality(card.id, undefined)
-                              }
-                              className="rounded-lg border border-rose-500/30 bg-rose-950/40 px-2 py-1 text-[11px] text-rose-300 hover:bg-rose-900/50"
-                              title="移除此光譜"
-                            >
-                              移除
-                            </button>
+                          <span className="font-mono text-xs font-bold text-cyan-300">
+                            {card.shortLabel}
+                          </span>
+                          {spec && calText && cal && (
+                            <>
+                              <span
+                                className="max-w-[105px] truncate font-mono text-[11px] text-slate-300"
+                                title={spec.fileName}
+                              >
+                                {spec.fileName}
+                              </span>
+                              <span className="whitespace-nowrap rounded border border-emerald-500/30 bg-emerald-950/50 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-emerald-300">
+                                {spec.peaks.length} 標記
+                              </span>
+                              <span
+                                data-calibration-kind={cal.kind}
+                                title={cal.detail}
+                                className={`whitespace-nowrap rounded border px-1.5 py-0.5 text-[10px] font-semibold ${
+                                  calText.tone === "ok"
+                                    ? "border-emerald-500/30 bg-emerald-950/40 text-emerald-300"
+                                    : calText.tone === "info"
+                                      ? "border-sky-500/40 bg-sky-950/40 text-sky-300"
+                                      : "border-amber-500/40 bg-amber-950/40 text-amber-300"
+                                }`}
+                              >
+                                {calText.tone === "warn" ? "⚠ " : calText.tone === "ok" ? "✓ " : ""}
+                                {calText.text}
+                              </span>
+                            </>
                           )}
-                        </div>
+                        </button>
+                        <label
+                          title={spec ? "更換此光譜檔案" : `加入 ${card.shortLabel} 圖片或數值檔`}
+                          className="inline-flex cursor-pointer items-center gap-1 whitespace-nowrap rounded border border-slate-700 bg-slate-800 px-1.5 py-0.5 text-[11px] font-medium text-slate-200 hover:bg-slate-700"
+                        >
+                          <span aria-hidden={spec ? true : undefined}>{spec ? "↻" : "＋加入"}</span>
+                          {spec && <span className="sr-only">{`更換 ${card.shortLabel} 光譜檔案`}</span>}
+                          <input
+                            type="file"
+                            accept=".csv,.txt,.jdx,.dx,.jcamp,.xls,.xlsx,.png,.jpg,.jpeg,.webp"
+                            className="hidden"
+                            onChange={(e) =>
+                              handleFileUpload(card.id, e.target.files?.[0])
+                            }
+                          />
+                        </label>
+                        {spec && (
+                          <button
+                            type="button"
+                            onClick={() => updateSpectrumForModality(card.id, undefined)}
+                            className="rounded border border-rose-500/30 bg-rose-950/40 px-1.5 py-0.5 text-[11px] text-rose-300 hover:bg-rose-900/50"
+                            title="移除此光譜"
+                            aria-label={`移除 ${card.shortLabel} 光譜`}
+                          >
+                            ×
+                          </button>
+                        )}
                       </div>
                     );
                   })}
@@ -1750,12 +1689,11 @@ export default function App() {
                 {currentSpectrum ? (
                   <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
                     {/* 左側：純粹的訊號標記檢視器 (不塞入校正工具或化學判讀) */}
-                    <div className="lg:col-span-7 space-y-3">
+                    <div className="lg:col-span-7 space-y-2">
                       {/* 標記方向與溶劑設定控制列 */}
-                      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-800 bg-slate-900/80 px-3.5 py-2.5 text-xs">
+                      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-800 bg-slate-900/80 px-3 py-1.5 text-xs">
                         <div className="flex flex-wrap items-center gap-2">
-                          <button type="button" className="rounded border border-cyan-600 px-3 py-1" aria-pressed={markingEnabled} onClick={()=>{setMarkingEnabled(v=>!v);setSelectedPeakId(null);}}>標記圖譜</button>
-                          <span>點圖後於資料列補充觀測資訊。</span>
+                          <button type="button" title="開啟後，點圖即新增標記；點圖後於右側資料列補充觀測資訊" className="rounded border border-cyan-600 px-3 py-1" aria-pressed={markingEnabled} onClick={()=>{setMarkingEnabled(v=>!v);setSelectedPeakId(null);}}>標記圖譜</button>
                         </div>
 
                         {(focusedModality === "1H_NMR" ||
@@ -1773,7 +1711,7 @@ export default function App() {
                                     e.target.value as NMRSolvent
                                   )
                                 }
-                                className="rounded border border-violet-500/40 bg-violet-950/50 px-2 py-1 font-mono text-[11px] text-violet-200"
+                                className="max-w-[170px] rounded border border-violet-500/40 bg-violet-950/50 px-2 py-1 font-mono text-[11px] text-violet-200"
                               >
                                 {Object.entries(NMR_SOLVENT_REFERENCE_SHIFTS).map(
                                   ([k, v]) => (
@@ -1851,66 +1789,58 @@ export default function App() {
                         onMarkPeakFromPlot={markingEnabled?handleMarkPeakFromPlot:undefined}
                         onMovePeakFromPlot={handleMovePeakFromPlot}
                         hideModeSwitchButtons
-                        height={340}
+                        height={420}
                       />
                     </div>
 
-                    {/* 右側：第 1 頁已標記訊號清單（支援新增、移動微調、編輯、刪除、選取） */}
-                    <div className="lg:col-span-5 rounded-xl border border-slate-800 bg-slate-900/80 p-4 flex flex-col justify-between">
-                      <div>
-                        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
-                          <div>
-                            <h3 className="text-sm font-bold text-slate-100">
-                              已標記訊號清單 ({focusedModalityMeta.shortLabel}：{currentSpectrum.peaks.length} 筆)
-                            </h3>
-                            <p className="text-[11px] text-slate-400">
-                              可直接在左圖點擊新增或拖曳移動標記，或於下方微調像素/數值座標、裂分、積分與備註。
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-1.5">
+                    {/* 右側：已標記訊號清單（支援新增、移動微調、編輯、刪除、選取） */}
+                    <div className="lg:col-span-5 rounded-xl border border-slate-800 bg-slate-900/80 p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2">
+                        <h3
+                          className="text-sm font-bold text-slate-100"
+                          title="可直接在左圖點擊新增或拖曳移動標記，或於下方微調位置、積分與備註。"
+                        >
+                          已標記訊號清單 ({focusedModalityMeta.shortLabel}：{currentSpectrum.peaks.length} 筆)
+                        </h3>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleReRunAutoPeakDetection(focusedModality)
+                            }
+                            className="inline-flex items-center gap-1 rounded border border-cyan-500/40 bg-cyan-950/50 px-2 py-1 text-[11px] font-semibold text-cyan-200 hover:bg-cyan-900/60"
+                            title="重新執行自動讀譜尋峰（保留人工新增與編輯訊號）"
+                          >
+                            自動尋峰
+                          </button>
+                          {selectedPeakId && (
                             <button
                               type="button"
                               onClick={() =>
-                                handleReRunAutoPeakDetection(focusedModality)
+                                handleDeletePeak(focusedModality, selectedPeakId)
                               }
-                              className="inline-flex items-center gap-1 rounded border border-cyan-500/40 bg-cyan-950/50 px-2 py-1 text-[11px] font-semibold text-cyan-200 hover:bg-cyan-900/60"
-                              title="重新執行自動讀譜尋峰（保留人工新增與編輯訊號）"
+                              className="inline-flex items-center gap-1 rounded border border-rose-500/40 bg-rose-950/50 px-2 py-1 text-[11px] font-semibold text-rose-300 hover:bg-rose-900/60"
                             >
-                              自動尋峰
+                              <Trash2 className="h-3 w-3" />
+                              刪除選取
                             </button>
-                            {selectedPeakId && (
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  handleDeletePeak(
-                                    focusedModality,
-                                    selectedPeakId
-                                  )
-                                }
-                                className="inline-flex items-center gap-1 rounded border border-rose-500/40 bg-rose-950/50 px-2 py-1 text-[11px] font-semibold text-rose-300 hover:bg-rose-900/60"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                                刪除選取
-                              </button>
-                            )}
-                            {currentSpectrum.peaks.length > 0 && (
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  handleClearAllPeaks(focusedModality)
-                                }
-                                className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[11px] text-rose-300 hover:bg-slate-800"
-                              >
-                                清空全部標記
-                              </button>
-                            )}
-                          </div>
+                          )}
+                          {currentSpectrum.peaks.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => handleClearAllPeaks(focusedModality)}
+                              className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[11px] text-rose-300 hover:bg-slate-800"
+                            >
+                              清空全部標記
+                            </button>
+                          )}
                         </div>
+                      </div>
 
                         {/* 手動輸入座標或像素新增標記表單 */}
                         <form
                           onSubmit={handleAddManualPeak}
-                          className="mt-3 grid grid-cols-2 gap-2 rounded-lg border border-slate-800 bg-slate-950/90 p-2.5 text-xs sm:grid-cols-4"
+                          className="mt-2 grid grid-cols-2 items-end gap-2 rounded-lg border border-slate-800 bg-slate-950/90 p-2 text-xs sm:grid-cols-[1fr_1fr_1.3fr_auto]"
                         >
 
                           <div>
@@ -1984,42 +1914,35 @@ export default function App() {
                           {manualPeakError&&<p className="col-span-full text-amber-300" role="status">{manualPeakError}</p>}
                         </form>
 
-                        {/* 標記列表表格 */}
-                        <div className="mt-3 max-h-[380px] overflow-y-auto">
+                        {/* 標記列表：隨內容長高（頁面 <main> 是唯一的捲動區） */}
+                        <div className="mt-2.5">
                           {currentSpectrum.peaks.length === 0 ? (
-                            <div className="rounded-lg border border-dashed border-slate-800 bg-slate-950/50 p-6 text-center text-xs text-slate-400">
+                            <div className="rounded-lg border border-dashed border-slate-800 bg-slate-950/50 p-5 text-center text-xs text-slate-400">
                               目前尚無任何訊號標記。請直接點擊左側原始圖片或真實數值曲線上的吸收谷底/峰頂進行標記。
                             </div>
                           ) : (
-                            <PeakObservationTable spectrum={currentSpectrum} modality={focusedModality} selectedId={selectedPeakId} onSelect={setSelectedPeakId} onUpdate={(id,patch)=>handleUpdatePeak(focusedModality,id,patch)} onDelete={id=>handleDeletePeak(focusedModality,id)}/>
-
+                            <PeakObservationTable
+                              spectrum={currentSpectrum}
+                              modality={focusedModality}
+                              selectedId={selectedPeakId}
+                              onSelect={setSelectedPeakId}
+                              onUpdate={(id, patch) => handleUpdatePeak(focusedModality, id, patch)}
+                              onDelete={(id) => handleDeletePeak(focusedModality, id)}
+                              openIds={openObsIds}
+                              onToggleOpen={handleToggleObsDetail}
+                            />
                           )}
                         </div>
-                      </div>
-
-                      <div className="mt-4 border-t border-slate-800 pt-3 flex items-center justify-between">
-                        <span className="text-[11px] text-slate-400">
-                          標記完成後，請進入第 2 頁進行座標校正
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => setModeAPage("PAGE_2_CALIBRATION")}
-                          className="inline-flex items-center gap-1.5 rounded-lg bg-cyan-600 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-cyan-500"
-                        >
-                          前往第 2 頁：座標校正
-                          <ArrowRight className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
                     </div>
                   </div>
                 ) : (
-                  <div className="rounded-xl border border-dashed border-slate-800 bg-slate-900/50 p-8 text-center">
+                  <div className="rounded-xl border border-dashed border-slate-800 bg-slate-900/50 p-6 text-center">
                     <Crosshair className="mx-auto h-8 w-8 text-cyan-400" />
                     <h3 className="mt-2 text-sm font-bold text-slate-100">
                       尚未載入 {focusedModalityMeta.title} 檔案
                     </h3>
                     <p className="mx-auto mt-1 max-w-xl text-xs text-slate-400">
-                      請點擊上方「上傳圖/數值」按鈕上傳 PNG/JPG/WEBP 原始光譜圖片或 CSV/TXT/JCAMP-DX/XLSX 數值檔案，或點擊下方按鈕建立手動訊號表。若您僅有分子式，亦可直接於上方輸入分子式並前往第 3 頁判讀。
+                      請按上方標籤的「＋加入」上傳 PNG/JPG/WEBP 原始光譜圖片或 CSV/TXT/JCAMP-DX/XLSX 數值檔案，或點下方按鈕建立手動訊號表。若只有分子式，也可直接在上方輸入分子式並前往第 3 頁判讀。
                     </p>
                     <div className="mt-4 flex flex-wrap justify-center gap-2">
                       <button

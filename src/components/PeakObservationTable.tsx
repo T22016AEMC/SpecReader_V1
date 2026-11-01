@@ -30,18 +30,42 @@ function JInput({peak,label,onChange}:{peak:SpectralPeak;label:string;onChange:(
  const [text,setText]=useState(peak.jValues?.join(', ')??'');
  return <input aria-label={`${label} J Hz`} className={style} value={text} placeholder="選填，如 7.2, 1.5" onChange={e=>{setText(e.target.value);onChange(e.target.value.split(/[,;\s]+/).filter(Boolean).map(Number).filter(n=>Number.isFinite(n)&&n>0));}}/>;
 }
-export function PeakObservationTable({spectrum:s,modality,selectedId,onSelect,onUpdate,onDelete}:{spectrum:ExperimentalSpectrumData;modality:ExtendedSpectrumModality;selectedId:string|null;onSelect:(id:string)=>void;onUpdate:(id:string,patch:Partial<SpectralPeak>)=>void;onDelete:(id:string)=>void}) {
+const caption='text-[10px] text-slate-400';
+/**
+ * Marked-signal list (v1.2.2 P2a). Always visible per row: position, relative integral / intensity, the IR band-shape tag and delete.
+ * Fields that are usually "unknown" (IR baseline-relative intensity, band shape / multiplicity / J, note) sit in the row's own <details>
+ * ("明細"), inside the same `observation-row` element, so row-scoped queries still reach them once the row is expanded.
+ * The list grows with its content; the page (<main>) is the only scroll area.
+ */
+export function PeakObservationTable({spectrum:s,modality,selectedId,onSelect,onUpdate,onDelete,openIds,onToggleOpen}:{spectrum:ExperimentalSpectrumData;modality:ExtendedSpectrumModality;selectedId:string|null;onSelect:(id:string)=>void;onUpdate:(id:string,patch:Partial<SpectralPeak>)=>void;onDelete:(id:string)=>void;openIds?:ReadonlySet<string>;onToggleOpen?:(id:string,open:boolean)=>void}) {
  const nmr=modality==='1H_NMR'||modality==='13C_NMR';
- return <table className="w-full text-left text-xs" data-testid="observation-table"><thead><tr><th>{modality==='IR'?'波數 cm⁻¹':nmr?'δ ppm':'m/z'}</th><th>{nmr?'相對積分（選填）':modality==='IR'?'基線相對強度':'相對強度'}</th><th>{modality==='IR'?'吸收帶形態':modality==='1H_NMR'?'多重性／J Hz':'觀測資訊'}</th><th>備註（選填）</th><th>操作</th></tr></thead><tbody>{s.peaks.map((p,i)=>{
+ return <ul className="space-y-1.5" data-testid="observation-table">{s.peaks.map((p,i)=>{
  const uncal=p.pixelX!==undefined&&p.isCalibrated!==true;
  const label=`${modality} 標記 ${i+1}`;
  const integral=p.integration??p.integral;
  const morphology=modality==='IR'?measureIRBandMorphology(s,p).shape:'UNRESOLVED';
- return <tr key={p.id} data-testid="observation-row" className={selectedId===p.id?'bg-cyan-950/40':''} onClick={()=>onSelect(p.id)}>
- <td><input aria-label={`${label} 位置`} className={style} type="number" step="any" value={uncal?p.pixelX:p.x} onChange={e=>{const v=numberOrUndefined(e.target.value);if(v===undefined)return;const c=s.imageCalibration;const patch:Partial<SpectralPeak>=uncal?{pixelX:v}:{x:v};if(!uncal&&p.pixelX!==undefined&&c&&c.piecewiseKnots&&c.piecewiseKnots.length>=2)patch.pixelX=pixelFromPhysical(c.piecewiseKnots,v);else if(!uncal&&p.pixelX!==undefined&&c){const slope=c.slope??(c.xAxisEnd-c.xAxisStart)/(c.plotRightPx-c.plotLeftPx),intercept=c.intercept??c.xAxisStart-c.plotLeftPx*slope;if(slope)patch.pixelX=(v-intercept)/slope;}onUpdate(p.id,patch);}}/>{uncal&&<span> px（待校正）</span>}</td>
- <td>{nmr?<input aria-label={`${label} 相對積分`} className={style} type="number" min="0" step="any" value={integral??''} onChange={e=>{const v=numberOrUndefined(e.target.value);onUpdate(p.id,{integration:v??null,integral:v});}}/>:modality==='IR'?<span data-testid="ir-relative-intensity">{irObservedHeight(s,p)?.toFixed(2)??'未知'}</span>:<input aria-label={`${label} 相對強度`} className={style} type="number" min="0" step="any" value={p.intensityKnown===false?'':p.y} onChange={e=>{const v=numberOrUndefined(e.target.value);onUpdate(p.id,{y:v??0,intensityKnown:v!==undefined});}}/>}</td>
- <td>{modality==='IR'?<><select aria-label={`${label} 吸收帶形態`} className={style} value={morphology==='broad'||morphology==='sharp'?morphology:''} onChange={e=>onUpdate(p.id,{shape:e.target.value as SpectralPeak['shape'],isBroad:e.target.value==='broad',irShapeSource:'USER',userOverride:true})}><option value="" disabled hidden>未判定</option>{shapes.map(([v,t])=><option key={v} value={v}>{t}</option>)}</select></>:modality==='1H_NMR'?<><select aria-label={`${label} 多重性`} className={style} value={p.multiplicity??'unresolved'} onChange={e=>onUpdate(p.id,{multiplicity:e.target.value as SpectralPeak['multiplicity']})}>{['unresolved','s','d','t','q','dd','dt','td','ddd','quint','sext','sept','m','br s','ABq'].map(v=><option key={v} value={v}>{v==='unresolved'?'未知':v}</option>)}</select><JInput peak={p} label={label} onChange={values=>onUpdate(p.id,{jValues:values})}/></>:<span>{modality==='13C_NMR'?'一般積分不代表碳數':'離子歸屬待分析'}</span>}</td>
- <td><input aria-label={`${label} 備註`} className={style} value={p.note??''} onChange={e=>onUpdate(p.id,{note:e.target.value})}/></td>
- <td><button type="button" aria-label={`${label} 刪除`} onClick={e=>{e.stopPropagation();onDelete(p.id);}}>刪除</button></td></tr>;
- })}</tbody></table>;
+ const shapeTag=morphology==='broad'?'寬':morphology==='sharp'?'窄':null;
+ const multiplicity=modality==='1H_NMR'&&p.multiplicity&&p.multiplicity!=='unresolved'?p.multiplicity:null;
+ const detailOpen=openIds?openIds.has(p.id):undefined;
+ return <li key={p.id} data-testid="observation-row" className={`rounded-lg border px-2 py-1.5 ${selectedId===p.id?'border-cyan-600/60 bg-cyan-950/40':'border-slate-800 bg-slate-950/60'}`} onClick={()=>onSelect(p.id)}>
+ <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+ <label className="flex items-center gap-1"><span className={caption}>{modality==='IR'?'波數':nmr?'δ':'m/z'}</span><input aria-label={`${label} 位置`} className={style} type="number" step="any" value={uncal?p.pixelX:p.x} onChange={e=>{const v=numberOrUndefined(e.target.value);if(v===undefined)return;const c=s.imageCalibration;const patch:Partial<SpectralPeak>=uncal?{pixelX:v}:{x:v};if(!uncal&&p.pixelX!==undefined&&c&&c.piecewiseKnots&&c.piecewiseKnots.length>=2)patch.pixelX=pixelFromPhysical(c.piecewiseKnots,v);else if(!uncal&&p.pixelX!==undefined&&c){const slope=c.slope??(c.xAxisEnd-c.xAxisStart)/(c.plotRightPx-c.plotLeftPx),intercept=c.intercept??c.xAxisStart-c.plotLeftPx*slope;if(slope)patch.pixelX=(v-intercept)/slope;}onUpdate(p.id,patch);}}/>{uncal&&<span className="text-amber-300"> px（待校正）</span>}</label>
+ {nmr?<label className="flex items-center gap-1"><span className={caption}>積分</span><input aria-label={`${label} 相對積分`} className={style} type="number" min="0" step="any" value={integral??''} onChange={e=>{const v=numberOrUndefined(e.target.value);onUpdate(p.id,{integration:v??null,integral:v});}}/></label>:modality==='IR'?null:<label className="flex items-center gap-1"><span className={caption}>強度</span><input aria-label={`${label} 相對強度`} className={style} type="number" min="0" step="any" value={p.intensityKnown===false?'':p.y} onChange={e=>{const v=numberOrUndefined(e.target.value);onUpdate(p.id,{y:v??0,intensityKnown:v!==undefined});}}/></label>}
+ {shapeTag&&<span className="rounded border border-cyan-500/40 bg-cyan-950/40 px-1.5 py-0.5 text-[11px] text-cyan-200" title="吸收帶形態（設定值或依取樣自動判定；可在「明細」修改）">形態 {shapeTag}</span>}
+ {multiplicity&&<span className="rounded border border-slate-700 bg-slate-900 px-1.5 py-0.5 font-mono text-[11px] text-slate-200" title="多重性（可在「明細」修改）">{multiplicity}</span>}
+ <button type="button" className="ml-auto rounded border border-slate-700 px-2 py-0.5 text-[11px] text-rose-300 hover:bg-slate-800" aria-label={`${label} 刪除`} onClick={e=>{e.stopPropagation();onDelete(p.id);}}>刪除</button>
+ </div>
+ <details className="mt-1" open={detailOpen} onToggle={e=>onToggleOpen?.(p.id,e.currentTarget.open)}>
+ <summary className="cursor-pointer text-[11px] text-slate-400 hover:text-slate-200">明細</summary>
+ <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+ {modality==='IR'&&<><span className={caption}>基線相對強度 <span className="text-slate-200" data-testid="ir-relative-intensity">{irObservedHeight(s,p)?.toFixed(2)??'未知'}</span></span>
+ <label className="flex items-center gap-1"><span className={caption}>吸收帶形態</span><select aria-label={`${label} 吸收帶形態`} className={style} value={morphology==='broad'||morphology==='sharp'?morphology:''} onChange={e=>onUpdate(p.id,{shape:e.target.value as SpectralPeak['shape'],isBroad:e.target.value==='broad',irShapeSource:'USER',userOverride:true})}><option value="" disabled hidden>未判定</option>{shapes.map(([v,t])=><option key={v} value={v}>{t}</option>)}</select></label></>}
+ {modality==='1H_NMR'&&<><label className="flex items-center gap-1"><span className={caption}>多重性</span><select aria-label={`${label} 多重性`} className={style} value={p.multiplicity??'unresolved'} onChange={e=>onUpdate(p.id,{multiplicity:e.target.value as SpectralPeak['multiplicity']})}>{['unresolved','s','d','t','q','dd','dt','td','ddd','quint','sext','sept','m','br s','ABq'].map(v=><option key={v} value={v}>{v==='unresolved'?'未知':v}</option>)}</select></label><JInput peak={p} label={label} onChange={values=>onUpdate(p.id,{jValues:values})}/></>}
+ {modality==='13C_NMR'&&<span className={caption}>一般積分不代表碳數</span>}
+ {(modality==='MS'||modality==='MS/MS'||modality==='ToF-SIMS')&&<span className={caption}>離子歸屬待分析</span>}
+ <label className="flex items-center gap-1"><span className={caption}>備註</span><input aria-label={`${label} 備註`} className={style} value={p.note??''} onChange={e=>onUpdate(p.id,{note:e.target.value})}/></label>
+ </div>
+ </details>
+ </li>;
+ })}</ul>;
 }
