@@ -40,6 +40,7 @@ import { SpectrumViewer } from "./components/SpectrumViewer";
 import { StructureRenderer2D } from "./components/StructureRenderer2D";
 import { StructureSpectrumValidationPage } from "./components/StructureSpectrumValidationPage";
 import { SpectrumParser } from "./engines/spectrumParser";
+import {calibrationStatus,calibrationCardText,calibrationReminder} from './ui/calibrationStatus';
 import {PiecewiseCalibrationControls,type CalibPixelPoint,type ExtraKey} from './components/PiecewiseCalibrationControls';
 import {CalibrationCheckTable} from './components/CalibrationCheckTable';
 import {buildCalibrationCheck,threePointFailureMessage,type PanelPoint} from './engines/scientificEngines/axisCalibrationPanel';
@@ -720,6 +721,18 @@ export default function App() {
     };
   }, [spectra, auxSpectraMap, molecularFormulaInput, chemicalNotesInput]);
 
+  // 校正狀態（僅畫面提醒，不影響任何分析行為）：進第 3 頁前列出尚未校正的光譜
+  const calibrationReminderInfo = useMemo(
+    () =>
+      calibrationReminder(
+        ALL_EXTENDED_MODALITIES.flatMap((m) => {
+          const spec = getSpectrumForModality(m.id);
+          return spec ? [{ label: m.shortLabel, status: calibrationStatus(spec) }] : [];
+        })
+      ),
+    [spectra, auxSpectraMap]
+  );
+
   // ============================================================================
   // 8. 事件處理函式：重置、載入範例、檔案上傳、訊號標記、座標校正
   // ============================================================================
@@ -1342,68 +1355,69 @@ export default function App() {
         {/* =================================================================== */}
         {primaryMode === "MODE_A" && (
           <div className="border-t border-slate-800/80 bg-slate-900/80">
-            <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-3 px-4 py-2.5">
-              <div className="flex flex-wrap items-center gap-2">
+            <div className="mx-auto flex max-w-[1600px] items-center justify-between gap-3 px-4 py-1.5">
+              <nav aria-label="Mode A 三頁流程" className="flex min-w-0 items-center gap-2">
                 {(
                   [
                     {
                       id: "PAGE_1_SIGNAL_MARKING" as ModeAPageId,
                       step: "第 1 頁",
-                      title: "訊號標記 (Signal Marking)",
-                      subtitle: "上傳原圖/數值檔・手動點選峰頂或谷底・記錄原始位置",
+                      title: "訊號標記",
+                      hint: "上傳原圖/數值檔・手動點選峰頂或谷底・記錄原始位置",
                       icon: Crosshair,
                     },
                     {
                       id: "PAGE_2_CALIBRATION" as ModeAPageId,
                       step: "第 2 頁",
-                      title: "座標校正 (Calibration)",
-                      subtitle: "點選原圖已知刻度・2點線性/3點進階校正・轉換物理座標",
+                      title: "座標校正",
+                      hint: "點選原圖已知刻度・2點線性/3點進階校正・轉換物理座標",
                       icon: Ruler,
                     },
                     {
                       id: "PAGE_3_INTERPRETATION" as ModeAPageId,
                       step: "第 3 頁",
-                      title: "化學判讀與結構推論 (Interpretation)",
-                      subtitle: "讀取校正訊號與分子式・官能基判讀・候選結構生成與驗證",
+                      title: "化學判讀與結構推論",
+                      hint: "讀取校正訊號與分子式・官能基判讀・候選結構生成與驗證",
                       icon: FlaskConical,
                     },
                   ] as const
                 ).map((pg, idx) => {
                   const Icon = pg.icon;
                   const isCurrent = modeAPage === pg.id;
+                  const warnHere = pg.id === "PAGE_3_INTERPRETATION" && calibrationReminderInfo !== null;
                   return (
                     <React.Fragment key={pg.id}>
                       <button
                         type="button"
                         onClick={() => setModeAPage(pg.id)}
-                        className={`flex items-center gap-2.5 rounded-xl border px-3.5 py-2 text-left transition ${
+                        aria-current={isCurrent ? "step" : undefined}
+                        title={warnHere ? `${pg.hint}（${calibrationReminderInfo!.count} 張光譜尚未校正，仍可前往）` : pg.hint}
+                        className={`flex items-center gap-2 whitespace-nowrap rounded-lg border px-3 py-1.5 text-left transition ${
                           isCurrent
                             ? "border-cyan-500 bg-cyan-950/70 text-cyan-100 shadow-sm"
                             : "border-slate-800 bg-slate-950/70 text-slate-300 hover:border-slate-700 hover:bg-slate-900"
                         }`}
                       >
-                        <div
-                          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg font-mono text-xs font-extrabold ${
+                        <span
+                          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md ${
                             isCurrent
                               ? "bg-cyan-500 text-slate-950"
                               : "bg-slate-800 text-slate-400"
                           }`}
                         >
-                          <Icon className="h-4 w-4" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-cyan-400">
-                              {pg.step}
-                            </span>
-                            <span className="text-xs font-bold text-slate-100">
-                              {pg.title}
-                            </span>
-                          </div>
-                          <div className="text-[11px] text-slate-400">
-                            {pg.subtitle}
-                          </div>
-                        </div>
+                          <Icon className="h-3.5 w-3.5" />
+                        </span>
+                        <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-cyan-400">
+                          {pg.step}
+                        </span>
+                        <span className="text-xs font-bold text-slate-100">
+                          {pg.title}
+                        </span>
+                        {warnHere && (
+                          <span className="text-amber-300">
+                            ⚠<span className="sr-only">（尚有光譜未校正）</span>
+                          </span>
+                        )}
                       </button>
                       {idx < 2 && (
                         <ArrowRight className="h-4 w-4 shrink-0 text-slate-600" />
@@ -1411,24 +1425,27 @@ export default function App() {
                     </React.Fragment>
                   );
                 })}
-              </div>
+              </nav>
 
-              {/* 右側：目前標記與校正統計摘要 */}
-              <div className="flex flex-wrap items-center gap-2 font-mono text-[11px]">
-                <span className="rounded-lg border border-slate-800 bg-slate-950 px-2.5 py-1 text-slate-300">
+              {/* 右側：統計膠囊與三個步驟按鈕同一行 */}
+              <div className="flex shrink-0 items-center gap-2 font-mono text-[11px]">
+                <span className="whitespace-nowrap rounded-lg border border-slate-800 bg-slate-950 px-2.5 py-1 text-slate-300">
                   已標記訊號：
                   <strong className="ml-1 text-cyan-300">
                     {activeEvidenceSummary.totalMarkedSignals}
                   </strong>
                 </span>
-                <span className="rounded-lg border border-emerald-500/30 bg-emerald-950/40 px-2.5 py-1 text-emerald-300">
-                  已校正物理座標：
+                <span
+                  title="含數值檔與程式預設座標；是否由你校正過，請看各光譜的校正狀態"
+                  className="whitespace-nowrap rounded-lg border border-emerald-500/30 bg-emerald-950/40 px-2.5 py-1 text-emerald-300"
+                >
+                  具物理座標：
                   <strong className="ml-1">
                     {activeEvidenceSummary.calibratedSignalsCount}
                   </strong>
                 </span>
                 {activeEvidenceSummary.uncalibratedSignalsCount > 0 && (
-                  <span className="rounded-lg border border-amber-500/40 bg-amber-950/50 px-2.5 py-1 text-amber-300">
+                  <span className="whitespace-nowrap rounded-lg border border-amber-500/40 bg-amber-950/50 px-2.5 py-1 text-amber-300">
                     待校正像素標記：
                     <strong className="ml-1">
                       {activeEvidenceSummary.uncalibratedSignalsCount}
