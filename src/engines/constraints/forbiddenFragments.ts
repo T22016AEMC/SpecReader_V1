@@ -36,6 +36,6 @@ export const CYCLIC_HYDROXY_ORTHOESTER: ForbiddenFragment = {
   reason: '環上碳同時有游離 OH 與兩個 OR，不是可分離的穩定結構', source: FORBIDDEN_SOURCE, stage: 'LEAF',
 };
 
-export const FORBIDDEN_FRAGMENTS: ForbiddenFragment[] = [CYCLIC_HYDROXY_ORTHOESTER];
+export const FORBIDDEN_FRAGMENTS: ForbiddenFragment[] = [...bridgeFragments(), CYCLIC_HYDROXY_ORTHOESTER];
 
 export const forbiddenById = (id: string): ForbiddenFragment | undefined => FORBIDDEN_FRAGMENTS.find(f => f.id === id);
