@@ -5,6 +5,8 @@ import {V12_CONFIG} from '../constraints/v12Config';
 import {COMPOSITION_CONFIG} from '../composition/compositionConfig';
 import {SULFUR_NOT_CONSIDERED as SULFUR_TEXT} from '../composition/inferComposition';
 import {exclusionLines, exclusionStats, zeroCandidateExplanation, type ZeroCandidateExplanation} from './exclusionStats';
+import {CARBONYL_CLASSES, CARBONYL_STATUS_TEXT, type CarbonylBandStatus} from '../scientificEngines/carbonylClasses';
+import {vinylWindowsActive} from '../composition/planningGate';
 import type {CandidateOrigin, EnumerationDiagnostics, EnumerationRunDiagnostic, IncompleteReason, V12RunDiagnostic} from './types';
 
 /**
@@ -90,6 +92,14 @@ export interface PanelModel {
   constraints: {formulas: ConstraintsFormulaView[]; scoringText: string; exclusionTitle: string; exclusions: string[]} | null;
   /** v1.2.1 search plan section (absent when the planning flag was off). */
   planning?: PlanningView;
+  /** v1.2.1 B4: is the missing-carbonyl-band check on for this IR, and why (absent when the B class is off or there is no IR). */
+  carbonylBand?: CarbonylBandView;
+}
+export interface CarbonylBandView {
+  title: string;
+  enabled: boolean;
+  text: string;
+  windowsText: string;
 }
 export interface PlanningView {
   title: string;
@@ -97,8 +107,12 @@ export interface PlanningView {
   sulfurText: string | null;
   summary: string;
   notSearched: {reason: string; label: string; count: number}[];
+  /** v1.2.1 B3: the =CH2 / =CH windows of the no-formula search (absent when the windows are off). */
+  vinylText?: string;
 }
 export interface PanelInput {
+  /** v1.2.1 B4: the status of the missing-carbonyl-band check for the IR of this analysis (the caller computes it; absent / null = no IR or the B class is off). */
+  carbonylBand?: CarbonylBandStatus | null;
   /** Candidates the downstream gates rejected (their reasons feed the exclusion statistics of section B). */
   rejectedCandidates?: {violatedConstraints: string[]}[];
   composition: CompositionInferenceResult | undefined;
@@ -137,6 +151,8 @@ export const NOT_SEARCHED_LABEL: Record<string, string> = {
 };
 export const ROUND_LABEL = {ROUND_1: '第一輪（芳香模板）', ROUND_1_VINYL: '第一輪（烯基例外）', ROUND_2: '第二輪（含烯基）', NOT_SEARCHED: '未搜尋'} as const;
 /** v1.2.1: added to the fixed limitations only when the search was planned. */
+export const VINYL_WINDOW_TEXT = '烯基 CH₂ 的視窗為 4.5–6.0 ppm（6.0–6.5 需要 IR 共軛 C=O）；=CH 上限 7.5 ppm（有共軛 C=O 時 7.8）。窗口是工程判斷，未查證；使用者自填分子式的路徑維持原範圍 4.5–7.5 ppm。';
+export const VINYL_RELAXED_NOTE = '（烯基視窗已依 IR 共軛 C=O 放寬）';
 export const PLANNING_LIMITATION = '兩輪搜尋下，烯基讀法只給各 k 第一輪最高分者；其餘分子式只跑了不含烯基的讀法（各分子式的「未完整」原因會寫明）。';
 export const FIXED_LIMITATIONS = [
   '分子式是假設，不是確認；使用者分子式永遠優先並作為硬限制。',
@@ -230,7 +246,7 @@ function inventoryView(formula: string, v: V12RunDiagnostic): InventoryFormulaVi
   });
   const signals = (inv?.signals ?? []).map(s => ({
     shift: num(s.shiftPpm), integral: s.relativeIntegral === null ? '—' : num(s.relativeIntegral), ratio: s.ratio === null ? '—' : String(s.ratio),
-    hText: s.ratio === null || !first ? '—' : String(s.ratio * first.k), multiplicity: s.multiplicity ?? '—', classes: s.classes.map(x => SHIFT_CLASS_LABEL[x] ?? x).join('、') || '—',
+    hText: s.ratio === null || !first ? '—' : String(s.ratio * first.k), multiplicity: s.multiplicity ?? '—', classes: (s.classes.map(x => SHIFT_CLASS_LABEL[x] ?? x).join('、') || '—') + (s.vinylRelaxed ? VINYL_RELAXED_NOTE : ''),
     hPerAtom: '', atoms: '', equivalence: s.equivalenceRequired ? '要求' : '不要求', singlet: s.singletRuleApplied ? '套用' : '—',
   }));
   const firstAlt = inv?.alternativesPreview[0];
@@ -266,7 +282,7 @@ function constraintsView(formula: string, e: EnumerationRunDiagnostic): Constrai
     structural,
     leaf: [
       ...(v.leafCost ? [`葉端檢查：${v.leafCost.leaves} 個葉；軌道（等價）檢查 ${v.leafCost.orbitChecks} 次${v.leafCost.orbitGiveUps ? `（${v.leafCost.orbitGiveUps} 次達搜尋上限而未排除）` : ''}`] : []),
-      ...(e.rejected?.v12 ? [`被葉端檢查排除的結構：芳香 ${e.rejected.v12.aromaticFailed}、必含子結構 ${e.rejected.v12.requiredFailed}、等價 ${e.rejected.v12.equivalenceFailed}、烯基 ${e.rejected.v12.alkeneFailed}`] : []),
+      ...(e.rejected?.v12 ? [`被葉端檢查排除的結構：芳香 ${e.rejected.v12.aromaticFailed}、必含子結構 ${e.rejected.v12.requiredFailed}、等價 ${e.rejected.v12.equivalenceFailed}、烯基 ${e.rejected.v12.alkeneFailed}${e.rejected.v12.forbiddenById ? `、禁含片段 ${Object.values(e.rejected.v12.forbiddenById).reduce((a, b) => a + b, 0)}` : ''}`] : []),
     ],
   };
 }
@@ -312,7 +328,16 @@ export function planningView(c: CompositionInferenceResult): PlanningView {
     title: '搜尋計畫（v1.2.1：k 輪流、兩輪預算）', oxygenText, sulfurText: v.sulfurConsidered ? null : SULFUR_TEXT,
     summary: `共 ${r1 + r2} 個分子式被搜尋：${r1} 個只跑第一輪（不含烯基的讀法）、${r2} 個也跑了第二輪（含烯基）${exploreNote}；${[...counts.values()].reduce((a, b) => a + b, 0)} 個列在清單內但未搜尋。${round2Note}`,
     notSearched: [...counts].map(([reason, count]) => ({reason, label: NOT_SEARCHED_LABEL[reason] ?? reason, count})),
+    ...(plans.length > 0 && vinylWindowsActive() ? {vinylText: VINYL_WINDOW_TEXT} : {}),
   };
+}
+
+/** B4 panel block: whether the missing-carbonyl-band check is on for this IR and why not (the windows are listed with their classes). */
+export function carbonylBandView(status: CarbonylBandStatus): CarbonylBandView {
+  const windowsText = `各類羰基的窗：${CARBONYL_CLASSES.map(c => `${c.label} ${c.windowCm1[0]}–${c.windowCm1[1]}`).join('、')} cm⁻¹（工程判斷，未查證；窗已與 Coates 的羰基頻率表核對）`;
+  return status.state === 'ENABLED'
+    ? {title: '影像 IR 缺羰基帶檢查', enabled: true, text: '影像 IR 缺羰基帶檢查：已啟用（校正可信、描線涵蓋羰基窗）。候選含上列羰基類別、但該類窗內沒有強帶時扣分，不剔除；扣分權重是未校準的工程判斷。', windowsText}
+    : {title: '影像 IR 缺羰基帶檢查', enabled: false, text: `影像 IR 缺羰基帶檢查：未啟用（原因：${CARBONYL_STATUS_TEXT[status.reason]}）`, windowsText};
 }
 
 export function buildCompositionPanel(input: PanelInput): PanelModel | null {
@@ -358,6 +383,7 @@ export function buildCompositionPanel(input: PanelInput): PanelModel | null {
     bounds: boundsText(c),
     limitations: [...FIXED_LIMITATIONS, ...(c.v121 ? [PLANNING_LIMITATION] : []), ...c.limitations],
     ...(c.v121 ? {planning: planningView(c)} : {}),
+    ...(input.carbonylBand ? {carbonylBand: carbonylBandView(input.carbonylBand)} : {}),
     ...v12Sections(c, runOf, input.rejectedCandidates ?? []),
   };
 }

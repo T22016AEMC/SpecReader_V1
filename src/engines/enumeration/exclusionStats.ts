@@ -1,4 +1,4 @@
-import {forbiddenById} from '../constraints/forbiddenFragments';
+import {FORBIDDEN_SOURCE, forbiddenById} from '../constraints/forbiddenFragments';
 import type {EnumerationRunDiagnostic, IncompleteReason} from './types';
 
 /**
@@ -16,6 +16,8 @@ export interface ExclusionStats {
   forbidden: {id: string; label: string; count: number}[];
   total: number;
 }
+/** Shown under the forbidden-fragment lines (v1.2.1 B class): where the rules come from. */
+export const FORBIDDEN_SOURCE_LINE = `禁含片段的出處：${FORBIDDEN_SOURCE}`;
 export const PLAUSIBILITY_LABEL: Record<string, string> = {
   PEROXIDE: '過氧 O–O 鍵', N_O_N: 'N–O–N 連接', N_DI_OH: 'N 上連兩個以上的 OH', N_O_LINK: 'N–O 鍵', CUMULATED_N: '疊氮／重氮的累積 N 雙鍵', GEM_DIOL: '偶二醇',
   ENOL: '非芳香烯醇', KETENE: '烯酮', AMINAL: '非環狀胺縮醛／半縮醛胺', HEMIACETAL_ACYCLIC: '非環狀半縮醛／半縮酮', ORTHOESTER_ACYCLIC: '非環狀原酸酯型',
@@ -60,6 +62,7 @@ export function exclusionLines(s: ExclusionStats): string[] {
   for (const r of s.strain) lines.push(`應變規則『${r.label}』排除了 ${r.count} 個`);
   for (const r of s.plausibility) lines.push(`化學合理性規則『${r.label}』排除了 ${r.count} 個`);
   for (const r of s.forbidden) lines.push(`禁含片段『${r.label}』排除了 ${r.count} 個`);
+  if (s.forbidden.length) lines.push(FORBIDDEN_SOURCE_LINE);
   return lines;
 }
 

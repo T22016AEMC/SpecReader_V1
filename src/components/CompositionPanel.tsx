@@ -1,5 +1,6 @@
 import React from 'react';
 import type {ModeAResult} from '../engines/analysisSession';
+import {carbonylBandStatusOfIr} from '../engines/scientificEngines/carbonylClasses';
 import {buildCompositionPanel, type PanelBadge, type PanelModel, type ReasonLine} from '../engines/enumeration/compositionPanelModel';
 
 const Badge = ({b}: {b: PanelBadge}) => <span data-testid="composition-badge" data-badge={b.id} className="mr-1 rounded border border-amber-500/60 bg-amber-950/60 px-1.5 py-0.5 text-[10px] font-bold text-amber-300">{b.text}</span>;
@@ -46,7 +47,13 @@ export function CompositionPanelView({model, stale}: {model: PanelModel; stale: 
         <p data-testid="composition-planning-summary">{model.planning.summary}</p>
         <p data-testid="composition-oxygen">{model.planning.oxygenText}</p>
         {model.planning.sulfurText && <p data-testid="composition-sulfur">{model.planning.sulfurText}</p>}
+        {model.planning.vinylText && <p data-testid="composition-vinyl-windows">{model.planning.vinylText}</p>}
         {model.planning.notSearched.length > 0 && <ul className="ml-4 list-disc" data-testid="composition-not-searched">{model.planning.notSearched.map(x => <li key={x.reason} data-reason={x.reason}>未搜尋（{x.label}）：{x.count} 個</li>)}</ul>}
+      </details>}
+      {model.carbonylBand && <details open data-testid="composition-carbonyl-band">
+        <summary className="font-semibold text-slate-200">{model.carbonylBand.title}</summary>
+        <p data-testid="composition-carbonyl-band-status" data-enabled={model.carbonylBand.enabled ? 'true' : 'false'}>{model.carbonylBand.text}</p>
+        <p className="text-[10px] text-slate-400">{model.carbonylBand.windowsText}</p>
       </details>}
       {model.inventory && <details open data-testid="composition-inventory">
         <summary className="font-semibold text-slate-200">由 1H 推得的原子清單</summary>
@@ -110,6 +117,7 @@ export function CompositionPanel({result, stale}: {result: ModeAResult; stale: b
     enumeration: result.solvedConstraintSpace?.searchResult?.enumeration,
     localStructures: result.reasoningTrace?.localStructures ?? [],
     rejectedCandidates: result.rejectedCandidates,
+    carbonylBand: carbonylBandStatusOfIr(result.inputSpectra?.IR),
   });
   return model ? <CompositionPanelView model={model} stale={stale}/> : null;
 }

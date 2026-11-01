@@ -1,7 +1,8 @@
 import type {ExperimentalSpectrumData} from '../../types/spectrum';
 import {V12_CONFIG} from '../constraints/v12Config';
 import type {ScoreLedgerEntry} from './evidenceLedger';
-import {irCalibrationTrusted, irImageRangeCovered} from './irSignalProcessing';
+import {carbonylBandActive} from '../composition/planningGate';
+import {irCalibrationTrusted, irImageRangeCovered, prepareIR} from './irSignalProcessing';
 import {matchingSMARTS} from './rdkitAdapter';
 
 /**
@@ -72,6 +73,12 @@ export function carbonylBandStatus(ir: ExperimentalSpectrumData | undefined, pro
 
 /** The status for the whole carbonyl range (all six windows together), for the panel. */
 export const allCarbonylWindows = (): [number, number][] => [[Math.min(...CARBONYL_CLASSES.map(c => c.windowCm1[0])), Math.max(...CARBONYL_CLASSES.map(c => c.windowCm1[1]))]];
+
+/** The panel's status for the IR of an analysis: null when the B class is off or there is no IR. */
+export function carbonylBandStatusOfIr(ir: ExperimentalSpectrumData | undefined): CarbonylBandStatus | null {
+  if (!carbonylBandActive() || !ir) return null;
+  return carbonylBandStatus(ir, prepareIR(ir), allCarbonylWindows());
+}
 
 /**
  * B4 ledger entries of one candidate: one `IR:carbonyl-missing:<class>` entry (compatibility 0, weight = irMissingBand.weight × irDataQuality) per carbonyl class the candidate has,

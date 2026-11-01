@@ -272,7 +272,7 @@ export interface V12RunDiagnostic {
     status: 'BUILT' | 'NOT_AVAILABLE'; reason: string | null; alternatives: number; truncated: boolean; patternSets: number; patternTruncated: boolean;
     incompleteReasons: string[]; ratioSum: number | null;
     combinations: {k: number; extraExchangeable: number; ratio: number[]}[];
-    signals: {observationId: string; shiftPpm: number; relativeIntegral: number | null; ratio: number | null; multiplicity: string | null; broad: boolean; classes: string[]; singletRuleApplied: boolean; equivalenceRequired: boolean}[];
+    signals: {observationId: string; shiftPpm: number; relativeIntegral: number | null; ratio: number | null; multiplicity: string | null; broad: boolean; classes: string[]; singletRuleApplied: boolean; equivalenceRequired: boolean; /** v1.2.1 B3: a vinyl H count exists only through the extended window (IR conjugated C=O) */ vinylRelaxed?: boolean}[];
     voided: {kind: string; reason: string; count: number}[];
     aromaticLimited: {k: number; extraExchangeable: number; aromaticCh: number; reason: string}[];
     /** The first readings (at most 6), for the panel. */
