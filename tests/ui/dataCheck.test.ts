@@ -61,16 +61,16 @@ describe('buildDataCheck: ¹H calibration', () => {
 });
 
 describe('buildDataCheck: solvent, frequency, the rest', () => {
-  it('9. solvent undefined / Unknown → warn, CDCl3 → ok', () => {
-    expect(item(buildDataCheck({'1H_NMR': csv({nmrSolvent: undefined})}), 'solvent')!.level).toBe('warn');
-    expect(item(buildDataCheck({'1H_NMR': csv({nmrSolvent: 'Unknown'})}), 'solvent')!.level).toBe('warn');
+  it('9. solvent undefined / Unknown → info (not ⚠), CDCl3 → ok', () => {
+    expect(item(buildDataCheck({'1H_NMR': csv({nmrSolvent: undefined})}), 'solvent')!.level).toBe('info');
+    expect(item(buildDataCheck({'1H_NMR': csv({nmrSolvent: 'Unknown'})}), 'solvent')!.level).toBe('info');
     const ok = item(buildDataCheck({'1H_NMR': csv({nmrSolvent: 'CDCl3'})}), 'solvent')!;
     expect(ok.level).toBe('ok');
     expect(ok.text).toContain('CDCl3');
   });
-  it('10. frequency undefined → warn and says the program computes with 400 MHz; 500 → ok', () => {
+  it('10. frequency undefined → info (not ⚠) and says the program computes with 400 MHz; 500 → ok', () => {
     const w = item(buildDataCheck({'1H_NMR': csv({spectrometerFrequencyMHz: undefined})}), 'frequency')!;
-    expect(w.level).toBe('warn');
+    expect(w.level).toBe('info');
     expect(w.text).toContain(`${DEFAULT_FREQUENCY_MHZ} MHz`);
     const ok = item(buildDataCheck({'1H_NMR': csv({spectrometerFrequencyMHz: 500})}), 'frequency')!;
     expect(ok).toMatchObject({level: 'ok'});
@@ -103,10 +103,16 @@ describe('buildDataCheck: solvent, frequency, the rest', () => {
 });
 
 describe('buildDataCheck: summary line', () => {
+  it('undeclared solvent and frequency alone never drive ⚠: worst is info, warnCount 0', () => {
+    const r = buildDataCheck({'1H_NMR': img('USER_CALIBRATED', {nmrSolvent: undefined, spectrometerFrequencyMHz: undefined})});
+    expect(r.warnCount).toBe(0);
+    expect(r.worst).toBe('info');
+    expect(r.summary.map(s => `${s.label}${s.mark}`)).toEqual(['¹H✓', '溶劑ℹ', '頻率ℹ']);
+  });
   it('lists label and mark per item: ✓ ok, ℹ info, ⚠ warn', () => {
     const r = buildDataCheck({'1H_NMR': img('AI_DETECTED', {nmrSolvent: undefined}), IR: csv()});
-    expect(r.summary.map(s => `${s.label}${s.mark}`)).toEqual(['¹H⚠', 'IRℹ', '溶劑⚠', '頻率✓']);
-    expect(r.warnCount).toBe(2);
+    expect(r.summary.map(s => `${s.label}${s.mark}`)).toEqual(['¹H⚠', 'IRℹ', '溶劑ℹ', '頻率✓']);
+    expect(r.warnCount).toBe(1);
   });
   it('everything fine → worst is ok', () => {
     const r = buildDataCheck({'1H_NMR': img('USER_CALIBRATED'), IR: img('USER_CORRECTED', {}, {calibrationMode: 'PIECEWISE'})});

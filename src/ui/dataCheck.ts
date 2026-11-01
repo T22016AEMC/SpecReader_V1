@@ -51,6 +51,7 @@ const RANK: Record<DataCheckLevel, number> = {ok: 0, info: 1, warn: 2};
 /** The engine computes with this field when the spectrum declares none (nmrEngine). */
 export const DEFAULT_FREQUENCY_MHZ = 400;
 
+/** Undeclared solvent / frequency are shown as blue info (v1.2.2 stop 4): only calibration items and pixel marks drive ⚠ (step bar, tab badge, top warning). */
 const solventDeclared = (s: DataCheckSpectrum): boolean => Boolean(s.nmrSolvent) && s.nmrSolvent !== 'Unknown';
 
 function calibrationItem(id: DataCheckItem['id'], modality: '1H_NMR' | '13C_NMR' | 'IR', s: DataCheckSpectrum): DataCheckItem {
@@ -98,14 +99,14 @@ export function buildDataCheck(spectra: Partial<Record<DataCheckModalityKey, Dat
   if (nmr.length) {
     const missing = nmr.filter(([, s]) => !solventDeclared(s)).map(([k]) => MODALITY_LABEL[k]);
     items.push(missing.length
-      ? {id: 'solvent', label: '溶劑', level: 'warn', text: `溶劑：${missing.join('、')} 未宣告（Unknown）`, detail: '溶劑殘峰（例如 CDCl₃ 的 7.26 ppm）不會被自動排除。'}
+      ? {id: 'solvent', label: '溶劑', level: 'info', text: `溶劑：${missing.join('、')} 未宣告（Unknown）`, detail: '溶劑殘峰（例如 CDCl₃ 的 7.26 ppm）不會被自動排除。'}
       : {id: 'solvent', label: '溶劑', level: 'ok', text: `溶劑：${nmr.map(([k, s]) => `${MODALITY_LABEL[k]} ${s.nmrSolvent}`).join('、')}（使用者宣告）`, detail: ''});
   }
   if (h1) {
     const f = h1.spectrometerFrequencyMHz;
     items.push(typeof f === 'number' && Number.isFinite(f) && f > 0
       ? {id: 'frequency', label: '頻率', level: 'ok', text: `頻率：${f} MHz（使用者宣告）`, detail: ''}
-      : {id: 'frequency', label: '頻率', level: 'warn', text: `頻率：未宣告，程式以 ${DEFAULT_FREQUENCY_MHZ} MHz 計算`, detail: '耦合常數（Hz）換成 ppm 時會用這個值；實際儀器不同時多重峰寬度的判讀會有偏差。'});
+      : {id: 'frequency', label: '頻率', level: 'info', text: `頻率：未宣告，程式以 ${DEFAULT_FREQUENCY_MHZ} MHz 計算`, detail: '耦合常數（Hz）換成 ppm 時會用這個值；實際儀器不同時多重峰寬度的判讀會有偏差。'});
   }
   const unprovided = MODALITY_ORDER.filter(k => !spectra[k]);
   const worst = items.reduce<DataCheckLevel>((w, i) => (RANK[i.level] > RANK[w] ? i.level : w), 'ok');

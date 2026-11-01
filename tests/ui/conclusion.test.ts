@@ -39,7 +39,8 @@ describe('pickTopWarning: priority calibration > incomplete search > close top t
   });
   it('solvent and frequency warnings stay in the data-check line: they are not the conclusion warning', () => {
     const solventOnly = buildDataCheck({'1H_NMR': {...h1Image('USER_CALIBRATED'), nmrSolvent: 'Unknown', spectrometerFrequencyMHz: undefined}});
-    expect(solventOnly.warnCount).toBeGreaterThan(0);
+    expect(solventOnly.warnCount).toBe(0); // blue info only (stop 4)
+    expect(solventOnly.items.filter(i => i.level === 'info').map(i => i.id)).toEqual(['solvent', 'frequency']);
     expect(pickTopWarning({dataCheck: solventOnly, generationCode: 'CANDIDATES_FOUND', scores: [80, 50]})).toBeNull();
   });
   it('IR or pixel-mark warnings are reported when ¹H is fine', () => {

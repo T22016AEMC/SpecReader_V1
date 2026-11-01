@@ -30,6 +30,9 @@ export function DataCheckBar({check, irVersion, onGoCalibration}: {check: DataCh
           </span>
         ))}
       </div>
+      {check.items.filter(i => (i.id === 'solvent' || i.id === 'frequency') && i.level === 'info').map(i => (
+        <span key={i.id} data-testid={`data-check-note-${i.id}`} title={i.text} className="hidden min-w-0 shrink truncate whitespace-nowrap text-cyan-300 min-[1100px]:inline">{i.text}</span>
+      ))}
       {check.worst === 'warn' && <span className="shrink-0 whitespace-nowrap font-semibold">有 ⚠ 項目，請展開確認</span>}
       {check.worst === 'info' && <span className="hidden shrink-0 whitespace-nowrap opacity-80 min-[1500px]:inline">ℹ＝數值檔或手動輸入，程式無法判斷是否已校準</span>}
       {check.stale && <span className="shrink-0 whitespace-nowrap opacity-80">（針對目前輸入）</span>}
