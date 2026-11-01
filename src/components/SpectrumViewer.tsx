@@ -1,3 +1,4 @@
+import {createPortal} from 'react-dom';
 import {initialIRSettings,IRCalibrationPanel,IRBaselineHandles} from './IRCalibrationTools';
 import {type IRManualSettings} from '../engines/scientificEngines/irManualBaseline';
 import React, { useEffect, useMemo, useState } from "react";
@@ -62,6 +63,8 @@ interface SpectrumViewerProps {
   irDraftSettings?:IRManualSettings;
   onIRDraftChange?:(settings:IRManualSettings)=>void;
   height?: number;
+  /** IR baseline panel placement (v1.2.2): omitted = inline above the chart; an element = render the panel there (portal); null = wait for that element, render nothing yet. */
+  irPanelHost?: HTMLElement | null;
 }
 
 export const SpectrumViewer: React.FC<SpectrumViewerProps> = ({
@@ -84,6 +87,7 @@ export const SpectrumViewer: React.FC<SpectrumViewerProps> = ({
   livePreviewMapPixelX = null,
   hideModeSwitchButtons = false,
   height = 310,
+  irPanelHost,
 }) => {
   const spectrum=originalSpectrum;
   const settings=irDraftSettings??initialIRSettings(originalSpectrum);
@@ -276,8 +280,8 @@ export const SpectrumViewer: React.FC<SpectrumViewerProps> = ({
   }, [domain]);
 
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-950/95 p-3 shadow-inner">
-      {canEditIR&&<IRCalibrationPanel s={spectrum} settings={settings} onDraft={onIRDraftChange!} onApply={onIRSettingsChange!}/>}
+    <div data-sr-viewer="" className="rounded-xl border border-slate-800 bg-slate-950/95 p-3 shadow-inner">
+      {canEditIR&&irPanelHost!==null&&(()=>{const panel=<IRCalibrationPanel s={spectrum} settings={settings} onDraft={onIRDraftChange!} onApply={onIRSettingsChange!}/>;return irPanelHost?createPortal(panel,irPanelHost):panel;})()}
       {/* 頂部儀表列 */}
       <div className="relative mb-2 flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-2">
         <div className="flex flex-wrap items-center gap-2">

@@ -1975,34 +1975,32 @@ export default function App() {
             {/* =============================================================== */}
             {modeAPage === "PAGE_2_CALIBRATION" && (
               <div className="space-y-5">
-                {/* 第 2 頁標題與前後頁導覽 */}
-                <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-500/30 bg-slate-900/90 px-4 py-3">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="rounded bg-amber-500 px-2 py-0.5 font-mono text-[11px] font-extrabold text-slate-950">
-                        MODE A · 第 2 頁
-                      </span>
-                      <h1 className="text-base font-bold text-slate-50">
-                        座標校正（Calibration）— 點選原圖已知刻度並輸入實際物理數值
-                      </h1>
-                    </div>
-                    <p className="mt-0.5 text-xs text-slate-300">
-                      讀取第 1 頁已標記的訊號，預設採用直覺之兩點線性校正（三點最小平方法校正置於進階選項）。返回第 1 頁修改標記再回到第 2 頁重新校正絕不遺失標記。
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
+                {/* 一句說明＋前後頁（步驟列已有「第 2 頁 座標校正」，不再放第二個標題）。提醒只是提示，不阻止前往第 3 頁。 */}
+                <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+                  <p className="text-xs text-slate-300">
+                    在原圖上點兩個已知刻度並輸入真實數值，就能把標記的像素位置換成真實座標。返回第 1 頁修改標記不會遺失標記。
+                  </p>
+                  <div className="flex flex-wrap items-center justify-end gap-2">
                     <button
                       type="button"
                       onClick={() => setModeAPage("PAGE_1_SIGNAL_MARKING")}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800 px-3.5 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-700"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-200 hover:bg-slate-700"
                     >
                       <ArrowLeft className="h-3.5 w-3.5" />
                       <span>返回第 1 頁修改訊號標記</span>
                     </button>
+                    {calibrationReminderInfo && (
+                      <span
+                        data-calibration-reminder=""
+                        className="rounded-lg border border-amber-500/40 bg-amber-950/40 px-2.5 py-1 text-[11px] font-medium text-amber-200"
+                      >
+                        ⚠ {calibrationReminderInfo.text}
+                      </span>
+                    )}
                     <button
                       type="button"
                       onClick={() => setModeAPage("PAGE_3_INTERPRETATION")}
-                      className="inline-flex items-center gap-1.5 rounded-lg bg-cyan-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-cyan-500"
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-cyan-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-cyan-500"
                     >
                       <span>下一步：前往第 3 頁化學判讀與結構推論</span>
                       <ArrowRight className="h-4 w-4" />
@@ -2010,47 +2008,42 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* 模態切換列 */}
-                <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/80 p-3">
+                {/* 模態切換列：每張光譜顯示校正狀態（已校正 ✓／尚未校正 ⚠），來自 calibrationStatus() */}
+                <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/80 px-3 py-2">
                   <span className="text-xs font-semibold text-slate-300">
-                    選擇欲校正之光譜模態：
+                    選擇欲校正之光譜：
                   </span>
                   {ALL_EXTENDED_MODALITIES.map((m) => {
                     const spec = getSpectrumForModality(m.id);
                     const isFocused = focusedModality === m.id;
-                    const isImg =
-                      spec &&
-                      (spec.sourceType === "IMAGE_EXPERIMENTAL" ||
-                        spec.digitizedFromImage);
-                    const isCal =
-                      spec &&
-                      (!isImg || SpectrumParser.isSpectrumCalibrated(spec));
+                    const st = spec ? calibrationStatus(spec) : null;
 
                     return (
                       <button
                         key={m.id}
                         type="button"
                         onClick={() => handleSelectModality(m.id)}
-                        className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 font-mono text-xs font-bold transition ${
+                        aria-pressed={isFocused}
+                        className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 font-mono text-xs font-bold transition ${
                           isFocused
                             ? "border-amber-500 bg-amber-950/60 text-amber-200"
                             : "border-slate-800 bg-slate-950 text-slate-400 hover:text-slate-200"
                         }`}
                       >
                         <span>{m.shortLabel}</span>
-                        {spec && (
+                        {st && (
                           <span
+                            data-calibration-kind={st.kind}
+                            title={st.detail}
                             className={`rounded px-1.5 py-0.5 text-[10px] ${
-                              isCal
+                              st.level === "ok"
                                 ? "bg-emerald-950 text-emerald-300"
-                                : "bg-amber-950 text-amber-300"
+                                : st.level === "info"
+                                  ? "bg-sky-950 text-sky-300"
+                                  : "bg-amber-950 text-amber-300"
                             }`}
                           >
-                            {isImg
-                              ? isCal
-                                ? "已校正"
-                                : `待校正(${spec.peaks.length}峰)`
-                              : "數值免校正"}
+                            {st.label}
                           </span>
                         )}
                       </button>
@@ -2084,24 +2077,24 @@ export default function App() {
                 {currentSpectrum ? (
                   currentSpectrum.sourceType === "NUMERIC_EXPERIMENTAL" &&
                   !currentSpectrum.digitizedFromImage ? (
-                    /* 已具有可靠物理座標之數值資料提示 */
-                    <div className="space-y-4">
-                      <div className="rounded-xl border border-emerald-500/40 bg-emerald-950/20 p-5 flex flex-wrap items-center justify-between gap-4">
+                    /* 數值檔：座標來自檔案本身（藍色資訊，不是警告；程式無法得知檔案是否已校準） */
+                    <div className="space-y-3">
+                      <div className="rounded-xl border border-sky-500/40 bg-sky-950/20 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
                         <div className="flex items-start gap-3">
-                          <CheckCircle2 className="h-6 w-6 shrink-0 text-emerald-400 mt-0.5" />
+                          <CheckCircle2 className="h-5 w-5 shrink-0 text-sky-400 mt-0.5" />
                           <div>
-                            <h3 className="text-sm font-bold text-emerald-200">
-                              此光譜 ({currentSpectrum.fileName}) 為已具備可靠物理座標之數值資料 ({currentSpectrum.sourceFormat})
+                            <h3 className="text-sm font-bold text-sky-200">
+                              此光譜 ({currentSpectrum.fileName}) 為數值資料 ({currentSpectrum.sourceFormat})：座標來自檔案
                             </h3>
-                            <p className="mt-1 text-xs text-slate-300">
-                              全部 {currentSpectrum.peaks.length} 個已標記訊號皆已直接對應至真實物理座標 ({currentSpectrum.xUnit})，可略過不必要的圖片像素校正步驟，直接前往第 3 頁進行化學判讀與結構推論。
+                            <p className="mt-0.5 text-xs text-slate-300">
+                              {currentSpectrum.peaks.length} 個標記直接使用檔案內的座標 ({currentSpectrum.xUnit})，不需做圖片像素校正。程式無法得知檔案本身是否已對溶劑殘峰或 TMS 校準，請自行確認。
                             </p>
                           </div>
                         </div>
                         <button
                           type="button"
                           onClick={() => setModeAPage("PAGE_3_INTERPRETATION")}
-                          className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-500"
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-sky-600 px-4 py-1.5 text-xs font-bold text-white hover:bg-sky-500"
                         >
                           略過圖片校正 → 直接進入第 3 頁判讀
                           <ArrowRight className="h-4 w-4" />
@@ -2125,6 +2118,7 @@ export default function App() {
                       <div className="lg:col-span-7 space-y-3">
                         <SpectrumViewer
                           spectrum={currentSpectrum}
+                          irPanelHost={irPanelHost}
                         irDraftSettings={irBaselineDraft}
                         onIRDraftChange={setIrBaselineDraft}
                         onIRSettingsChange={applyIRSettings}
@@ -2262,21 +2256,70 @@ export default function App() {
                         />
                       </div>
 
-                      {/* 右側：兩點校正設定（預設）+ 進階三點校正 + 第 1 頁標記即時轉換預覽表 */}
-                      <div className="lg:col-span-5 rounded-xl border border-slate-800 bg-slate-900/80 p-4 space-y-4">
-                        <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                      {/* 右側：座標校正（兩點為預設；IR 建議分段）+ 標記即時轉換預覽表 */}
+                      <div className="lg:col-span-5 rounded-xl border border-slate-800 bg-slate-900/80 p-3 space-y-3">
+                        <div className="flex items-start justify-between gap-2 border-b border-slate-800 pb-2">
                           <div>
                             <h3 className="text-sm font-bold text-slate-100">
-                              原圖已知刻度校正設定 ({focusedModalityMeta.shortLabel})
+                              座標校正 ({focusedModalityMeta.shortLabel})
                             </h3>
                             <p className="text-[11px] text-slate-400">
-                              步驟：1. 點擊左圖 X 軸第一個已知刻度 (Pt A) 並輸入數值 → 2. 點擊第二個已知刻度 (Pt B) 並輸入數值 → 3. 點擊套用校正。
+                              告訴程式圖上的刻度對應哪個真實數值，只影響峰的位置。
                             </p>
                           </div>
-                          <span className="rounded bg-cyan-950 px-2 py-0.5 font-mono text-[10px] font-bold text-cyan-300">
-                            預設：2點校正
+                          <span className="shrink-0 rounded bg-cyan-950 px-2 py-0.5 font-mono text-[10px] font-bold text-cyan-300">
+                            {piecewiseActive
+                              ? "目前：分段校正"
+                              : showAdvancedCalibration
+                                ? "目前：三點校正"
+                                : "預設：2點校正"}
                           </span>
                         </div>
+
+                        {/* IR 建議：分段（五點）校正。預設仍是兩點，這顆按鈕只是展開／收合分段（piecewise-toggle 行為不變） */}
+                        {focusedModality === "IR" && (
+                          <button
+                            type="button"
+                            data-testid="piecewise-toggle"
+                            aria-expanded={showPiecewiseCalibration}
+                            onClick={() => {
+                              const nextOpen = !showPiecewiseCalibration;
+                              setShowPiecewiseCalibration(nextOpen);
+                              if (nextOpen) {
+                                setShowAdvancedCalibration(false);
+                                setCalibrationMode("PIECEWISE");
+                              } else {
+                                setCalibrationMode("TWO_POINT");
+                                if (nextCalibTarget === "C" || nextCalibTarget === "D" || nextCalibTarget === "E") {
+                                  setNextCalibTarget("A");
+                                }
+                              }
+                            }}
+                            className={`flex w-full items-start gap-2 rounded-lg border px-3 py-2 text-left transition ${
+                              showPiecewiseCalibration
+                                ? "border-emerald-500/60 bg-emerald-950/30"
+                                : "border-cyan-500/40 bg-cyan-950/20 hover:bg-cyan-950/40"
+                            }`}
+                          >
+                            <span className="mt-0.5 shrink-0 rounded bg-cyan-500 px-1.5 py-0.5 text-[10px] font-extrabold text-slate-950">
+                              IR 建議
+                            </span>
+                            <span className="min-w-0 flex-1">
+                              <span className="block text-xs font-bold text-slate-100">
+                                分段（五點）校正
+                              </span>
+                              <span className="block text-[11px] text-slate-400">
+                                IR 圖的刻度常在中途換比例，不是等距。可用 A–E 最多五個已知刻度，每一段各自換算。
+                                {showPiecewiseCalibration ? "（目前使用分段校正）" : "（目前是預設的兩點校正）"}
+                              </span>
+                            </span>
+                            {showPiecewiseCalibration ? (
+                              <ChevronUp className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
+                            ) : (
+                              <ChevronDown className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
+                            )}
+                          </button>
+                        )}
 
                         {/* Point A 與 Point B 輸入區 */}
                         <div className="space-y-3 rounded-lg border border-slate-800 bg-slate-950/90 p-3 text-xs">
@@ -2529,31 +2572,6 @@ export default function App() {
 
                           {focusedModality === "IR" && (
                             <div className="border-t border-slate-800 pt-2">
-                              <button
-                                type="button"
-                                data-testid="piecewise-toggle"
-                                onClick={() => {
-                                  const nextOpen = !showPiecewiseCalibration;
-                                  setShowPiecewiseCalibration(nextOpen);
-                                  if (nextOpen) {
-                                    setShowAdvancedCalibration(false);
-                                    setCalibrationMode("PIECEWISE");
-                                  } else {
-                                    setCalibrationMode("TWO_POINT");
-                                    if (nextCalibTarget === "C" || nextCalibTarget === "D" || nextCalibTarget === "E") {
-                                      setNextCalibTarget("A");
-                                    }
-                                  }
-                                }}
-                                className="flex w-full items-center justify-between text-left text-[11px] font-semibold text-slate-400 hover:text-slate-200"
-                              >
-                                <span>{AXIS_CALIBRATION_CONFIG.ui.piecewiseToggleText}</span>
-                                {showPiecewiseCalibration ? (
-                                  <ChevronUp className="h-3.5 w-3.5" />
-                                ) : (
-                                  <ChevronDown className="h-3.5 w-3.5" />
-                                )}
-                              </button>
                               {showPiecewiseCalibration && (
                                 <PiecewiseCalibrationControls
                                   xUnit={currentSpectrum.xUnit}
@@ -2627,11 +2645,14 @@ export default function App() {
                           </button>
                         </div>
 
+                        {/* IR 基線（只管強度）：與上面的「座標校正」是兩件事，但共用左側同一張圖；面板由 SpectrumViewer 渲染到這裡 */}
+                        <div ref={setIrPanelHost} />
+
                         {/* 即時預覽與已校正結果對照表 */}
                         <div className="rounded-lg border border-slate-800 bg-slate-950/90 p-3">
                           <div className="flex items-center justify-between">
                             <span className="text-xs font-bold text-slate-200">
-                              第 1 頁標記訊號座標轉換即時預覽 ({currentSpectrum.peaks.length} 筆)
+                              標記訊號座標轉換即時預覽 ({currentSpectrum.peaks.length} 筆)
                             </span>
                             <span className="font-mono text-[10px] text-cyan-300">
                               {liveCalibrationPreview
@@ -2651,7 +2672,7 @@ export default function App() {
                             digits={focusedModality === "IR" ? 1 : 2}
                           />
 
-                          <div className="mt-2 max-h-48 overflow-y-auto">
+                          <div className="mt-2">
                             {currentSpectrum.peaks.length === 0 ? (
                               <div className="py-3 text-center text-[11px] text-slate-500">
                                 第 1 頁尚未標記任何訊號。可點擊上方「返回第 1 頁修改訊號標記」新增標記。
@@ -2670,7 +2691,10 @@ export default function App() {
                                   </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-800/60">
-                                  {currentSpectrum.peaks.map((pk) => {
+                                  {(showAllPreviewRows
+                                    ? currentSpectrum.peaks
+                                    : currentSpectrum.peaks.slice(0, PREVIEW_ROWS_COLLAPSED)
+                                  ).map((pk) => {
                                     const previewVal =
                                       liveCalibrationPreview &&
                                       pk.pixelX !== undefined
@@ -2706,6 +2730,18 @@ export default function App() {
                                   })}
                                 </tbody>
                               </table>
+                            )}
+                            {currentSpectrum.peaks.length > PREVIEW_ROWS_COLLAPSED && (
+                              <button
+                                type="button"
+                                onClick={() => setShowAllPreviewRows((v) => !v)}
+                                aria-expanded={showAllPreviewRows}
+                                className="mt-1.5 text-[11px] font-semibold text-cyan-300 hover:text-cyan-200"
+                              >
+                                {showAllPreviewRows
+                                  ? "收合預覽列"
+                                  : `展開全部 ${currentSpectrum.peaks.length} 筆（目前顯示前 ${PREVIEW_ROWS_COLLAPSED} 筆）`}
+                              </button>
                             )}
                           </div>
                         </div>
