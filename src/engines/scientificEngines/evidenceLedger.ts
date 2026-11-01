@@ -10,6 +10,8 @@ import {graphFragments} from './graphFragmentation';
 import {prepareIR,irRangeCovered} from './irSignalProcessing';
 import {ionMz,type IonAdduct} from './ionMass';
 import {V12_CONFIG} from '../constraints/v12Config';
+import {carbonylBandActive} from '../composition/planningGate';
+import {carbonylBandEntries} from './carbonylClasses';
 
 export interface ScientificEvidence {
   id:string;sourceModality:ExtendedSpectrumModality|'FORMULA';observationIds:string[];
@@ -185,6 +187,8 @@ export function scoreScientificEvidence(smiles:string,bundle:IntegratedAnalysisB
       const weight=.2*(irProcessed.irDataQuality??.5);
       entries.push({evidenceId:id,observationIds:[id],sourceModality:'IR',compatibility:0,weight,contribution:0,method:'實際掃描範圍內未檢出候選預期強吸收，弱反證（不適用 OH/NH）',limitations:['偵測門檻／重疊可能遮蔽；非硬限制']});
     }
+    // v1.2.1 (B4): image IR with a trusted calibration and a trace over the carbonyl windows; the candidate is scored down, never rejected
+    if(carbonylBandActive())entries.push(...carbonylBandEntries(smiles,sources.IR,irProcessed));
   }
   const modalityScores:CandidateScoreLedger['modalityScores']={},modalityWeights:CandidateScoreLedger['modalityWeights']={};
   let totalWeight=0,totalContribution=0;
