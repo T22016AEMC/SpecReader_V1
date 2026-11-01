@@ -6,15 +6,20 @@ import {buildDataCheck} from './ui/dataCheck';
 import {PredictionTab} from './ui/PredictionTab';
 import type {CandidateView} from './ui/ConclusionCard';
 import {CandidateEvidence} from './ui/CandidateEvidence';
+import {FunctionalGroupTab} from './ui/FunctionalGroupTab';
+import {DiagnosisTab} from './ui/DiagnosisTab';
+import {buildDiagnosticSummary,buildFullFormulaTable,type CompositionSourcesLike} from './ui/diagnosticSummary';
+import {filterIrEvidence,type FunctionalGroupRow,type IrFindingRow} from './ui/irEvidenceFilter';
 import {conclusionBullets,pickTopWarning,searchStatusSentence} from './ui/conclusion';
-import {fmtScoreOf100,shortenNumbers} from './ui/format';
+import {fmtIntegral,fmtMz,fmtScoreOf100,fmtShift13C,fmtShift1H,fmtWavenumber,shortenNumbers} from './ui/format';
 import type {ObservationLike} from './ui/obsLabel';
 import type {AnalysisProgress} from './engines/reasoning/types';
 import {MassExperimentConditions} from './components/MassExperimentConditions';
 import {emptyModeAState,executeAnalysisWorker,type ModeAResult} from './engines/analysisSession';
 import {PeakObservationTable} from './components/PeakObservationTable';
 import {CompositionPanel} from './components/CompositionPanel';
-import {candidateSourceTag, zeroCandidateModel} from './engines/enumeration/compositionPanelModel';
+import {buildCompositionPanel, candidateSourceTag, zeroCandidateModel} from './engines/enumeration/compositionPanelModel';
+import {carbonylBandStatusOfIr} from './engines/scientificEngines/carbonylClasses';
 import type {IRManualSettings} from './engines/scientificEngines/irManualBaseline';
 import type {ExtendedSpectrumModality} from './types/spectrum';
 import React, { useMemo, useRef, useState } from "react";
@@ -45,7 +50,7 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
-import { ReportExportModal } from "./components/ReportExportModal";
+import { ReportExportModal, buildMarkdownReport, downloadEvidenceJson } from "./components/ReportExportModal";
 import { SpectrumViewer } from "./components/SpectrumViewer";
 import { StructureRenderer2D } from "./components/StructureRenderer2D";
 import { StructureSpectrumValidationPage } from "./components/StructureSpectrumValidationPage";
@@ -788,11 +793,15 @@ export default function App() {
         text: `IR 已使用設定 v${irSnapshot.settingsVersion} · ${irSnapshot.curvePoints} 個相對吸收數值／${irSnapshot.peakCount} 個峰 · ${irSnapshot.featureChanged ? "峰特徵已更新" : "設定已使用，峰特徵未實質改變"} · ${irSnapshot.previousRankingKey === rankedCandidates.map((c) => c.smiles).join("|") ? "證據不足以改變候選順序" : "候選順序已重新計算"}`,
       }
     : null;
+  // 輸入與校正分頁：與資料檢查同一份輸入（分析結果仍是最新時用分析當時的快照）
+  const inputBase = completedAnalysis && !analysisStale ? completedAnalysis.spectra : spectra;
   const inputSummaryRows: InputSummaryRow[] = ALL_EXTENDED_MODALITIES.flatMap((m) => {
-    const spec = getSpectrumForModality(m.id);
+    const spec = (m.id === "MS/MS" || m.id === "ToF-SIMS" ? auxSpectraMap[m.id] : inputBase[m.id as keyof typeof inputBase]) ?? getSpectrumForModality(m.id);
     if (!spec) return [];
     const st = calibrationStatus(spec);
     const isNmr = m.id === "1H_NMR" || m.id === "13C_NMR";
+    const peakPosition = (x: number) =>
+      m.id === "IR" ? `${fmtWavenumber(x)} cm⁻¹` : m.id === "1H_NMR" ? `${fmtShift1H(x)} ppm` : m.id === "13C_NMR" ? `${fmtShift13C(x)} ppm` : `m/z ${fmtMz(x)}`;
     return [
       {
         key: m.id,
@@ -802,11 +811,64 @@ export default function App() {
         calibrationLabel: st.label,
         calibrationDetail: st.detail,
         level: st.level,
+        peaks: spec.peaks.map((pk) => ({
+          id: pk.id,
+          position: pk.isCalibrated === false ? `px(${pk.pixelX ?? "—"}, ${pk.pixelY ?? "—"})` : peakPosition(pk.x),
+          intensity: Number.isFinite(pk.relativeIntensity ?? pk.y) ? fmtIntegral(pk.relativeIntensity ?? pk.y) : "—",
+          detail: [
+            pk.isCalibrated === false ? "像素（尚未校正）" : "",
+            m.id === "IR" ? (pk.isBroad || pk.shape === "broad" || pk.shape === "very_broad" ? "寬" : pk.shape === "sharp" ? "窄" : "") : "",
+            isNmr && pk.integration != null ? `${fmtIntegral(pk.integration)}H` : "",
+            isNmr && pk.multiplicity ? String(pk.multiplicity) : "",
+            isNmr && pk.jValues?.length ? `J = ${pk.jValues.map((j) => Number(j.toFixed(1))).join(", ")} Hz` : "",
+          ].filter(Boolean).join("｜"),
+        })),
         solvent: isNmr ? spec.nmrSolvent ?? "" : undefined,
         frequencyMHz: m.id === "1H_NMR" ? spec.spectrometerFrequencyMHz ?? null : undefined,
+        irBaselineText: m.id === "IR" ? (irVersionInfo ? irVersionInfo.text : spec.irManualSettings?.enabled ? "已啟用（尚未分析）" : null) : undefined,
       },
     ];
   });
+  const traceObservations = modeAOrchestration.reasoningTrace?.observations as unknown as ObservationLike[] | undefined;
+  // 診斷分頁：純文字摘要與完整分子式表（只讀畫面上已有的資料）
+  const diagnosticPanel = useMemo(() => {
+    if (!completedAnalysis) return null;
+    const r = completedAnalysis.result;
+    return buildCompositionPanel({
+      composition: r.compositionInference,
+      runs: r.reasoningTrace?.compositionSearch?.runs ?? [],
+      mode: r.reasoningTrace?.compositionSearch?.mode,
+      enumeration: r.solvedConstraintSpace?.searchResult?.enumeration,
+      localStructures: r.reasoningTrace?.localStructures ?? [],
+      rejectedCandidates: r.rejectedCandidates,
+      carbonylBand: carbonylBandStatusOfIr(r.inputSpectra?.IR),
+    });
+  }, [completedAnalysis]);
+  const diagnosticStamp = useMemo(() => new Date().toLocaleString("zh-TW", { hour12: false }), [completedAnalysis]);
+  const irFilterResult = useMemo(
+    () => filterIrEvidence((modeAReport.constraints.functionalGroups || []) as FunctionalGroupRow[], (modeAReport.irFindings || []).filter((f) => f.status !== "ABSENT") as unknown as IrFindingRow[]),
+    [modeAReport]
+  );
+  const diagnosticSummaryText = useMemo(() => {
+    if (!completedAnalysis) return "";
+    const h1 = inputBase["1H_NMR"], ir = inputBase.IR;
+    return buildDiagnosticSummary({
+      generatedAt: diagnosticStamp,
+      appVersion: typeof __APP_VERSION__ === "string" ? __APP_VERSION__ : "",
+      resultIsCurrent: !analysisStale,
+      dataCheck,
+      h1Peaks: (h1?.peaks ?? []).map((pk) => ({ position: pk.x, integration: pk.integration, multiplicity: pk.multiplicity ?? undefined, jValues: pk.jValues })),
+      irPeaks: (ir?.peaks ?? []).map((pk) => ({ position: pk.x, broad: Boolean(pk.isBroad || pk.shape === "broad" || pk.shape === "very_broad") })),
+      irCalibrationText: ir ? `${calibrationStatus(ir).label}（${calibrationStatus(ir).detail}）` : undefined,
+      hiddenIrGroups: irFilterResult.hiddenCount,
+      shownIrGroups: irFilterResult.shownCount,
+      panel: diagnosticPanel,
+      composition: completedAnalysis.result.compositionInference as unknown as CompositionSourcesLike,
+      observations: traceObservations ?? [],
+      topCandidates: rankedCandidates.slice(0, 5).map((c, i) => ({ rank: i + 1, formula: c.molecularFormula, score: c.scoreBreakdown.totalScore, smiles: c.smiles })),
+    });
+  }, [completedAnalysis, analysisStale, dataCheck, diagnosticPanel, diagnosticStamp, irFilterResult, rankedCandidates]);
+  const fullFormulaTableText = useMemo(() => (completedAnalysis ? buildFullFormulaTable(diagnosticPanel, diagnosticStamp) : ""), [completedAnalysis, diagnosticPanel, diagnosticStamp]);
   // 分析中與被取消後：「分析過程」卡在「預測結構」；分析完成後只放在「診斷」（同一個 data-testid 全頁只能出現一處）
   const processInPred =
     analysisBusy ||
@@ -822,7 +884,6 @@ export default function App() {
           scores: rankedCandidates.map((c) => c.scoreBreakdown.totalScore),
         })
       : null;
-  const traceObservations = modeAOrchestration.reasoningTrace?.observations as unknown as ObservationLike[] | undefined;
   const candidateViews: CandidateView[] = rankedCandidates.map((cand) => {
     const record = modeAOrchestration.reasoningTrace?.candidates.find((r) => r.candidateId === cand.id);
     const graphInfo = validatedGraphs.find((vg) => vg.candidate.id === cand.id)?.graphValidation;
@@ -849,8 +910,8 @@ export default function App() {
         setPrimaryMode("MODE_B");
       },
       structure: () => <StructureRenderer2D smiles={cand.smiles} formula={cand.molecularFormula} compact />,
-      reasoning: () => <CandidateReasoningDetails record={record} />,
-      evidence: () => <CandidateEvidence cand={cand} graphInfo={graphInfo} modalityCount={activeEvidenceSummary.modalitiesWithData.length} />,
+      reasoning: () => <CandidateReasoningDetails record={record} observations={traceObservations} />,
+      evidence: () => <CandidateEvidence cand={cand} graphInfo={graphInfo} modalityCount={activeEvidenceSummary.modalitiesWithData.length} evidence={record?.evidence} observations={traceObservations} />,
     };
   });
   const searchInfo = {
@@ -2967,371 +3028,24 @@ export default function App() {
                 {/* 舊標題改成視覺隱藏（E2E 以這串文字確認已進入第 3 頁）；步驟列是唯一可見標題 */}
                 <h1 className="sr-only">化學判讀與結構推論（Interpretation）</h1>
                 <ResultPanels active={resultTab} panels={{
-                  fg: (<>
-                    {!completedAnalysis && <p className="rounded-xl border border-dashed border-slate-800 p-6 text-center text-xs text-slate-400">尚未分析。按上方「開始分析」後，這裡會列出圖譜上的官能基證據。</p>}
-                    {completedAnalysis&&<>
-                {!!modeAOrchestration.generationStatus?.partialHypotheses?.length&&<ul data-testid="local-structure-hypotheses" className="text-xs text-slate-300">{modeAOrchestration.generationStatus.partialHypotheses.map((h,i)=><li key={i}>{h}</li>)}</ul>}
-                {/* =========================================================== */}
-                {/* 第一部分：官能基與化學環境判讀（顯示支持證據、反對證據、相關峰位、可信度、不確定性） */}
-                {/* =========================================================== */}
-                <div className="rounded-xl border border-cyan-500/30 bg-slate-900/90 p-4 space-y-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
-                    <div>
-                      <h2 className="text-sm font-bold text-cyan-200">
-                        1. 官能基與化學環境判讀（Functional Groups &amp; Chemical Environments）
-                      </h2>
-                      <p className="text-xs text-slate-400">
-                        整合所有已校正光譜訊號、分子式與化學備註，逐項列出支持證據、反對證據、相關峰位、可信度與不確定性說明。
-                      </p>
-                    </div>
-                    <span className="rounded border border-cyan-500/30 bg-cyan-950/60 px-2.5 py-1 font-mono text-[11px] font-bold text-cyan-300">
-                      {(modeAReport.constraints.functionalGroups || []).length}{" "}
-                      項官能基約束評估
-                    </span>
-                  </div>
-
-                  {/* 跨模態官能基詳細判讀卡片 (含支持證據、反對證據、相關峰位、可信度、不確定性) */}
-                  {(modeAReport.constraints.functionalGroups || []).length ===
-                  0 ? (
-                    <div className="rounded-lg border border-dashed border-slate-800 bg-slate-950/50 p-6 text-center text-xs text-slate-400">
-                      目前尚無已校正之特徵光譜峰可供官能基判讀。若您僅輸入分子式，請直接參閱下方「分子式異構物與候選結構推論」；若已標記圖片訊號，請確認已於第 2 頁套用座標校正。
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-                      {(modeAReport.constraints.functionalGroups || []).map(
-                        (fg, idx) => {
-                          const fgDisplayName =
-                            fg.groupName || fg.label || fg.groupFamily;
-                          const associatedEv = spectrumEvidenceList.filter(
-                            (ev) => {
-                              const inf = (ev.inferredGroup || "").toLowerCase();
-                              const gName = fgDisplayName.toLowerCase();
-                              const gFam = (fg.groupFamily || "").toLowerCase();
-                              return (
-                                (inf && gName && inf.includes(gName)) ||
-                                (inf && gName && gName.includes(inf)) ||
-                                (inf && gFam && inf.includes(gFam))
-                              );
-                            }
-                          );
-                          const srcModalities =
-                            fg.sourceModalities &&
-                            fg.sourceModalities.length > 0
-                              ? fg.sourceModalities
-                              : [fg.sourceModality];
-                          const isSinglePeakOnly =
-                            associatedEv.length === 1 &&
-                            srcModalities.length <= 1;
-
-
-                          return (
-                            <div
-                              key={idx}
-                              className="rounded-xl border border-slate-800 bg-slate-950/90 p-3.5 text-xs flex flex-col justify-between space-y-2.5"
-                            >
-                              <div>
-                                <div className="flex items-center justify-between gap-2">
-                                  <span className="font-bold text-slate-100 text-sm">
-                                    {fgDisplayName}
-                                  </span>
-                                  <span
-                                    className={`rounded px-2 py-0.5 font-mono text-[10px] font-bold ${
-                                      fg.status === "REQUIRED"
-                                        ? "border border-emerald-500/40 bg-emerald-950/70 text-emerald-300"
-                                        : fg.status === "SUPPORTED" ||
-                                            fg.status === "PROBABLE"
-                                          ? "border border-cyan-500/40 bg-cyan-950/70 text-cyan-300"
-                                          : fg.status === "CONFLICTING" ||
-                                              fg.status === "EXCLUDED" ||
-                                              fg.status === "FORBIDDEN"
-                                            ? "border border-rose-500/40 bg-rose-950/70 text-rose-300"
-                                            : "border border-slate-700 bg-slate-800 text-slate-400"
-                                    }`}
-                                  >
-                                    {fg.status} · 經驗假設（非機率）
-                                  </span>
-                                </div>
-
-                                {/* 相關峰位 */}
-                                <div className="mt-2 font-mono text-[11px] text-cyan-300">
-                                  <span className="text-slate-400">
-                                    相關峰位與模態：
-                                  </span>
-                                  {fg.observedSignal
-                                    ? `${srcModalities.join("+")} (${fg.observedSignal})`
-                                    : associatedEv.length > 0
-                                      ? associatedEv
-                                          .map(
-                                            (e) =>
-                                              `${e.spectrumType}(${e.peakPosition})`
-                                          )
-                                          .join("、")
-                                      : srcModalities.join(" + ") ||
-                                        "跨譜規則評估"}
-                                </div>
-
-                                {/* 支持證據 */}
-                                <div className="mt-1.5 rounded border border-emerald-500/20 bg-emerald-950/15 p-2 text-[11px] text-slate-200">
-                                  <span className="font-semibold text-emerald-300">
-                                    支持證據：
-                                  </span>
-                                  {fg.status !== "FORBIDDEN" &&
-                                  fg.status !== "EXCLUDED" &&
-                                  fg.status !== "CONFLICTING"
-                                    ? fg.notes ||
-                                      fg.reasoning ||
-                                      "符合實驗特徵區間與結構約束"
-                                    : "未觀測到足夠支持此官能基之實驗訊號"}
-                                </div>
-
-                                {/* 反對證據 */}
-                                <div className="mt-1.5 rounded border border-rose-500/20 bg-rose-950/15 p-2 text-[11px] text-slate-300">
-                                  <span className="font-semibold text-rose-300">
-                                    反對證據 / 排他檢查：
-                                  </span>
-                                  {fg.status === "FORBIDDEN" ||
-                                  fg.status === "EXCLUDED" ||
-                                  fg.status === "CONFLICTING"
-                                    ? fg.notes ||
-                                      fg.reasoning ||
-                                      "實驗光譜缺乏此官能基必備吸收帶或共振峰"
-                                    : "目前提供的光譜中無直接反對證據"}
-                                </div>
-                              </div>
-
-                              {/* 不確定性與單一峰警告 */}
-                              <div className="rounded border border-amber-500/25 bg-amber-950/20 px-2.5 py-1.5 text-[11px] text-amber-200/90">
-                                <span className="font-semibold text-amber-300">
-                                  不確定性說明：
-                                </span>
-                                {isSinglePeakOnly
-                                  ? "目前僅依賴單一模態之孤立峰支持，吸收帶可能受重疊或化學環境影響，不可單憑此單一峰斷言唯一官能基，需結合其他光譜或分子式綜合確認。"
-                                  : srcModalities.length >= 2
-                                    ? `已獲 ${srcModalities.join(" + ")} 跨模態雙重印證，不確定性較低。`
-                                    : "建議結合互補光譜模態（如 ¹³C NMR 或 MS）進一步降低同分異構物不確定性。"}
-                              </div>
-                            </div>
-                          );
-                        }
-                      )}
-                    </div>
-                  )}
-
-                  {/* 各模態細部化學環境卡片 (IR / 1H / 13C / MS / MS/MS / ToF-SIMS) */}
-                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4 pt-2">
-                    {/* IR */}
-                    <div className="rounded-lg border border-slate-800 bg-slate-950/80 p-3 text-xs">
-                      <div className="font-mono font-bold text-cyan-300">
-                        IR 吸收帶化學環境判讀
-                      </div>
-                      {spectra.IR ? (
-                        <div className="mt-2 space-y-1.5 max-h-44 overflow-y-auto">
-                          {modeAReport.irFindings
-                            .filter((f) => f.status !== "ABSENT")
-                            .map((f, i) => {
-                              const rawPeaks =
-                                f.observedPeaks && f.observedPeaks.length > 0
-                                  ? f.observedPeaks
-                                  : f.observedPeak !== undefined
-                                    ? [f.observedPeak]
-                                    : [];
-                              return (
-                                <div
-                                  key={i}
-                                  className="rounded border border-slate-800 bg-slate-900/70 p-2"
-                                >
-                                  <div className="flex justify-between font-semibold text-emerald-300">
-                                    <span>
-                                      {f.groupName || f.functionalGroup}
-                                    </span>
-                                    <span className="font-mono text-[10px]">
-                                      {f.matchLevel==='Strong'?'較支持':f.matchLevel==='Weak'?'證據不足':'可能'}
-                                    </span>
-                                  </div>
-                                  <div className="mt-0.5 font-mono text-[10px] text-cyan-200">
-                                    峰位：
-                                    {rawPeaks
-                                      .filter((p) => Number.isFinite(Number(p)))
-                                      .map((p) => `${Number(p).toFixed(0)} cm⁻¹`)
-                                      .join(", ") || f.expectedRange}
-                                  </div>
-                                  <div className="mt-0.5 text-[11px] text-slate-400">
-                                    {f.chemicalInterpretation ||
-                                      f.reasoning ||
-                                      f.evidence?.reasoning}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                        </div>
-                      ) : (
-                        <div className="mt-2 text-[11px] text-slate-500">
-                          未提供 IR 光譜
-                        </div>
-                      )}
-                    </div>
-
-                    {/* 1H NMR */}
-                    <div className="rounded-lg border border-slate-800 bg-slate-950/80 p-3 text-xs">
-                      <div className="font-mono font-bold text-cyan-300">
-                        ¹H NMR 質子環境與自旋偶合
-                      </div>
-                      {modeAReport.protonSummary ? (
-                        <div className="mt-2 space-y-1.5 max-h-44 overflow-y-auto">
-                          {(modeAReport.protonSummary.environments || []).map(
-                            (env: any, i: number) => {
-                              const shiftVal = Number(
-                                env.shiftPpm ?? env.chemicalShift ?? env.shift ?? 0
-                              );
-                              const integVal =
-                                env.integration ?? env.integral ?? "—";
-                              const envText =
-                                env.environmentLabel ||
-                                env.environment ||
-                                env.environmentType ||
-                                env.regionCategory ||
-                                "質子共振環境";
-                              return (
-                                <div
-                                  key={i}
-                                  className="rounded border border-slate-800 bg-slate-900/70 p-2"
-                                >
-                                  <div className="font-mono font-semibold text-cyan-200">
-                                    δ {shiftVal.toFixed(2)} ppm (
-                                    {env.multiplicity || "s"}, {integVal}H)
-                                  </div>
-                                  <div className="text-[11px] text-slate-300">
-                                    環境：{envText}
-                                  </div>
-                                </div>
-                              );
-                            }
-                          )}
-                        </div>
-                      ) : (
-                        <div className="mt-2 text-[11px] text-slate-500">
-                          未提供 ¹H NMR 光譜
-                        </div>
-                      )}
-                    </div>
-
-                    {/* 13C NMR */}
-                    <div className="rounded-lg border border-slate-800 bg-slate-950/80 p-3 text-xs">
-                      <div className="font-mono font-bold text-cyan-300">
-                        ¹³C NMR 碳骨架與對稱性
-                      </div>
-                      {modeAReport.carbonSummary ? (
-                        <div className="mt-2 space-y-1.5 max-h-44 overflow-y-auto">
-                          <div className="rounded border border-slate-800 bg-slate-900 p-2 text-[11px] text-slate-300">
-                            {modeAReport.carbonSummary.symmetryAndOverlapNote ||
-                              (modeAReport.carbonSummary as any)
-                                .symmetryAssessment}
-                          </div>
-                          {(modeAReport.carbonSummary.environments || []).map(
-                            (cEnv: any, i: number) => {
-                              const cShift = Number(
-                                cEnv.shiftPpm ??
-                                  cEnv.chemicalShift ??
-                                  cEnv.shift ??
-                                  0
-                              );
-                              const cLabel =
-                                cEnv.regionCategory ||
-                                cEnv.assignment ||
-                                cEnv.regionLabel ||
-                                "碳化學環境";
-                              return (
-                                <div
-                                  key={i}
-                                  className="rounded border border-slate-800 bg-slate-900/70 p-1.5 font-mono text-[11px]"
-                                >
-                                  <span className="text-amber-300">
-                                    δ {cShift.toFixed(1)} ppm (
-                                    {cEnv.deptType || "C"})
-                                  </span>{" "}
-                                  → {cLabel}
-                                </div>
-                              );
-                            }
-                          )}
-                        </div>
-                      ) : (
-                        <div className="mt-2 text-[11px] text-slate-500">
-                          未提供 ¹³C NMR 光譜
-                        </div>
-                      )}
-                    </div>
-
-                    {/* MS / MS/MS / ToF-SIMS */}
-                    <div className="rounded-lg border border-slate-800 bg-slate-950/80 p-3 text-xs">
-                      <div className="font-mono font-bold text-cyan-300">
-                        MS / MS/MS / ToF-SIMS 裂解診斷
-                      </div>
-                      <div className="mt-2 space-y-1.5 max-h-44 overflow-y-auto">
-                        {modeAReport.msSummary ? (
-                          <>
-                            <div className="rounded border border-slate-800 bg-slate-900 p-2 font-mono text-[11px] text-slate-200">
-                              M+• ={" "}
-                              {modeAReport.msSummary.estimatedMolecularIonMz ??
-                                "—"}{" "}
-                              | Base Peak = {modeAReport.msSummary.basePeakMz}
-                            </div>
-                            {modeAReport.msSummary.neutralLosses.map(
-                              (nl: any, i: number) => (
-                                <div
-                                  key={i}
-                                  className="rounded border border-slate-800 bg-slate-900/70 p-1.5 text-[11px] text-slate-300"
-                                >
-                                  <span className="font-mono text-amber-300">
-                                    -Δ{nl.lossMass} Da:
-                                  </span>{" "}
-                                  {nl.lostNeutralFormula} ({nl.chemicalMeaning})
-                                </div>
-                              )
-                            )}
-                          </>
-                        ) : (
-                          <div className="text-[11px] text-slate-500">
-                            未提供一級 MS 質譜
-                          </div>
-                        )}
-                        {bundle.msmsAnalysis && (
-                          <div className="rounded border border-violet-500/30 bg-violet-950/30 p-2 text-[11px] text-violet-200">
-                            <strong>MS/MS 診斷：</strong>
-                            共擷取{" "}
-                            {
-                              bundle.msmsAnalysis.physicsModel.productIons
-                                .length
-                            }{" "}
-                            個子離子與{" "}
-                            {
-                              bundle.msmsAnalysis.physicsModel.neutralLosses
-                                .length
-                            }{" "}
-                            條中性脫去路徑
-                          </div>
-                        )}
-                        {bundle.tofSimsAnalysis && (
-                          <div className="rounded border border-violet-500/30 bg-violet-950/30 p-2 text-[11px] text-violet-200">
-                            <strong>ToF-SIMS 診斷：</strong>
-                            共解析{" "}
-                            {
-                              bundle.tofSimsAnalysis.physicsModel
-                                .secondaryIonFeatures.length
-                            }{" "}
-                            個表面特徵二次離子
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                {!spectra.IR&&!spectra['1H_NMR']&&!spectra['13C_NMR']&&(spectra.MS||auxSpectraMap['MS/MS']||auxSpectraMap['ToF-SIMS'])&&<p className="text-xs text-amber-200">本版本可利用 MS 質量、可能分子式及碎片資訊提供結構限制，但尚無法僅憑 MS 資料可靠確定完整分子結構，建議搭配 IR 或 NMR。</p>}
-                    </>}
-                    <div className="flex justify-end">
-                      <button type="button" onClick={() => setResultTab("pred")} className="inline-flex items-center gap-1.5 rounded-lg bg-cyan-600 px-4 py-2 text-sm font-bold text-white hover:bg-cyan-500">看預測結構 <ArrowRight className="h-4 w-4" /></button>
-                    </div>
-                  </>),
+                  fg: (<FunctionalGroupTab
+                    hasResult={!!completedAnalysis}
+                    groups={modeAReport.constraints.functionalGroups || []}
+                    irFindings={modeAReport.irFindings || []}
+                    evidenceList={spectrumEvidenceList}
+                    observations={traceObservations}
+                    proton={modeAReport.protonSummary ?? null}
+                    carbon={modeAReport.carbonSummary ?? null}
+                    ms={modeAReport.msSummary ?? null}
+                    msmsProductIons={bundle.msmsAnalysis ? bundle.msmsAnalysis.physicsModel.productIons.length : null}
+                    msmsNeutralLosses={bundle.msmsAnalysis ? bundle.msmsAnalysis.physicsModel.neutralLosses.length : null}
+                    tofFeatures={bundle.tofSimsAnalysis ? bundle.tofSimsAnalysis.physicsModel.secondaryIonFeatures.length : null}
+                    localStructures={modeAOrchestration.reasoningTrace?.localStructures ?? []}
+                    hypotheses={modeAOrchestration.reasoningTrace?.hypotheses ?? []}
+                    partialHypotheses={modeAOrchestration.generationStatus?.partialHypotheses}
+                    msOnlyNote={!spectra.IR && !spectra["1H_NMR"] && !spectra["13C_NMR"] && !!(spectra.MS || auxSpectraMap["MS/MS"] || auxSpectraMap["ToF-SIMS"])}
+                    onNext={() => setResultTab("pred")}
+                  />),
                   pred: (<PredictionTab
                     onBack={() => setResultTab("fg")}
                     onGoCalibration={() => setModeAPage("PAGE_2_CALIBRATION")}
@@ -3347,264 +3061,27 @@ export default function App() {
                   />),
                   formula: (<>
                     {!completedAnalysis && <p className="rounded-xl border border-dashed border-slate-800 p-6 text-center text-xs text-slate-400">尚未分析。分析後，這裡會列出分子式假設與搜尋計畫。</p>}
-                    {completedAnalysis&&<CompositionPanel result={completedAnalysis.result} stale={analysisStale}/>}
+                    {completedAnalysis&&<CompositionPanel result={completedAnalysis.result} stale={analysisStale} unsearchedRowLimit={4}/>}
                   </>),
-                  input: (<InputSummaryTab rows={inputSummaryRows} unprovidedText={dataCheck.unprovidedText} onGoPage1={() => setModeAPage("PAGE_1_SIGNAL_MARKING")} onGoPage2={() => setModeAPage("PAGE_2_CALIBRATION")} />),
-                  diag: (<>
-                    {!processInPred && <ReasoningPanel trace={completedAnalysis?.result.reasoningTrace} progress={analysisProgress} busy={analysisBusy}/>}
-                    <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/80 p-3">
-                      <span className="text-xs font-bold text-slate-100">匯出</span>
-                      <button type="button" onClick={() => setIsExportModalOpen(true)} className="rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-200 hover:bg-slate-700">開啟匯出視窗</button>
-                      <span className="text-[11px] text-slate-400">視窗內可複製 Markdown 報告、下載完整 JSON 證據包、列印報告。</span>
-                    </div>
-                    {!completedAnalysis && <p className="rounded-xl border border-dashed border-slate-800 p-6 text-center text-xs text-slate-400">尚未分析。分析後，這裡會列出驗證矩陣與可追溯證據。</p>}
-                    {completedAnalysis&&<>
-                {/* =========================================================== */}
-                {/* 第三部分：跨光譜一致性驗證矩陣 (支援全 6 種光譜模態)             */}
-                {/* =========================================================== */}
-                {validationMatrix.length > 0 && (
-                  <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-4">
-                    <h3 className="text-sm font-bold text-slate-100">
-                      3. 跨光譜一致性驗證矩陣 (Cross-Spectrum Validation Matrix — IR / ¹H / ¹³C / MS / MS-MS / ToF-SIMS)
-                    </h3>
-                    <p className="text-xs text-slate-400">
-                      未提供之光譜模態嚴格標記為 NOT PROVIDED，絕不當成反證扣分。
-                    </p>
-                    <div className="mt-3 overflow-x-auto">
-                      <table className="w-full border-collapse text-left text-xs">
-                        <thead>
-                          <tr className="border-b border-slate-800 text-[11px] text-slate-400">
-                            <th className="py-2 pr-3">排名 / 候選結構</th>
-                            <th className="px-3 py-2 font-mono">分子式 / SMILES</th>
-                            <th className="px-2 py-2 font-mono">IR</th>
-                            <th className="px-2 py-2 font-mono">¹H NMR</th>
-                            <th className="px-2 py-2 font-mono">¹³C NMR</th>
-                            <th className="px-2 py-2 font-mono">MS</th>
-                            <th className="px-2 py-2 font-mono">MS/MS</th>
-                            <th className="px-2 py-2 font-mono">ToF-SIMS</th>
-                            <th className="py-2 pl-3 font-mono">綜合吻合度</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-800/70">
-                          {validationMatrix.map((row, idx) => {
-                            const renderBadge = (
-                              st:
-                                | "SUPPORTED"
-                                | "COMPATIBLE"
-                                | "INSUFFICIENT_DATA"
-                                | "CONTRADICTED"
-                                | "NOT_PROVIDED"
-                                | undefined,
-                              sc: number | null | undefined
-                            ) => {
-                              if (!st || st === "NOT_PROVIDED") {
-                                return (
-                                  <span className="rounded bg-slate-800 px-2 py-0.5 font-mono text-[10px] text-slate-400">
-                                    NOT PROVIDED
-                                  </span>
-                                );
-                              }
-                              if (st === "SUPPORTED") {
-                                return (
-                                  <span className="rounded border border-emerald-500/30 bg-emerald-950/60 px-2 py-0.5 font-mono text-[10px] font-bold text-emerald-300">
-                                    SUPPORTED ({sc}/100)
-                                  </span>
-                                );
-                              }
-                              if(st==='INSUFFICIENT_DATA')return <span className="text-slate-400">資料不足／未評分</span>;
-                              if (st === "COMPATIBLE") {
-                                return (
-                                  <span className="rounded border border-cyan-500/30 bg-cyan-950/60 px-2 py-0.5 font-mono text-[10px] font-bold text-cyan-300">
-                                    COMPATIBLE ({sc}/100)
-                                  </span>
-                                );
-                              }
-                              return (
-                                <span className="rounded border border-rose-500/30 bg-rose-950/60 px-2 py-0.5 font-mono text-[10px] font-bold text-rose-300">
-                                  CONTRADICTED ({sc}/100)
-                                </span>
-                              );
-                            };
-
-                            return (
-                              <tr key={row.candidateId}>
-                                <td className="py-2.5 pr-3 font-semibold text-slate-100">
-                                  #{idx + 1} {row.candidateName}
-                                </td>
-                                <td className="px-3 py-2.5 font-mono text-[11px] text-cyan-300">
-                                  <div>{row.formula}</div>
-                                  <div className="text-[10px] text-slate-400">
-                                    {row.smiles}
-                                  </div>
-                                </td>
-                                <td className="px-2 py-2.5">
-                                  {renderBadge(
-                                    row.modalityStatus.IR,
-                                    row.modalityScores.IR
-                                  )}
-                                </td>
-                                <td className="px-2 py-2.5">
-                                  {renderBadge(
-                                    row.modalityStatus["1H_NMR"],
-                                    row.modalityScores["1H_NMR"]
-                                  )}
-                                </td>
-                                <td className="px-2 py-2.5">
-                                  {renderBadge(
-                                    row.modalityStatus["13C_NMR"],
-                                    row.modalityScores["13C_NMR"]
-                                  )}
-                                </td>
-                                <td className="px-2 py-2.5">
-                                  {renderBadge(
-                                    row.modalityStatus.MS,
-                                    row.modalityScores.MS
-                                  )}
-                                </td>
-                                <td className="px-2 py-2.5">
-                                  {renderBadge(
-                                    row.modalityStatus["MS/MS"],
-                                    row.modalityScores["MS/MS"]
-                                  )}
-                                </td>
-                                <td className="px-2 py-2.5">
-                                  {renderBadge(
-                                    row.modalityStatus["ToF-SIMS"],
-                                    row.modalityScores["ToF-SIMS"]
-                                  )}
-                                </td>
-                                <td className="py-2.5 pl-3 font-mono text-sm font-extrabold text-cyan-300">
-                                  {row.totalScore}%
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-                {/* =========================================================== */}
-                {/* 第四部分：Mode A 可追溯證據推理鏈總覽 (Evidence Traceability Chain) */}
-                {/* =========================================================== */}
-                {spectrumEvidenceList.length > 0 && (
-                  <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-4">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div>
-                        <h3 className="text-sm font-bold text-slate-100">
-                          4. 可追溯證據推理鏈明細（Evidence Traceability Chain：原始訊號/化學式 → 特徵規則 → 結構限制 → 評分影響）
-                        </h3>
-                        <p className="text-xs text-slate-400">
-                          明確區分「化學式證據 (FORMULA)」、「使用者化學資訊 (CHEMICAL_NOTES)」與六種獨立「實驗光譜證據 (IR / ¹H NMR / ¹³C NMR / MS / MS/MS / ToF-SIMS)」。
-                        </p>
-                      </div>
-                      <span className="rounded bg-slate-800 px-2.5 py-1 font-mono text-[11px] text-cyan-300">
-                        共 {spectrumEvidenceList.length} 筆可追溯證據
-                      </span>
-                    </div>
-                    <div className="mt-3 max-h-64 overflow-y-auto">
-                      <table className="w-full border-collapse text-left text-xs">
-                        <thead>
-                          <tr className="border-b border-slate-800 text-[10px] text-slate-400">
-                            <th className="py-1.5 pr-2">證據 ID / 來源模態</th>
-                            <th className="px-2 py-1.5">證據類別</th>
-                            <th className="px-2 py-1.5">觀測訊號 / 輸入值</th>
-                            <th className="px-2 py-1.5">推論特徵與套用規則</th>
-                            <th className="px-2 py-1.5">方向</th>
-                            <th className="py-1.5 pl-2">對候選結構之影響與不確定性</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-800/60">
-                          {spectrumEvidenceList.map((ev) => (
-                            <tr key={ev.id}>
-                              <td className="py-2 pr-2 font-mono text-[11px]">
-                                <div className="font-bold text-cyan-300">
-                                  [{ev.sourceSpectrum || ev.spectrumType}]
-                                </div>
-                                <div className="text-[10px] text-slate-500">
-                                  {ev.id}
-                                </div>
-                              </td>
-                              <td className="px-2 py-2 font-mono text-[10px]">
-                                <span
-                                  className={`rounded px-1.5 py-0.5 ${
-                                    ev.evidenceCategory ===
-                                    "CHEMICAL_FORMULA_EVIDENCE"
-                                      ? "bg-amber-950/70 text-amber-300 border border-amber-500/30"
-                                      : ev.evidenceCategory ===
-                                          "USER_CHEMICAL_INFO"
-                                        ? "bg-violet-950/70 text-violet-300 border border-violet-500/30"
-                                        : "bg-cyan-950/70 text-cyan-300 border border-cyan-500/30"
-                                  }`}
-                                >
-                                  {ev.evidenceCategory || "EXPERIMENTAL_SPECTRUM"}
-                                </span>
-                              </td>
-                              <td className="px-2 py-2 font-mono text-[11px] text-slate-200">
-                                {ev.evidenceChain?.observedPeak ||
-                                  `${ev.peakPosition} (${ev.intensity ?? ""})`}
-                              </td>
-                              <td className="px-2 py-2 text-[11px]">
-                                <div className="font-semibold text-slate-100">
-                                  {ev.inferredGroup}
-                                </div>
-                                <div className="text-[10px] text-slate-400">
-                                  {ev.ruleApplied || ev.chemicalMeaning}
-                                </div>
-                              </td>
-                              <td className="px-2 py-2 font-mono text-[10px]">
-                                <span
-                                  className={`rounded px-1.5 py-0.5 font-bold ${
-                                    ev.direction === "CONTRADICTING"
-                                      ? "bg-rose-950/70 text-rose-300"
-                                      : ev.direction === "INCONCLUSIVE"
-                                        ? "bg-amber-950/70 text-amber-300"
-                                        : "bg-emerald-950/70 text-emerald-300"
-                                  }`}
-                                >
-                                  {ev.direction || "SUPPORTING"}
-                                </span>
-                              </td>
-                              <td className="py-2 pl-2 text-[11px] text-slate-300">
-                                <div>{ev.scoreImpact || ev.chemicalMeaning}</div>
-                                {ev.uncertaintyNote && (
-                                  <div className="text-[10px] text-amber-300/80">
-                                    不確定性：{ev.uncertaintyNote}
-                                  </div>
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-                {/* 跨模態共識與資料不確定性紀錄 */}
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-4">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-300">
-                      跨模態共識與輔助證據印證 (Cross-Modality Consensus)
-                    </h4>
-                    <ul className="mt-2 list-disc space-y-1.5 pl-4 text-xs text-slate-300">
-                      {modeAReport.crossModalConsistencyNotes.map((n, i) => (
-                        <li key={i}>{n}</li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-4">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-amber-300">
-                      不確定性、未校正訊號與溶劑排除紀錄 (Uncertainty &amp; Limitations)
-                    </h4>
-                    <ul className="mt-2 list-disc space-y-1.5 pl-4 text-xs text-slate-300">
-                      {modeAReport.uncertaintyNotes.map((n, i) => (
-                        <li key={i}>{n}</li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-                    </>}
-                  </>),
+                  input: (<InputSummaryTab
+                    rows={inputSummaryRows}
+                    unprovidedText={dataCheck.unprovidedText}
+                    onGoPage1={() => setModeAPage("PAGE_1_SIGNAL_MARKING")}
+                    onGoPage2={(key) => { if (key) setFocusedModality(key as ExtendedModality); setModeAPage("PAGE_2_CALIBRATION"); }}
+                  />),
+                  diag: (<DiagnosisTab
+                    hasResult={!!completedAnalysis}
+                    summaryText={diagnosticSummaryText}
+                    fullFormulaTableText={fullFormulaTableText}
+                    onOpenExport={() => setIsExportModalOpen(true)}
+                    markdownReport={() => buildMarkdownReport(orchestrationState, null)}
+                    onDownloadJson={() => downloadEvidenceJson(orchestrationState)}
+                    matrix={validationMatrix}
+                    evidence={spectrumEvidenceList}
+                    consensusNotes={modeAReport.crossModalConsistencyNotes}
+                    uncertaintyNotes={modeAReport.uncertaintyNotes}
+                    processCard={!processInPred ? <ReasoningPanel trace={completedAnalysis?.result.reasoningTrace} progress={analysisProgress} busy={analysisBusy}/> : null}
+                  />),
                 }} />
               </div>
             )}

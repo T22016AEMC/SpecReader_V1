@@ -79,7 +79,7 @@ export function mergeFunctionalGroups(groups: readonly FunctionalGroupRow[], fin
 }
 
 // ---------------------------------------------------------------- one candidate's evidence per spectrum
-export interface TraceEvidenceLike {observationIds: string[]; modality: string; status: string}
+export interface TraceEvidenceLike {observationIds: string[]; modality: string; status: string; method?: string}
 export interface ModalitySummary {
   modality: string;
   /** Unit of the counted items: 峰 (IR, MS) or 訊號 (NMR). */
@@ -93,6 +93,9 @@ export interface ModalitySummary {
 }
 const MODALITY_ORDER = ['IR', '1H_NMR', '13C_NMR', 'MS', 'MS/MS', 'ToF-SIMS'];
 export const MODALITY_SHORT: Record<string, string> = {IR: 'IR', '1H_NMR': '¹H', '13C_NMR': '¹³C', MS: 'MS', 'MS/MS': 'MS/MS', 'ToF-SIMS': 'ToF-SIMS'};
+
+/** Evidence items that stand for one observed signal. Whole-spectrum checks (e.g. 「預測 3 種氫環境，實測 3 組訊號」) carry no observation id and are not counted as signals. */
+export const perSignalEvidence = <T extends TraceEvidenceLike>(evidence: readonly T[]): T[] => evidence.filter(e => e.observationIds.length > 0);
 
 /** Counts the three states (SUPPORT / CONTRADICTION / UNKNOWN) of one candidate's evidence per spectrum; spectra without evidence produce no entry. */
 export function summarizeCandidateEvidence(evidence: readonly TraceEvidenceLike[]): ModalitySummary[] {

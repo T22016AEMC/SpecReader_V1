@@ -48,9 +48,10 @@ export function ResultTabBar({active, onChange, badges}: {active: ResultTabId; o
         id={`result-tab-${t.id}`}
         aria-selected={selected}
         aria-controls={`result-panel-${t.id}`}
+        tabIndex={selected ? 0 : -1}
         data-testid={`result-tab-${t.id}`}
         onClick={() => onChange(t.id)}
-        className={`inline-flex items-center whitespace-nowrap border-b-2 px-2.5 transition ${t.primary ? 'py-2.5 text-[15px] font-bold' : 'py-2.5 text-xs font-normal'} ${
+        className={`inline-flex items-center whitespace-nowrap border-b-2 px-2.5 transition focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-cyan-400 ${t.primary ? 'py-2.5 text-[15px] font-bold' : 'py-2.5 text-xs font-normal'} ${
           selected
             ? 'border-cyan-500 text-cyan-100'
             : `border-transparent hover:text-slate-100 ${t.primary ? 'text-slate-300' : 'text-slate-400'}`
@@ -63,8 +64,18 @@ export function ResultTabBar({active, onChange, badges}: {active: ResultTabId; o
     );
   };
   const [fg, pred, ...secondary] = RESULT_TABS;
+  // Keyboard (WAI-ARIA tabs, automatic activation): ←/→ move to the previous/next tab (wrapping), Home/End to the first/last; only the selected tab is in the tab order.
+  const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const keys = ['ArrowLeft', 'ArrowRight', 'Home', 'End'];
+    if (!keys.includes(e.key)) return;
+    const i = RESULT_TABS.findIndex(t => t.id === active);
+    const next = e.key === 'Home' ? 0 : e.key === 'End' ? RESULT_TABS.length - 1 : (i + (e.key === 'ArrowRight' ? 1 : -1) + RESULT_TABS.length) % RESULT_TABS.length;
+    e.preventDefault();
+    onChange(RESULT_TABS[next].id);
+    document.getElementById(`result-tab-${RESULT_TABS[next].id}`)?.focus();
+  };
   return (
-    <div role="tablist" aria-label="結果頁分頁" className="flex min-w-0 shrink-0 items-center">
+    <div role="tablist" aria-label="結果頁分頁" onKeyDown={onKeyDown} className="flex min-w-0 shrink-0 items-center">
       {tab(fg)}
       <ArrowRight aria-hidden="true" className="mx-0.5 h-4 w-4 shrink-0 text-slate-500" />
       {tab(pred)}

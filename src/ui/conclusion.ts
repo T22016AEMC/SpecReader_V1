@@ -1,5 +1,5 @@
 import type {DataCheckResult} from './dataCheck';
-import {summarizeCandidateEvidence, summaryLine, type TraceEvidenceLike} from './evidenceMerge';
+import {perSignalEvidence, summarizeCandidateEvidence, summaryLine, type TraceEvidenceLike} from './evidenceMerge';
 import type {ObservationLike} from './obsLabel';
 
 /**
@@ -83,7 +83,7 @@ export interface BulletInput {
 
 /** The per-spectrum lines shown on a conclusion card: ¹H and IR first, then the other spectra, but at most two spectrum lines; the third line says where the formula came from. */
 export function conclusionBullets(input: BulletInput): string[] {
-  const summaries = summarizeCandidateEvidence(input.evidence);
+  const summaries = summarizeCandidateEvidence(perSignalEvidence(input.evidence));
   const order = ['1H_NMR', 'IR', '13C_NMR', 'MS', 'MS/MS', 'ToF-SIMS'];
   const picked = summaries.filter(s => order.includes(s.modality)).sort((a, b) => order.indexOf(a.modality) - order.indexOf(b.modality)).slice(0, 2);
   const lines = picked.map(s => summaryLine(s, input.observations));

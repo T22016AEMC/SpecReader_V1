@@ -44,7 +44,7 @@ export interface DiagnosticInput {
 
 const NOT_SEARCHED_PREFIX = '未搜尋（';
 type Row = PanelModel['rows'][number];
-const isSearched = (r: Row): boolean => r.search.round ? r.search.round.id !== 'NOT_SEARCHED' : !r.search.text.startsWith(NOT_SEARCHED_PREFIX);
+export const isSearchedRow = (r: Row): boolean => r.search.round ? r.search.round.id !== 'NOT_SEARCHED' : !r.search.text.startsWith(NOT_SEARCHED_PREFIX);
 /** "未搜尋（k 輪流名額已滿（第一輪最多搜尋 12 個分子式））" → "k 輪流名額已滿（第一輪最多搜尋 12 個分子式）". */
 const notSearchedReason = (r: Row): string => {
   const t = r.search.text;
@@ -60,7 +60,7 @@ export const shortReason = (reason: string): string => reason.split(/[：（]/)[
 export function notSearchedCounts(rows: readonly Row[], planned?: {label: string; count: number}[]): {reason: string; count: number}[] {
   if (planned?.length) return planned.map(p => ({reason: p.label, count: p.count}));
   const counts = new Map<string, number>();
-  for (const r of rows) if (!isSearched(r)) { const k = shortReason(notSearchedReason(r)); counts.set(k, (counts.get(k) ?? 0) + 1); }
+  for (const r of rows) if (!isSearchedRow(r)) { const k = shortReason(notSearchedReason(r)); counts.set(k, (counts.get(k) ?? 0) + 1); }
   return [...counts].map(([reason, count]) => ({reason, count}));
 }
 
@@ -106,7 +106,7 @@ function build(input: DiagnosticInput, caps: Caps): string[] {
   const out: string[] = [];
   const section = (title: string, lines: string[]) => { out.push('', `■ ${title}`, ...(lines.length ? lines : ['- （沒有資料）'])); };
   const rows = input.panel?.rows ?? [];
-  const searched = rows.filter(isSearched), unsearched = rows.filter(r => !isSearched(r));
+  const searched = rows.filter(isSearchedRow), unsearched = rows.filter(r => !isSearchedRow(r));
   out.push('SpecReader 診斷摘要', `產生時間：${input.generatedAt}｜版本 ${input.appVersion}｜${input.resultIsCurrent ? '結果為目前輸入' : '資料已變更，以下為舊結果'}`);
 
   section(SUMMARY_SECTION_TITLES[0], [
@@ -164,13 +164,13 @@ export function buildDiagnosticSummary(input: DiagnosticInput): string {
 /** Every formula hypothesis, one plain-text line each, with the search state and (for unsearched rows) the reason. No line limit. */
 export function buildFullFormulaTable(panel: PanelModel | null, generatedAt: string): string {
   if (!panel) return `SpecReader 完整分子式表\n產生時間：${generatedAt}\n沒有分子式假設\n`;
-  const searched = panel.rows.filter(isSearched).length;
+  const searched = panel.rows.filter(isSearchedRow).length;
   const lines = [
     'SpecReader 完整分子式表',
     `產生時間：${generatedAt}`,
     `共 ${panel.rows.length} 個假設｜${searched} 個被搜尋｜${panel.rows.length - searched} 個未搜尋`,
     '格式：#排序｜分子式｜DBE｜k｜搜尋狀態｜結果或原因',
-    ...panel.rows.map(r => `#${r.rank}｜${r.formula}｜DBE ${r.dbe}｜${r.k === '—' ? 'k 未定' : `k=${r.k}`}｜${isSearched(r) ? `已搜尋${r.search.round ? `（${r.search.round.text}）` : ''}｜${r.search.text}` : `未搜尋｜原因：${notSearchedReason(r)}`}`),
+    ...panel.rows.map(r => `#${r.rank}｜${r.formula}｜DBE ${r.dbe}｜${r.k === '—' ? 'k 未定' : `k=${r.k}`}｜${isSearchedRow(r) ? `已搜尋${r.search.round ? `（${r.search.round.text}）` : ''}｜${r.search.text}` : `未搜尋｜原因：${notSearchedReason(r)}`}`),
   ];
   return lines.join('\n') + '\n';
 }
