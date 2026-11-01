@@ -57,9 +57,20 @@ body{background:var(--bg);color:var(--text);font:14px/1.5 var(--sans);-webkit-fo
 .subbar{flex:none;background:#fff;border-bottom:1px solid var(--line2);display:flex;align-items:center;gap:16px;padding:0 24px;height:48px;z-index:15}
 .ctl{display:flex;align-items:center;gap:10px;font-size:12px;color:#475569;min-width:0}
 .ctl .st{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px}
-.tabs{display:flex;gap:2px;margin-left:auto;height:100%}
+.tabs{display:flex;align-items:stretch;gap:2px;margin-left:auto;height:100%}
 .tab{appearance:none;border:0;background:none;font:600 13px var(--sans);color:var(--muted);padding:0 14px;height:100%;border-bottom:3px solid transparent;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap}
 .tab:hover{color:var(--text)}.tab[aria-selected=true]{color:var(--primary);border-bottom-color:var(--primary)}
+.tab.pri{font-size:15px;font-weight:800;color:#475569;padding:0 16px}.tab.pri[aria-selected=true]{color:var(--primary)}
+.tab .no{width:20px;height:20px;border-radius:999px;background:#e2e8f0;color:#475569;font:700 11px var(--mono);display:grid;place-items:center}.tab.pri[aria-selected=true] .no{background:var(--primary);color:#fff}
+.tabs .arrow{align-self:center;color:var(--muted2);font-size:18px;padding:0 2px}
+.tabs .div{align-self:center;width:1px;height:26px;background:var(--line2);margin:0 10px 0 14px}.tabs .lab{align-self:center;font-size:10px;color:var(--muted2);margin-right:2px;white-space:nowrap}
+.tab.sec{font-size:12px;font-weight:500;color:var(--muted2);padding:0 10px}.tab.sec[aria-selected=true]{color:var(--primary);font-weight:700}
+/* one-line data check, fixed above the tab row (32px); details open as an overlay so fixed height never changes */
+.dcbar{flex:none;height:32px;background:#f8fafc;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:16px;padding:0 24px;font-size:12px;position:relative;z-index:18}
+.dcbar.w{background:var(--amber-bg);border-bottom-color:var(--amber-line);color:var(--amber-tx)}
+.dcbar .it{white-space:nowrap;font-weight:600}.dcbar .it.ok{color:#047857}.dcbar .it.wn{color:#b45309;font-weight:800}.dcbar .it.inf{color:#1d4ed8}.dcbar .exp{margin-left:auto}
+.dcpop{display:none;position:absolute;left:24px;right:24px;top:32px;max-width:1000px;background:#fff;border:1px solid var(--line2);border-radius:0 0 12px 12px;box-shadow:0 12px 28px rgba(15,23,42,.18);padding:12px 14px;color:var(--text)}
+.dcbar.open .dcpop{display:block}
 .tab .c{font:600 10px var(--mono);background:#f1f5f9;color:var(--muted);border-radius:999px;padding:0 6px}
 .tab .c.w{background:var(--amber-bg);color:var(--amber-tx);border:1px solid var(--amber-line)}
 /* the only scrolling region: visible scrollbar */
@@ -119,6 +130,8 @@ input:focus,select:focus{outline:2px solid #bfdbfe;border-color:var(--primary)}
 .struct{background:#fff;border:1px solid #eef2f6;border-radius:8px;display:grid;place-items:center;padding:4px}.struct svg{width:100%;max-width:210px;height:auto}
 .reasons{margin:0;padding-left:16px;font-size:12px;color:#334155}.reasons li{margin:1px 0}.reasons .x{color:var(--rose-tx)}
 .legend{font-size:11px;color:var(--muted)}
+details.sup>summary{display:inline-flex;list-style:none}details.sup>summary::before{display:none}details.sup .o2{display:none}details.sup[open] .o1{display:none}details.sup[open] .o2{display:inline}
+.supin{margin-top:8px;border-top:1px dashed var(--line);padding-top:8px;font-size:12px;color:#334155}
 /* chk list */
 .chk{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:6px 18px;margin:0;padding:0;list-style:none}
 .chk li{display:flex;gap:8px;font-size:12.5px;align-items:flex-start}
@@ -186,17 +199,17 @@ const header = (mode = 'A') => `
 
 const stepsBar = (active, warn = true) => {
   const s = (n, label, sub, cls) => `<a class="step ${cls}" href="#"><span class="n">${n}</span><span>第 ${n} 頁 ${label}${n === 3 && warn ? ' <span class="w" title="尚有光譜未校正">⚠</span>' : ''} <small>${sub}</small></span></a>`;
-  return `<div class="steps">${s(1, '訊號標記', '上傳・點峰', active === 1 ? 'on' : 'done')}<span class="sep">›</span>${s(2, '座標校正', '像素 → 真實刻度', active === 2 ? 'on' : active > 2 ? 'done' : '')}<span class="sep">›</span>${s(3, '化學判讀', '結論・證據・診斷', active === 3 ? 'on' : '')}
+  return `<div class="steps">${s(1, '訊號標記', '上傳・點峰', active === 1 ? 'on' : 'done')}<span class="sep">›</span>${s(2, '座標校正', '像素 → 真實刻度', active === 2 ? 'on' : active > 2 ? 'done' : '')}<span class="sep">›</span>${s(3, '化學判讀', '官能基・結構・診斷', active === 3 ? 'on' : '')}
   <div class="stat"><span class="pill">已標記 14</span><span class="pill ${warn ? 'w' : 'g'}">${warn ? '座標：1 張未校正' : '座標：全部已確認'}</span></div></div>`;
 };
 
 const inputStrip = (formula = '') => `
-<section class="card"><div class="cb"><div class="strip">
-  <label>Mode A 輸入證據中心</label>
-  <input type="text" aria-label="分子式（選填）" placeholder="分子式（選填）例：C15H16O2" value="${formula}" style="width:210px">
-  <input type="text" placeholder="其他化學證據（FeCl₃ 呈色、D₂O 交換…）" style="width:300px">
+<div class="strip" style="gap:8px;padding:2px 2px;font-size:11px;min-height:28px">
+  <label style="font-size:11px;font-weight:600;color:var(--muted)">Mode A 輸入證據中心</label>
+  <input type="text" aria-label="分子式（選填）" placeholder="分子式（選填）例：C15H16O2" value="${formula}" style="width:190px;padding:2px 6px;font-size:11px">
+  <input type="text" placeholder="其他化學證據（FeCl₃ 呈色、D₂O 交換…）" style="width:260px;padding:2px 6px;font-size:11px">
   <span class="pill g">光譜：IR、¹H</span><span class="pill">分子式：${formula ? '已提供' : '未提供'}</span>
-  <button class="btn sm gray" style="margin-left:auto">重置空白未知物</button></div></div></section>`;
+  <button class="btn sm gray" style="margin-left:auto">重置空白未知物</button></div>`;
 
 const devNote = items => `<details class="dev"><summary>草圖說明</summary><div class="box"><ul>${items.map(i => `<li>${i}</li>`).join('')}</ul></div></details>`;
 const exportDialog = `<dialog id="exp"><div class="ch"><div class="sq">⬇</div><h3>匯出報告</h3><div class="r"><button class="btn sm" onclick="this.closest('dialog').close()">關閉</button></div></div>
@@ -280,6 +293,19 @@ const FG_ROWS = [
 ];
 const HIDDEN = [['氫鍵 O–H', 'IR 3350'], ['硝基 NO₂ 伸縮對', 'IR 1510'], ['三級胺 C–N', 'IR 1235、1175'], ['醚 C–O–C', 'IR 1235、1175'], ['C–F 指紋', 'IR 1235、1175'], ['胺 C–N', 'IR 1235、1175'], ['C–Br 指紋', 'IR 560']];
 
+
+// ---- diagnostic summary (synthetic S1). Formula section = ALL searched rows + first 15 unsearched rows + counts per reason.
+const SEARCHED = [
+  [1, 'C7H8O', 1, '第二輪（含烯基）', 1, '完整'], [2, 'C7H8O2', 1, '第一輪', 2, '未完整（含烯基的讀法尚未執行）'], [3, 'C8H8O', 1, '第一輪', 1, '未完整'],
+  [4, 'C8H8O2', 1, '第一輪', 5, '未完整'], [6, 'C9H10O', 1, '第一輪', 2, '未完整'], [7, 'C9H10O2', 1, '第一輪', 3, '未完整'], [9, 'C10H12O', 1, '第一輪', 2, '未完整'],
+  [11, 'C13H12O2', 2, '第一輪', 1, '未完整'], [14, 'C14H14O2', 2, '第一輪', 2, '未完整'], [19, 'C15H14O', 2, '第一輪', 0, '未完整'], [24, 'C15H16O2', 2, '第二輪（含烯基）', 4, '未完整（時間預算）'], [31, 'C16H18O2', 2, '第一輪', 0, '未完整'],
+];
+const UNSEARCHED = [[5, 'C9H8O', 'k 輪流名額已滿'], [8, 'C10H10O', 'k 輪流名額已滿'], [10, 'C10H12O2', '¹H 清單不可行'], [12, 'C11H12O', '¹H 清單不可行'], [13, 'C11H14O', 'k 輪流名額已滿'],
+  [15, 'C12H14O', '¹H 清單不可行'], [16, 'C12H16O2', 'O 變體超過保留數'], [17, 'C12H10O', 'O 數在 IR 證據範圍之外'], [18, 'C13H10O', 'k 輪流名額已滿'], [20, 'C13H14O', '¹H 清單不可行'],
+  [21, 'C13H16O2', 'O 變體超過保留數'], [22, 'C14H12O', 'O 數在 IR 證據範圍之外'], [23, 'C14H16O', 'k 輪流名額已滿'], [25, 'C14H18O2', '¹H 清單不可行'], [26, 'C15H12O', 'O 數在 IR 證據範圍之外']]
+const searchedLines = SEARCHED.map(([r, f, k, rd, n, c]) => `- #${r} ${f}（k = ${k}）｜${rd}｜${n} 個候選｜${c}`).join('\n');
+const unsearchedLines = UNSEARCHED.map(([r, f, why]) => `- #${r} ${f}｜未搜尋｜${why}`).join('\n');
+
 const DIAG = `SpecReader 診斷摘要（v1.2.2 草圖；合成樣本 S1，非真實資料）
 產生時間：2026-11-01 14:05｜版本 1.2.2｜分析 #1（結果為目前輸入）
 
@@ -301,17 +327,17 @@ const DIAG = `SpecReader 診斷摘要（v1.2.2 草圖；合成樣本 S1，非真
 - IR 證據不足而隱藏的官能基：7 項
 
 ■ 分子式表（共 200 個假設；12 個被搜尋、188 個未搜尋）
-- #1 C7H8O（k = 1）｜第二輪（含烯基）｜1 個候選｜完整
-- #2 C7H8O2｜第一輪｜2 個候選｜未完整（含烯基的讀法尚未執行）
-- #3 C8H8O｜第一輪｜1 個候選｜未完整
-- #4 C8H8O2｜第一輪｜5 個候選｜未完整
-- #24 C15H16O2（k = 2）｜第二輪（含烯基）｜4 個候選｜未完整（時間預算）
-- #5 C9H8O 起其餘：未搜尋（k 輪流名額已滿等原因）
+- 被搜尋的列（全部 12 列）：
+${searchedLines}
+- 未搜尋的列（只列前 15 列；完整表請按「複製完整分子式表」）：
+${unsearchedLines}
+- 未搜尋原因與數量：k 輪流名額已滿 38、¹H 清單不可行 76、O 變體超過保留數 21、O 數在 IR 證據範圍之外 53（合計 188）
 
 ■ 搜尋計畫摘要
 - 共 12 個分子式被搜尋：9 個只跑第一輪、3 個也跑了第二輪
-- O 下限 1（IR 3350 寬帶 → O–H；IR 1235、1175 強 C–O）
-- 未搜尋原因：k 輪流名額已滿 38、¹H 清單不可行 76、O 變體超過保留數 21、O 數在 IR 證據範圍之外 53
+- 氧下限來源：O ≥ 1 ← IR 3350 寬帶（O–H）、IR 1235／1175（強 C–O 帶）；¹H 4.75 ppm（br s，可交換 H）作為輔助
+- 氮證據來源：無 N 專屬證據（IR 3350 寬帶歸 O–H；未見 1550–1650 N–H 彎曲；未提供 MS）→ 不考慮 N
+- S：未考慮
 - 窮舉：未完整（TIME_BUDGET）；取得 13 個有效圖候選
 
 ■ 前幾名候選
@@ -325,94 +351,112 @@ const DIAG = `SpecReader 診斷摘要（v1.2.2 草圖；合成樣本 S1，非真
 - 化學合理性規則「過氧 O–O」3、「偶二醇」1、「非環狀半縮醛／半縮酮」1
 `;
 
+// full formula table: ALL rows (incl. every unsearched row) with search status and reason. Preview shows the head only.
+const FULLTBL_HEAD = `SpecReader 完整分子式表（v1.2.2 草圖；合成樣本 S1，非真實資料）
+共 200 個假設｜12 個被搜尋｜188 個未搜尋｜格式：排序｜分子式｜DBE｜k｜搜尋狀態｜原因／結果
+${[...SEARCHED.slice(0, 4).map(([r, f, k, rd, n, c]) => `#${r}｜${f}｜k=${k}｜已搜尋（${rd}，${n} 個候選，${c}）`), ...UNSEARCHED.slice(0, 6).map(([r, f, why]) => `#${r}｜${f}｜未搜尋｜${why}`)].join('\n')}
+…（草圖只預覽前 10 列；實際複製內容含全部 200 列，每列都有搜尋狀態與未搜尋原因）`;
+
+const SUP = {
+  1: `<ul class="bl"><li><b>IR：</b>10 個峰中 <span class="tag g">8 個與預測一致</span> <span class="tag">1 個不明（3030）</span> <span class="tag r">1 個矛盾（560）</span></li>
+   <li><b>¹H：</b>4 組訊號中 <span class="tag g">3 組一致</span> <span class="tag">1 組不明（4.75 br s，可交換 H）</span>；環境數與 H 總數吻合（預測 3 種／14H，實測 3 組／14H）。</li>
+   <li><b>模型相容分：</b>IR 70、¹H 90、整體 78。</li></ul>
+   <details class="item"><summary class="xs muted">IR 逐峰明細（10 筆）</summary><div class="in"><table><thead><tr><th>觀測</th><th>結果</th><th class="m">相容</th></tr></thead><tbody>${[[3350, '一致', .9], [3030, '不明', .28], [2965, '一致', .84], [1612, '一致', .92], [1510, '一致', .98], [560, '矛盾', 0]].map(([w, r, c]) => `<tr><td class="mono">IR ${w} cm⁻¹</td><td><span class="tag ${r === '一致' ? 'g' : r === '矛盾' ? 'r' : ''}">${r}</span></td><td class="m">${c.toFixed(2)}</td></tr>`).join('')}<tr><td colspan="3" class="muted">…其餘 4 筆</td></tr></tbody></table></div></details>`,
+  2: `<ul class="bl"><li><b>IR：</b>8 個一致、1 個不明、<span class="tag r">1 個矛盾（560）</span></li><li><b>¹H：</b>4 組中 3 組一致、<span class="tag r">1 組矛盾（1.62 ppm，6H 單峰 vs 預測 3H）</span></li></ul>`,
+  3: `<ul class="bl"><li><b>IR：</b>8 個一致、1 個不明、<span class="tag r">1 個矛盾（560）</span></li><li><b>¹H：</b><span class="tag r">7.08 ppm 偏差較大</span>；1.62 ppm 無對應</li></ul>`,
+};
+
 function resultBody(initial, warn) {
-  const dc = warn ? `
-  <div class="alert w"><span class="ic">⚠</span><div><b>資料檢查：2 項需要你確認</b>
-   <ul><li><b>¹H 尚未校正</b>：圖片座標是程式用圖框推定的 0–12 ppm（<span class="tag w">預設座標</span>），不是你校正過的。位移若有偏差，下方排名可能不可靠。 <a class="btn sm" href="02-page2-calibration.html">回第 2 頁校正 ¹H</a></li>
-   <li><b>溶劑未宣告</b>：溶劑殘峰（例如 CDCl₃ 的 7.26 ppm）不會被自動排除；<b>頻率未宣告</b>：程式以 400 MHz 計算。</li></ul></div></div>` :
-  `<div class="alert s"><span class="ic">✓</span><div><b>資料檢查：沒有發現需要處理的項目</b></div></div>`;
+  // ---- one-line data check (fixed above the tab row on every result tab); details open as an overlay so the fixed height never changes
+  const dcItems = warn
+    ? [['¹H', 'wn', '⚠'], ['IR', 'ok', '✓'], ['溶劑', 'wn', '⚠'], ['頻率', 'wn', '⚠']]
+    : [['¹H', 'inf', 'ℹ'], ['IR', 'inf', 'ℹ'], ['溶劑', 'ok', '✓'], ['頻率', 'ok', '✓']];
   const dcList = warn ? `
-   <li><span class="m wn">!</span><span><b>¹H 校正</b>：⚠ 預設座標（依圖框推定 0–12 ppm），使用者未校正</span></li>
+   <li><span class="m wn">!</span><span><b>¹H 校正</b>：⚠ 預設座標（程式用圖框推定 0–12 ppm），使用者未校正。位移若有偏差，排名可能不可靠。 <a class="btn sm" href="02-page2-calibration.html">回第 2 頁校正 ¹H</a></span></li>
    <li><span class="m ok">✓</span><span><b>IR 校正</b>：已校正（分段線性，5 點，最大誤差 0.4 cm⁻¹）；基線設定 v3</span></li>
-   <li><span class="m wn">!</span><span><b>溶劑</b>：未宣告（Unknown）</span></li>
+   <li><span class="m wn">!</span><span><b>溶劑</b>：未宣告（Unknown）；溶劑殘峰（如 CDCl₃ 7.26 ppm）不會被自動排除</span></li>
    <li><span class="m wn">!</span><span><b>頻率</b>：未宣告，程式以 400 MHz 計算</span></li>` : `
    <li><span class="m in">i</span><span><b>¹H 校正</b>：數值檔，座標來自檔案（程式無法得知是否已對溶劑殘峰校準）</span></li>
    <li><span class="m in">i</span><span><b>IR 校正</b>：數值檔，座標來自檔案；基線設定 v3</span></li>
    <li><span class="m ok">✓</span><span><b>溶劑</b>：CDCl₃（使用者宣告）</span></li>
    <li><span class="m ok">✓</span><span><b>頻率</b>：400 MHz（使用者宣告）</span></li>`;
-  const dataCheck = `<section class="card" data-testid="data-check"><div class="ch"><div class="sq">✓</div><h3>資料檢查</h3><div class="r"><span class="hint">只讀現有資料，不改任何分析</span></div></div><div class="cb"><ul class="chk">${dcList}</ul></div></section>`;
+  const dcbar = `<div class="dcbar ${warn ? 'w' : ''}" data-testid="data-check" id="dcbar"><b>資料檢查：</b>${dcItems.map(([n, c, m]) => `<span class="it ${c}">${n} ${m}</span>`).join('')}<span class="hint" style="color:inherit;opacity:.75">${warn ? '有 ⚠ 項目，請展開確認' : 'ℹ＝數值檔，程式無法判斷是否已校準'}</span><button class="btn sm exp" onclick="document.getElementById('dcbar').classList.toggle('open');this.textContent=document.getElementById('dcbar').classList.contains('open')?'收合':'展開'" aria-controls="dcpop">展開</button>
+   <div class="dcpop" id="dcpop"><ul class="chk">${dcList}</ul><p class="hint" style="margin:8px 0 0">只讀現有資料，不改任何分析。未載入的光譜（¹³C、MS、MS/MS、ToF-SIMS）不當成反證。</p></div></div>`;
+
+  // ---- tab 2: 預測結構
+  const warnLine = warn ? `<div class="alert w" style="margin-bottom:10px"><span class="ic">⚠</span><span><b>最重要的警告：</b>¹H 未經校正 — 下列排名可能不可靠，請先確認 ¹H 位移。</span><a class="btn sm" href="02-page2-calibration.html" style="margin-left:auto">回第 2 頁校正</a></div>` : `<div class="alert w" style="margin-bottom:10px"><span class="ic">⚠</span><span><b>最重要的警告：</b>前兩名只差 6 分，不能視為有區別；窮舉未完整（時間預算用盡），清單只是「在目前限制下找到的結構」。</span></div>`;
   const top = CAND.map(c => `<article class="cand ${c.rank === 1 ? 'first' : ''}"><div class="row"><span class="rank">#${c.rank}</span><span class="grow"></span><span class="score" title="未校準的模型相容度，不是正確機率">${c.s}<small> /100</small></span></div>
    <div class="struct">${c.svg}</div><div><b>${c.f}</b> <span class="muted sm">${c.name}</span></div>
-   <ul class="reasons">${c.r.map(x => `<li ${/不相容|矛盾|偏差/.test(x) ? '' : ''}>${x}</li>`).join('')}</ul>
-   <div class="row gap8"><button class="btn sm" onclick="goTab('evidence')">看證據 →</button><button class="btn sm gray">送入 Mode B</button></div></article>`).join('');
-  const warnLine = warn ? `<div class="alert w" style="margin-bottom:10px"><span class="ic">⚠</span><span><b>最重要的警告：</b>¹H 未經校正 — 下列排名可能不可靠，請先確認 ¹H 位移。</span></div>` : `<div class="alert w" style="margin-bottom:10px"><span class="ic">⚠</span><span><b>最重要的警告：</b>窮舉未完整（時間預算用盡）— 清單只是「在目前限制下找到的結構」，不代表所有可能。</span></div>`;
-  const structure = `${dataCheck}
-  <section class="card" data-testid="conclusion-card"><div class="ch"><div class="sq">★</div><h3>結論</h3><div class="r"><span class="hint">前 3 名候選 · 相容度＝未校準的模型相容度（非機率）</span></div></div><div class="cb">${warnLine}<div class="top3">${top}</div>
-   <p class="legend" style="margin:8px 0 0">組成來源：未指定分子式；不以前置猜測限制搜尋。共找到 13 個候選結構，其餘 10 個在下方。</p></div></section>
-  <section class="card"><div class="ch"><div class="sq">▤</div><h3>其餘候選結構（10）</h3><div class="r"><span class="hint">依相容度排序</span></div></div><div class="cb">
-   <details class="fold"><summary>展開 #4–#13（每個：結構圖、相容度、1 行理由、[看證據]）</summary><div class="in"><p class="hint">（草圖省略）候選卡內的「候選組裝與驗證證據」折疊區仍保留在卡片上。</p></div></details>
+   <ul class="reasons">${c.r.map(x => `<li>${x}</li>`).join('')}</ul>
+   <details class="sup"><summary class="btn sm"><span class="o1">展開支持與矛盾</span><span class="o2">收合支持與矛盾</span></summary><div class="supin">${SUP[c.rank]}</div></details>
+   <div class="row gap8"><button class="btn sm gray">送入 Mode B</button></div></article>`).join('');
+  const others = [[4, 'C8H8O2', '4-羥基苯乙酮', 64], [5, 'C9H10O2', '4-羥基苯丙酮', 62], [6, 'C14H14O2', '二芳基乙烷二酚', 60]].map(([r, f, n, s]) => `<details class="item"><summary><span class="rank">#${r}</span> <b>${f}</b> <span class="muted">${n}</span><span class="grow"></span><span class="score" style="font-size:14px">${s}<small>/100</small></span><span class="btn sm" style="margin-left:8px">展開支持與矛盾</span></summary><div class="in"><ul class="bl"><li>IR：7 個一致、2 個不明、1 個矛盾</li><li>¹H：2 組一致、2 組矛盾</li></ul></div></details>`).join('');
+  const pred = `
+  <div class="row gap8"><button class="btn" onclick="goTab('fg')">← 回圖譜官能基</button><span class="hint">閱讀順序：先看圖譜指出哪些官能基，再看預測出的結構。</span></div>
+  <section class="card" data-testid="conclusion-card"><div class="ch"><div class="sq">②</div><h3>預測結構（結論）</h3><div class="r"><span class="hint">前 3 名候選 · 相容度＝未校準的模型相容度（非機率）</span></div></div><div class="cb">${warnLine}<div class="top3">${top}</div>
+   <p class="legend" style="margin:8px 0 0">組成來源：未指定分子式；不以前置猜測限制搜尋。共找到 13 個候選結構，其餘 10 個在下方。每張候選卡的「展開支持與矛盾」就地展開，不會切換分頁。</p></div></section>
+  <section class="card"><div class="ch"><div class="sq">▤</div><h3>其餘候選結構（10）</h3><div class="r"><span class="hint">依相容度排序，精簡列</span></div></div><div class="cb">
+   ${others}<p class="hint" style="margin:6px 0 0">…其餘 7 個（草圖省略）。候選卡內的「候選組裝與驗證證據」折疊區仍保留在卡片上。</p>
    <details class="fold" style="margin-top:8px"><summary>De novo 搜尋狀態與界限</summary><div class="in"><p class="hint">獨立原子／鍵枚舉目前支援中性 C/N/O/F/Cl/Br；資料庫命中不代表答案正確。</p></div></details></div></section>`;
 
-  const fgItems = FG_ROWS.map(([n, peaks, lvl, comp, det]) => `<details class="item"><summary><b>${n}</b><span class="muted">— ${peaks}</span><span class="grow"></span><span class="tag ${lvl === '較支持' ? 'g' : lvl === '證據不足' ? 'w' : ''}">${lvl}</span></summary><div class="in"><div>${comp}</div><ul class="bl">${det.map(d => `<li class="mono xs">${d}</li>`).join('')}</ul><div class="xs muted" style="margin-top:4px">完整觀測 ID：IR:synthetic-fixture.csv:3350 …（展開才看）</div></div></details>`).join('');
+  // ---- tab 1: 圖譜官能基
+  const fgItems = FG_ROWS.map(([n, peaks, lvl, comp, det]) => `<details class="item"><summary><b>${n}</b><span class="muted">— ${peaks}</span>${/寬/.test(peaks) ? '<span class="tag">寬</span>' : /窄/.test(peaks) ? '<span class="tag">窄</span>' : ''}<span class="grow"></span><span class="tag ${lvl === '較支持' ? 'g' : lvl === '證據不足' ? 'w' : ''}">${lvl}</span></summary><div class="in"><div>${comp}</div><ul class="bl">${det.map(d => `<li class="mono xs">${d}</li>`).join('')}</ul><div class="xs muted" style="margin-top:4px">完整觀測 ID：IR:synthetic-fixture.csv:3350 …（展開才看）</div></div></details>`).join('');
   const hid = HIDDEN.map(([n, p]) => `<li><b>${n}</b> <span class="muted">— ${p}（單一孤立峰、無伴隨帶、無其他光譜佐證）</span></li>`).join('');
-  const evidence = `
-  <section class="card"><div class="ch"><div class="sq">1</div><h3>官能基證據</h3><div class="r"><span class="tag">12 項顯示</span><span class="tag w">7 項隱藏</span></div></div><div class="cb">
-   <p class="hint" style="margin:0 0 6px">相同官能基合併成一行；點開看每個峰。「經驗假設，非機率」。單一 IR 峰不能單獨確認官能基，需結合其他光譜或分子式（此提醒只在這裡說一次）。</p>
+  const fg = `
+  <section class="card"><div class="ch"><div class="sq">①</div><h3>圖譜官能基 · 官能基證據</h3><div class="r"><span class="tag">12 項顯示</span><span class="tag w">7 項隱藏</span></div></div><div class="cb">
+   <p class="hint" style="margin:0 0 6px">相同官能基合併成一行；一律條列，點開看每個峰（觀測 ID 顯示為「IR 3350 cm⁻¹」）。「經驗假設，非機率」。單一 IR 峰不能單獨確認官能基，需結合其他光譜或分子式（這句提醒只在這裡說一次）。</p>
    ${fgItems}
-   <details class="fold" style="margin-top:8px;background:#fffdf5;border-color:var(--amber-line)"><summary style="color:var(--amber-tx)">另有 7 項 IR 證據不足的官能基，已隱藏（點開查看）</summary><div class="in"><p class="hint">判定條件：只有 IR 來源 · 只有 1 個孤立峰 · 沒有任何伴隨帶被觀測到。這是顯示層篩選，資料與分析不變。</p><ul class="bl">${hid}</ul></div></details></div></section>
-  <section class="card"><div class="ch"><div class="sq">2</div><h3>分子連結（局部結構假設）證據</h3><div class="r"><span class="tag">11 個局部結構</span></div></div><div class="cb">
+   <details class="fold" style="margin-top:8px;background:#fffdf5;border-color:var(--amber-line)"><summary style="color:var(--amber-tx)">另有 7 項 IR 證據不足的官能基，已隱藏（點開查看）</summary><div class="in"><p class="hint">判定條件：只有 IR 來源 · 只有 1 個孤立峰 · 沒有任何伴隨帶被觀測到。REQUIRED／FORBIDDEN／EXCLUDED／CONFLICTING 永不隱藏。這是顯示層篩選，資料與分析不變。</p><ul class="bl">${hid}</ul></div></details></div></section>
+  <section class="card"><div class="ch"><div class="sq">≡</div><h3>分子連結（局部結構假設）證據</h3><div class="r"><span class="tag">11 個局部結構</span></div></div><div class="cb">
    <p class="hint" style="margin:0 0 6px">局部結構是「片段」，不是完整分子；兩片段之間的連結 46 組為「可能」，64 組為「未知」（共享同一個觀測，不可當成兩個獨立片段必須共存）。以下說明只講一次。</p>
    <ul class="bl tight"><li>較支持（4）：對位雙取代芳香環；六碳芳香環局部骨架；可能酚類局部連接；O–H／含氧端點競爭假設</li><li>可能（7）：C=O 兩側連接；C=C 局部骨架（芳香的競爭解釋）；C–O 局部連接（醇／醚）；sp³ 碳環境；sp 三鍵；間位、鄰位芳香環</li></ul>
-   <details class="fold" style="margin-top:8px"><summary>明細：11 個局部結構（來源觀測、開放連接點）</summary><div class="in"><table><thead><tr><th>局部結構</th><th>來源觀測</th><th>狀態</th></tr></thead><tbody><tr><td>對位雙取代芳香環</td><td class="mono xs">¹H 7.08、¹H 6.73</td><td><span class="tag g">較支持</span></td></tr><tr><td>六碳芳香環局部骨架</td><td class="mono xs">IR 1612、1510、1440 …</td><td><span class="tag g">較支持</span></td></tr><tr><td colspan="3" class="muted">…其餘 9 個</td></tr></tbody></table></div></details></div></section>
-  <section class="card"><div class="ch"><div class="sq">3</div><h3>各候選的支持與矛盾證據</h3><div class="r"><span class="hint">點候選卡上的「看證據」會跳到這裡並展開該候選</span></div></div><div class="cb">
-   <p class="hint" style="margin:0 0 6px">所有候選使用同一個評分方法：候選分子圖選出區間／環境知識，與實測峰型、寬度、伴隨峰比較；每個原始峰只計一次。（這句模板話只在這裡出現一次。）</p>
-   <details class="fold" open id="cand1"><summary><span class="rank" style="background:#2563eb;color:#fff">#1</span> C15H16O2 <span class="muted">雙酚型</span><span class="grow"></span><span class="score" style="font-size:15px">78<small>/100</small></span></summary><div class="in">
-     <ul class="bl"><li><b>IR：</b>10 個峰中 <span class="tag g">8 個與預測一致</span> <span class="tag">1 個不明</span> <span class="tag r">1 個矛盾</span>
-        <details class="item" style="margin-left:-18px"><summary class="xs muted" style="padding-left:18px">明細（10 筆）</summary><div class="in"><table><thead><tr><th>觀測</th><th>結果</th><th class="m">相容</th></tr></thead><tbody>
-          ${[[3350, '一致', .9], [3030, '不明', .28], [2965, '一致', .84], [1612, '一致', .92], [1510, '一致', .98], [1440, '一致', .85], [1235, '一致', .73], [1175, '一致', .73], [830, '一致', .74], [560, '矛盾', 0]].map(([w, r, c]) => `<tr><td class="mono">IR ${w} cm⁻¹</td><td><span class="tag ${r === '一致' ? 'g' : r === '矛盾' ? 'r' : ''}">${r}</span></td><td class="m">${c.toFixed(2)}</td></tr>`).join('')}</tbody></table></div></details></li>
-       <li><b>¹H：</b>4 組訊號中 <span class="tag g">3 組一致</span> <span class="tag">1 組不明（4.75 br s，可交換 H）</span>；環境數與 H 總數吻合（預測 3 種環境／14H，實測 3 組／14H）。</li>
-       <li><b>模型相容分：</b>IR 70、¹H 90、整體 78。</li></ul></div></details>
-   <details class="fold" style="margin-top:8px"><summary><span class="rank">#2</span> C7H8O <span class="muted">對甲酚</span><span class="grow"></span><span class="score" style="font-size:15px">72<small>/100</small></span></summary><div class="in"><ul class="bl"><li>IR：8 個一致、1 個不明、<span class="tag r">1 個矛盾（560）</span></li><li>¹H：4 組中 3 組一致、<span class="tag r">1 組矛盾（1.62 ppm，6H 單峰 vs 預測 3H）</span></li></ul></div></details>
-   <details class="fold" style="margin-top:8px"><summary><span class="rank">#3</span> C7H8O2 <span class="muted">4-甲氧基酚</span><span class="grow"></span><span class="score" style="font-size:15px">67<small>/100</small></span></summary><div class="in"><ul class="bl"><li>…</li></ul></div></details></div></section>
-  <section class="card"><div class="ch"><div class="sq">4</div><h3>其他正反證據與提醒</h3></div><div class="cb"><ul class="bl"><li>跨模態共識：已基於目前載入之 IR + ¹H 圖譜完成特徵約束提取。</li><li>尚未載入的光譜（¹³C、MS、MS/MS、ToF-SIMS）不當成反證，但可能影響位置異構物的唯一性判別。</li></ul>
-   <details class="fold" style="margin-top:8px"><summary>跨光譜一致性（只列有提供的光譜）</summary><div class="in"><table><thead><tr><th>候選</th><th class="m">IR</th><th class="m">¹H</th><th class="m">綜合</th></tr></thead><tbody><tr><td>#1 C15H16O2</td><td class="m"><span class="tag b">相容 70</span></td><td class="m"><span class="tag g">支持 90</span></td><td class="m"><b>78%</b></td></tr><tr><td>#2 C7H8O</td><td class="m"><span class="tag b">相容 70</span></td><td class="m"><span class="tag b">相容 75</span></td><td class="m"><b>72%</b></td></tr><tr><td>#3 C7H8O2</td><td class="m"><span class="tag b">相容 70</span></td><td class="m"><span class="tag b">相容 63</span></td><td class="m"><b>67%</b></td></tr></tbody></table><p class="hint" style="margin:6px 0 0">未提供：¹³C、MS、MS/MS、ToF-SIMS（不扣分）。數值一律四捨五入到整數。</p></div></details>
-   <details class="fold" style="margin-top:8px"><summary>可追溯證據明細（32 筆；證據 ID → 規則 → 影響）</summary><div class="in"><p class="hint">原「4. 可追溯證據推理鏈明細」整張表放這裡，預設收合、不加內部捲軸；每筆的觀測 ID 顯示為「IR 3350 cm⁻¹」。</p></div></details></div></section>`;
+   <details class="fold" style="margin-top:8px"><summary>明細：11 個局部結構（來源觀測、開放連接點、競爭假設）</summary><div class="in"><table><thead><tr><th>局部結構</th><th>來源觀測</th><th>狀態</th></tr></thead><tbody><tr><td>對位雙取代芳香環</td><td class="mono xs">¹H 7.08、¹H 6.73</td><td><span class="tag g">較支持</span></td></tr><tr><td>六碳芳香環局部骨架</td><td class="mono xs">IR 1612、1510、1440 …</td><td><span class="tag g">較支持</span></td></tr><tr><td colspan="3" class="muted">…其餘 9 個</td></tr></tbody></table></div></details></div></section>
+  <div class="row" style="justify-content:flex-end"><button class="btn pri" onclick="goTab('pred')">看預測結構 →</button></div>`;
 
+  // ---- secondary tabs
   const formulaTab = `
-  <section class="card"><div class="ch"><div class="sq">C</div><h3>組成推斷（分子式假設）</h3><div class="r"><span class="tag w">窮舉：未完整</span><span class="tag">200 個假設</span></div></div><div class="cb">
+  <section class="card"><div class="ch"><div class="sq">C</div><h3>組成推斷（分子式假設）</h3><div class="r"><span class="tag w">窮舉：未完整</span><span class="hint">參考資料</span></div></div><div class="cb">
    <details class="fold" open data-testid="composition-panel"><summary data-testid="composition-panel-summary">組成推斷（分子式假設）｜由光譜推斷（假設，非確認）｜200 個分子式假設｜窮舉：未完整（INCOMPLETE）</summary><div class="in">
-   <ul class="bl"><li><b>搜尋計畫：</b>共 12 個分子式被搜尋（9 個只跑第一輪，3 個也跑了第二輪）；188 個列出但未搜尋。</li><li><b>O 下限 1：</b>IR 3350 寬帶 → O–H；IR 1235、1175 強 C–O 帶。</li><li><b>未考慮 S；</b>無 N 專屬證據（模糊的 O／N 訊號歸 O）。</li><li><b>未搜尋原因：</b>k 輪流名額已滿 38 · ¹H 清單不可行 76 · O 變體超過保留數 21 · O 數在 IR 範圍之外 53。</li></ul>
-   <details class="fold" open style="margin-top:8px" data-testid="composition-hypotheses"><summary>分子式假設（16／200：所有被搜尋的列＋前 4 列未搜尋）</summary><div class="in"><table><thead><tr><th>排序</th><th>分子式</th><th>DBE</th><th>k</th><th>搜尋結果</th></tr></thead><tbody>
-    ${[[1, 'C7H8O', 4, 1, '第二輪（含烯基）｜1 個候選｜完整'], [2, 'C7H8O2', 4, 1, '第一輪｜2 個候選｜未完整'], [3, 'C8H8O', 5, 1, '第一輪｜1 個候選｜未完整'], [4, 'C8H8O2', 5, 1, '第一輪｜5 個候選｜未完整'], [24, 'C15H16O2', 8, 2, '第二輪（含烯基）｜4 個候選｜未完整（時間預算）'], [5, 'C9H8O', 6, 1, '未搜尋（k 輪流名額已滿）']].map(r => `<tr><td>${r[0]}</td><td class="mono">${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td><td>${r[4]}</td></tr>`).join('')}</tbody></table><p class="hint" style="margin:6px 0 0">相對信心未校準，只表示假設之間的比較，不是機率。（草圖只畫其中 6 列。）</p><button class="btn sm" style="margin-top:6px">展開全部 200 個</button></div></details>
+   <ul class="bl"><li><b>搜尋計畫：</b>共 12 個分子式被搜尋（9 個只跑第一輪，3 個也跑了第二輪）；188 個列出但未搜尋。</li><li><b>氧下限 1：</b>IR 3350 寬帶 → O–H；IR 1235、1175 強 C–O 帶。</li><li><b>未考慮 S；</b>無 N 專屬證據（模糊的 O／N 訊號歸 O）。</li><li><b>未搜尋原因：</b>k 輪流名額已滿 38 · ¹H 清單不可行 76 · O 變體超過保留數 21 · O 數在 IR 範圍之外 53。</li></ul>
+   <details class="fold" open style="margin-top:8px" data-testid="composition-hypotheses"><summary>分子式假設（27／200：所有被搜尋的列＋前 15 列未搜尋）</summary><div class="in"><table><thead><tr><th>排序</th><th>分子式</th><th>k</th><th>搜尋結果</th></tr></thead><tbody>
+    ${SEARCHED.slice(0, 5).map(r => `<tr><td>${r[0]}</td><td class="mono">${r[1]}</td><td>${r[2]}</td><td>${r[3]}｜${r[4]} 個候選｜${r[5]}</td></tr>`).join('')}${UNSEARCHED.slice(0, 2).map(r => `<tr><td>${r[0]}</td><td class="mono">${r[1]}</td><td>—</td><td class="muted">未搜尋（${r[2]}）</td></tr>`).join('')}</tbody></table><p class="hint" style="margin:6px 0 0">相對信心未校準，只表示假設之間的比較，不是機率。（草圖只畫其中 7 列。）</p><button class="btn sm" style="margin-top:6px">展開全部 200 個</button></div></details>
    <details class="fold" style="margin-top:8px"><summary>由 ¹H 推得的原子清單（4 組訊號）</summary><div class="in"><table><thead><tr><th>δ (ppm)</th><th>積分</th><th>最簡比</th><th>多重性</th><th>位移類別</th></tr></thead><tbody><tr><td class="mono">7.08</td><td>4</td><td>2</td><td>d</td><td>芳香 CH、烯基 CH</td></tr><tr><td class="mono">6.73</td><td>4</td><td>2</td><td>d</td><td>芳香 CH、烯基 CH</td></tr><tr><td class="mono">4.75</td><td>2</td><td>1</td><td>br s</td><td>可交換 H（OH／NH）等</td></tr><tr><td class="mono">1.62</td><td>6</td><td>3</td><td>s</td><td>烷基 H</td></tr></tbody></table></div></details>
    <details class="fold" style="margin-top:8px"><summary>實際套用的約束與被擋掉的結構數</summary><div class="in"><ul class="bl"><li>必含子結構：對位二取代苯（依據 ¹H 7.08、6.73）</li><li>被擋掉：必含子結構 5183、等價（對稱）檢查 5167、烯基 124、芳香原子 4、禁含片段（對位短橋 106、間位短橋 7）、合理性規則 5</li></ul></div></details>
    <details class="fold" style="margin-top:8px" open data-testid="composition-limitations"><summary>限制</summary><div class="in"><ul class="bl"><li>分子式是假設，不是確認；使用者分子式永遠優先並作為硬限制。</li><li>相對信心沒有校準。</li><li>窮舉完整性只相對於目前的分子式、片段讀法與禁止規則。</li></ul></div></details>
    </div></details></div></section>`;
 
   const inputTab = `
-  <section class="card"><div class="ch"><div class="sq">IR</div><h3>IR · synthetic-fixture.csv</h3><div class="r"><span class="tag ${warn ? '' : ''}">數值檔 · 座標來自檔案</span><a class="btn sm" href="02-page2-calibration.html">到第 2 頁調整</a></div></div><div class="cb"><ul class="bl tight"><li>10 個標記；校正：無需（數值檔）；五點基線 v3 已套用</li></ul>
+  <section class="card"><div class="ch"><div class="sq">IR</div><h3>IR · synthetic-fixture.csv</h3><div class="r"><span class="tag">數值檔 · 座標來自檔案</span><a class="btn sm" href="02-page2-calibration.html">到第 2 頁調整</a></div></div><div class="cb"><ul class="bl tight"><li>10 個標記；校正：無需（數值檔）；五點基線 v3 已套用</li></ul>
    <details class="fold" style="margin-top:8px"><summary>峰表（10 筆）</summary><div class="in"><table><thead><tr><th>位置</th><th>基線相對強度</th><th>形態</th></tr></thead><tbody><tr><td class="mono">3350</td><td class="mono">0.75</td><td>寬峰</td></tr><tr><td class="mono">3030</td><td class="mono">0.16</td><td>未判定</td></tr><tr><td colspan="3" class="muted">…其餘 8 筆</td></tr></tbody></table></div></details></div></section>
   <section class="card"><div class="ch"><div class="sq">¹H</div><h3>¹H NMR · ${warn ? 'h1-scan.png' : 'synthetic-fixture.csv'}</h3><div class="r">${warn ? '<span class="tag w">⚠ 預設座標（未校正）</span>' : '<span class="tag">數值檔 · 座標來自檔案</span>'}<a class="btn sm" href="02-page2-calibration.html">到第 2 頁校正</a></div></div><div class="cb"><ul class="bl tight"><li>溶劑：${warn ? '<span class="tag w">未宣告</span>' : 'CDCl₃'}　頻率：${warn ? '<span class="tag w">未宣告（程式以 400 MHz 計算）</span>' : '400 MHz'}</li><li>4 個標記</li></ul>
    <details class="fold" style="margin-top:8px"><summary>峰表（4 筆）</summary><div class="in"><table><thead><tr><th>δ ppm</th><th>積分</th><th>多重性／J</th></tr></thead><tbody><tr><td class="mono">7.08</td><td>4</td><td>d, 8.6 Hz</td></tr><tr><td class="mono">6.73</td><td>4</td><td>d, 8.6 Hz</td></tr><tr><td class="mono">4.75</td><td>2</td><td>br s</td></tr><tr><td class="mono">1.62</td><td>6</td><td>s</td></tr></tbody></table></div></details></div></section>
   <section class="card"><div class="ch"><div class="sq">⚙</div><h3>校正摘要</h3></div><div class="cb"><ul class="bl tight"><li>IR：${warn ? '分段線性，5 點，最大誤差 0.4 cm⁻¹' : '數值檔，無需校正'}</li><li>¹H：${warn ? '<b>預設座標（未校正）</b>' : '數值檔，無需校正'}</li><li>未提供：¹³C、MS、MS/MS、ToF-SIMS</li></ul></div></section>`;
 
   const diagTab = `
-  <section class="card"><div class="ch"><div class="sq">✎</div><h3>複製診斷摘要</h3><div class="r"><button class="btn pri" id="copy">複製診斷摘要</button></div></div><div class="cb">
-   <p class="hint" style="margin:0 0 8px">純文字、條列；貼給規劃者或存檔即可。不含使用者的原始圖譜或檔案內容，只含上面這些設定與數字。</p><pre class="pre" id="diag">${esc(DIAG)}</pre></div></section>
+  <section class="card"><div class="ch"><div class="sq">✎</div><h3>診斷摘要（給規劃者或存檔）</h3><div class="r"><button class="btn pri" id="copy">複製診斷摘要</button><button class="btn" id="copy2">複製完整分子式表（200 列）</button></div></div><div class="cb">
+   <p class="hint" style="margin:0 0 8px">純文字、條列、≤120 行；不含使用者的原始圖譜或檔案內容。分子式部分＝所有被搜尋的列＋前 15 個未搜尋列＋各未搜尋原因的數量；要看完整的 200 列，按「複製完整分子式表」（每列附搜尋狀態與未搜尋原因）。摘要另寫出「氧下限來源」與「氮證據來源」（哪幾個 IR 峰／¹H 訊號）。</p><pre class="pre" id="diag">${esc(DIAG)}</pre>
+   <details class="fold" style="margin-top:8px"><summary>完整分子式表預覽（按上方按鈕複製全部列）</summary><div class="in"><pre class="pre" id="diag2">${esc(FULLTBL_HEAD)}</pre></div></details></div></section>
   <section class="card"><div class="ch"><div class="sq">⬇</div><h3>匯出</h3></div><div class="cb"><div class="row wrapf gap8"><button class="btn" onclick="document.getElementById('exp').showModal()">開啟匯出視窗（Markdown 預覽）</button><button class="btn">複製 Markdown 報告</button><button class="btn">下載完整 JSON 證據包</button><button class="btn">列印報告</button></div></div></section>
+  <section class="card"><div class="ch"><div class="sq">▦</div><h3>跨光譜一致性、可追溯證據與限制</h3></div><div class="cb">
+   <details class="fold"><summary>跨光譜一致性矩陣（只列有提供的光譜）</summary><div class="in"><table><thead><tr><th>候選</th><th class="m">IR</th><th class="m">¹H</th><th class="m">綜合</th></tr></thead><tbody><tr><td>#1 C15H16O2</td><td class="m"><span class="tag b">相容 70</span></td><td class="m"><span class="tag g">支持 90</span></td><td class="m"><b>78%</b></td></tr><tr><td>#2 C7H8O</td><td class="m"><span class="tag b">相容 70</span></td><td class="m"><span class="tag b">相容 75</span></td><td class="m"><b>72%</b></td></tr><tr><td>#3 C7H8O2</td><td class="m"><span class="tag b">相容 70</span></td><td class="m"><span class="tag b">相容 63</span></td><td class="m"><b>67%</b></td></tr></tbody></table><p class="hint" style="margin:6px 0 0">未提供：¹³C、MS、MS/MS、ToF-SIMS（不扣分）。數值一律四捨五入到整數。</p></div></details>
+   <details class="fold" style="margin-top:8px"><summary>可追溯證據明細（32 筆；證據 ID → 規則 → 影響）</summary><div class="in"><p class="hint">原「可追溯證據推理鏈明細」整張表放這裡，預設收合、不加內部捲軸；每筆的觀測 ID 顯示為「IR 3350 cm⁻¹」。</p></div></details>
+   <details class="fold" style="margin-top:8px"><summary>跨模態共識</summary><div class="in"><ul class="bl"><li>已基於目前載入之 IR + ¹H 圖譜完成特徵約束提取。</li></ul></div></details>
+   <details class="fold" style="margin-top:8px"><summary>不確定性與限制</summary><div class="in"><ul class="bl"><li>尚未載入的光譜（¹³C、MS、MS/MS、ToF-SIMS）不當成反證，但可能影響位置異構物的唯一性判別。</li><li>評分是未校準的相容度，非結構正確機率；同一原始觀測僅計一次。（這句模板話整頁只出現一次）</li></ul></div></details></div></section>
   <section class="card"><div class="ch"><div class="sq">6</div><h3>分析過程（六步驟推理）</h3></div><div class="cb"><ol class="bl"><li>collectObservedEvidence — 14 個實際觀測；精度未知保留 null</li><li>generateChemicalHypotheses — 35 個競爭環境／耦合假設</li><li>inferLocalStructures — 11 個局部圖</li><li>searchMolecularGraphs — 已展開 29,892,583 狀態；TIME_BUDGET</li><li>ChemicalHardConstraintValidator + scoreScientificEvidence — 13 個候選通過硬限制</li><li>StructureRenderer2D + ReasoningPanel — 由完整 SMILES 生成 2D 圖</li></ol></div></section>`;
 
-  const tabs = [['structure', '結構', '3', ''], ['evidence', '證據', '', ''], ['formula', '分子式與搜尋', '200', ''], ['input', '輸入與校正', warn ? '⚠ 1' : '', warn ? 'w' : ''], ['diag', '診斷', '', '']];
-  const sub = `<div class="subbar" data-testid="analysis-control"><div class="ctl"><button class="btn pri">▶ 開始分析</button><span class="st" role="status">分析完成（使用已保存輸入快照）· 13 個候選</span></div>
-   <div class="tabs" role="tablist">${tabs.map(([id, n, c, cls]) => `<button class="tab" role="tab" id="t-${id}" aria-selected="${id === initial}" aria-controls="p-${id}" onclick="goTab('${id}')">${n}${c ? `<span class="c ${cls}">${c}</span>` : ''}</button>`).join('')}</div></div>`;
-  const panels = [['structure', structure], ['evidence', evidence], ['formula', formulaTab], ['input', inputTab], ['diag', diagTab]].map(([id, html]) => `<div id="p-${id}" role="tabpanel" aria-labelledby="t-${id}" ${id === initial ? '' : 'hidden'} style="display:${id === initial ? 'flex' : 'none'};flex-direction:column;gap:12px">${html}</div>`).join('');
-  return header() + stepsBar(3, warn) + sub + `<main class="scroll" id="sc"><div class="wrap">${inputStrip('')}${panels}</div></main>`;
+  // primary tabs (reading order ① → ②) | secondary "參考資料" tabs (right, smaller, lighter)
+  const tb = (id, n, c, cls, kind, no) => `<button class="tab ${kind}" role="tab" id="t-${id}" aria-selected="${id === initial}" aria-controls="p-${id}" onclick="goTab('${id}')">${no ? `<span class="no">${no}</span>` : ''}${n}${c ? `<span class="c ${cls}">${c}</span>` : ''}</button>`;
+  const sub = `<div class="subbar" data-testid="analysis-control"><div class="ctl"><button class="btn pri">▶ 開始分析</button><span class="st" role="status">分析完成 · 13 個候選</span></div>
+   <div class="tabs" role="tablist">${tb('fg', '圖譜官能基', '', '', 'pri', '①')}<span class="arrow" aria-hidden="true">→</span>${tb('pred', '預測結構', '3', '', 'pri', '②')}
+   <span class="div" aria-hidden="true"></span><span class="lab">參考資料</span>${tb('formula', '分子式與搜尋', '', '', 'sec')}${tb('input', '輸入與校正', warn ? '⚠ 1' : '', warn ? 'w' : '', 'sec')}${tb('diag', '診斷', '', '', 'sec')}</div></div>`;
+  const panels = [['fg', fg], ['pred', pred], ['formula', formulaTab], ['input', inputTab], ['diag', diagTab]].map(([id, html]) => `<div id="p-${id}" role="tabpanel" aria-labelledby="t-${id}" ${id === initial ? '' : 'hidden'} style="display:${id === initial ? 'flex' : 'none'};flex-direction:column;gap:12px">${html}</div>`).join('');
+  return header() + stepsBar(3, warn) + dcbar + sub + `<main class="scroll" id="sc"><div class="wrap">${inputStrip('')}${panels}</div></main>`;
 }
 const resultScripts = `
 function goTab(id){document.querySelectorAll('[role=tabpanel]').forEach(p=>{const on=p.id==='p-'+id;p.hidden=!on;p.style.display=on?'flex':'none'});
  document.querySelectorAll('[role=tab]').forEach(t=>t.setAttribute('aria-selected',t.id==='t-'+id));document.getElementById('sc').scrollTop=0;}
-document.getElementById('copy')&&document.getElementById('copy').addEventListener('click',async()=>{const t=document.getElementById('diag').textContent;
- try{await navigator.clipboard.writeText(t);toast('已複製診斷摘要（'+t.split('\\n').length+' 行）')}catch(e){const r=document.createRange();r.selectNodeContents(document.getElementById('diag'));const s=getSelection();s.removeAllRanges();s.addRange(r);toast('請按 Ctrl+C 複製（瀏覽器不允許自動複製）')}});
+[['copy','diag'],['copy2','diag2']].forEach(([b,t])=>{const el=document.getElementById(b);el&&el.addEventListener('click',async()=>{const txt=document.getElementById(t).textContent;
+ try{await navigator.clipboard.writeText(txt);toast('已複製（'+txt.split('\\n').length+' 行）')}catch(e){const r=document.createRange();r.selectNodeContents(document.getElementById(t));const sel=getSelection();sel.removeAllRanges();sel.addRange(r);toast('請按 Ctrl+C 複製（瀏覽器不允許自動複製）')}})});
 `;
 function resultPage(title, initial, warn, notes) {
   return page(title, resultBody(initial, warn) + devNote(notes), resultScripts);
@@ -423,8 +467,8 @@ const index = `<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><
 <div class="brand" style="margin-bottom:16px"><img src="data:image/png;base64,${logo}" alt=""><div><h1>Spec<b>Reader</b> <span class="ver">v1.2.2 草圖</span></h1><div class="sub">雙擊任一檔案即可開啟；不需要 dev server、不需要網路。資料全部是合成樣本（tests/fixtures/v121/S1）。</div></div></div>
 <div class="card"><div class="cb"><ol class="bl" style="line-height:2">
 <li><a href="01-page1-signal-marking.html">第 1 頁 訊號標記</a></li><li><a href="02-page2-calibration.html">第 2 頁 座標校正</a></li>
-<li><a href="03-result-structure.html">結果頁 · 結構（資料檢查橫條＋結論卡）</a></li><li><a href="04-result-evidence.html">結果頁 · 證據（合併顯示、IR 證據不足隱藏列）</a></li>
-<li><a href="05-result-diagnosis.html">結果頁 · 診斷（複製診斷摘要）</a></li><li><a href="06-result-datacheck-warning.html">結果頁 · 資料檢查有警告（未校正）</a></li>
+<li><a href="04-result-evidence.html">結果頁 · ① 圖譜官能基（分析完成後預設開啟；合併顯示、IR 證據不足隱藏列）</a></li><li><a href="03-result-structure.html">結果頁 · ② 預測結構（結論卡前 3 名、候選的「支持與矛盾」）</a></li>
+<li><a href="05-result-diagnosis.html">結果頁 · 診斷（複製診斷摘要、複製完整分子式表）</a></li><li><a href="06-result-datacheck-warning.html">結果頁 · 資料檢查有警告（一行摘要變琥珀色）</a></li>
 <li><a href="07-result-formula-search.html">結果頁 · 分子式與搜尋（補充）</a></li><li><a href="08-result-input-calibration.html">結果頁 · 輸入與校正（補充）</a></li></ol>
 <p class="hint">建議用 1280×720 與 1920×1080 兩種視窗大小各看一次。標題列與分頁列固定在上方，只有中間內容區捲動（右側有一直可見的捲軸）。左下角「草圖說明」可展開每張圖的重點。</p></div></div></div></body></html>`;
 
@@ -432,12 +476,12 @@ const index = `<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><
 const files = {
   '01-page1-signal-marking.html': page1(),
   '02-page2-calibration.html': page2(),
-  '03-result-structure.html': resultPage('SpecReader 草圖 3 · 結果頁 結構', 'structure', false, ['固定在上方：標題列、步驟列、分析列＋分頁列；只有中間捲動', '最上方「資料檢查」橫條；其下「結論卡」（前 3 名、整數相容度、1–3 行理由、最重要的警告）', '預設只展開結論卡；其餘候選收合', '候選卡上的「看證據 →」直接跳到證據分頁']),
-  '04-result-evidence.html': resultPage('SpecReader 草圖 4 · 結果頁 證據', 'evidence', false, ['同一官能基合併成一行；點開看每個峰（觀測 ID 顯示為「IR 3350 cm⁻¹」）', '琥珀色列：IR 證據不足的官能基預設隱藏，點開才看', '重複模板話（例如「單一峰不可斷言」「每原始峰只計一次」）每類只講一次', '「看證據」會展開對應候選（此例：#1 已展開）']),
-  '05-result-diagnosis.html': resultPage('SpecReader 草圖 5 · 結果頁 診斷', 'diag', false, ['「複製診斷摘要」一鍵複製純文字條列（預覽在下方）', '匯出 JSON／Markdown／列印都在這一頁，頂端「匯出報告」仍保留', '六步驟推理放在這裡（分析中則顯示在分析列）']),
-  '06-result-datacheck-warning.html': resultPage('SpecReader 草圖 6 · 資料檢查有警告', 'structure', true, ['¹H 只有程式預設座標（沒有使用者校正）→ 琥珀色橫條', '同一個警告也出現在：步驟列「第 3 頁 ⚠」、「輸入與校正」分頁徽章、結論卡的「最重要警告」', '溶劑、頻率未宣告也一併列出', '提醒不攔截：仍可照常檢視結果']),
-  '07-result-formula-search.html': resultPage('SpecReader 草圖 7 · 結果頁 分子式與搜尋', 'formula', false, ['原 CompositionPanel 整塊搬到這個分頁；內部 data-testid 與 <details> 結構不變', '假設表預設只列「所有被搜尋的列＋前 4 列未搜尋」，其餘按鈕展開，不使用內部捲軸']),
-  '08-result-input-calibration.html': resultPage('SpecReader 草圖 8 · 結果頁 輸入與校正', 'input', true, ['峰表、溶劑、頻率、校正摘要集中在這裡', '空欄位（未載入的光譜）合併成一行「未提供」']),
+  '03-result-structure.html': resultPage('SpecReader 草圖 3 · 結果頁 預測結構', 'pred', false, ['分頁順序：先「① 圖譜官能基」再「② 預測結構」；右側小字「參考資料」是三個次要分頁', '分頁列上方固定一行「資料檢查」摘要（所有分頁都看得到）；全部正常就只有這一行', '結論卡（前 3 名、整數相容度、1–3 行理由、最重要的警告）；頁頂有「← 回圖譜官能基」', '每張候選卡的「展開支持與矛盾」就地展開，不切換分頁']),
+  '04-result-evidence.html': resultPage('SpecReader 草圖 4 · 結果頁 圖譜官能基（分析完成後預設）', 'fg', false, ['分析完成後預設開啟這一頁；第一個條列不用捲動就看得到（1280×720）', '同一官能基合併成一行、一律條列；「寬／窄」吸收帶形態小標籤', '琥珀色列：IR 證據不足的官能基預設隱藏，點開才看', '頁底「看預測結構 →」按鈕']),
+  '05-result-diagnosis.html': resultPage('SpecReader 草圖 5 · 結果頁 診斷', 'diag', false, ['兩個複製按鈕：「複製診斷摘要」與「複製完整分子式表（200 列）」', '診斷摘要的分子式部分＝所有被搜尋的列＋前 15 個未搜尋列＋各原因數量；並寫出氧下限來源、氮證據來源', '跨光譜一致性、可追溯證據、跨模態共識、不確定性與限制、匯出、六步驟都在這一頁']),
+  '06-result-datacheck-warning.html': resultPage('SpecReader 草圖 6 · 資料檢查有警告', 'pred', true, ['資料檢查那一行整行變琥珀色；點「展開」才列條列細節（浮在內容上，不會推擠版面）', '同一個警告也出現在：步驟列「第 3 頁 ⚠」、「輸入與校正」分頁徽章、預測結構頁的「最重要警告」', '提醒不攔截：仍可照常檢視結果']),
+  '07-result-formula-search.html': resultPage('SpecReader 草圖 7 · 結果頁 分子式與搜尋', 'formula', false, ['次要分頁（參考資料）；分頁上沒有「200」徽章', '原 CompositionPanel 整塊搬到這個分頁；內部 data-testid 與 <details> 結構不變', '假設表預設列「所有被搜尋的列＋前 15 列未搜尋」，其餘按鈕展開，不使用內部捲軸']),
+  '08-result-input-calibration.html': resultPage('SpecReader 草圖 8 · 結果頁 輸入與校正', 'input', true, ['次要分頁；⚠ 徽章保留且醒目', '峰表、溶劑、頻率、校正摘要集中在這裡；未載入的光譜合併成一行「未提供」']),
   'index.html': index,
 };
 for (const [name, html] of Object.entries(files)) fs.writeFileSync(path.join(out, name), html);

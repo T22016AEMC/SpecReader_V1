@@ -45,9 +45,20 @@ body{background:var(--bg);color:var(--text);font:14px/1.5 var(--sans);-webkit-fo
 .subbar{flex:none;background:#fff;border-bottom:1px solid var(--line2);display:flex;align-items:center;gap:16px;padding:0 24px;height:48px;z-index:15}
 .ctl{display:flex;align-items:center;gap:10px;font-size:12px;color:#475569;min-width:0}
 .ctl .st{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px}
-.tabs{display:flex;gap:2px;margin-left:auto;height:100%}
+.tabs{display:flex;align-items:stretch;gap:2px;margin-left:auto;height:100%}
 .tab{appearance:none;border:0;background:none;font:600 13px var(--sans);color:var(--muted);padding:0 14px;height:100%;border-bottom:3px solid transparent;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap}
 .tab:hover{color:var(--text)}.tab[aria-selected=true]{color:var(--primary);border-bottom-color:var(--primary)}
+.tab.pri{font-size:15px;font-weight:800;color:#475569;padding:0 16px}.tab.pri[aria-selected=true]{color:var(--primary)}
+.tab .no{width:20px;height:20px;border-radius:999px;background:#e2e8f0;color:#475569;font:700 11px var(--mono);display:grid;place-items:center}.tab.pri[aria-selected=true] .no{background:var(--primary);color:#fff}
+.tabs .arrow{align-self:center;color:var(--muted2);font-size:18px;padding:0 2px}
+.tabs .div{align-self:center;width:1px;height:26px;background:var(--line2);margin:0 10px 0 14px}.tabs .lab{align-self:center;font-size:10px;color:var(--muted2);margin-right:2px;white-space:nowrap}
+.tab.sec{font-size:12px;font-weight:500;color:var(--muted2);padding:0 10px}.tab.sec[aria-selected=true]{color:var(--primary);font-weight:700}
+/* one-line data check, fixed above the tab row (32px); details open as an overlay so fixed height never changes */
+.dcbar{flex:none;height:32px;background:#f8fafc;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:16px;padding:0 24px;font-size:12px;position:relative;z-index:18}
+.dcbar.w{background:var(--amber-bg);border-bottom-color:var(--amber-line);color:var(--amber-tx)}
+.dcbar .it{white-space:nowrap;font-weight:600}.dcbar .it.ok{color:#047857}.dcbar .it.wn{color:#b45309;font-weight:800}.dcbar .it.inf{color:#1d4ed8}.dcbar .exp{margin-left:auto}
+.dcpop{display:none;position:absolute;left:24px;right:24px;top:32px;max-width:1000px;background:#fff;border:1px solid var(--line2);border-radius:0 0 12px 12px;box-shadow:0 12px 28px rgba(15,23,42,.18);padding:12px 14px;color:var(--text)}
+.dcbar.open .dcpop{display:block}
 .tab .c{font:600 10px var(--mono);background:#f1f5f9;color:var(--muted);border-radius:999px;padding:0 6px}
 .tab .c.w{background:var(--amber-bg);color:var(--amber-tx);border:1px solid var(--amber-line)}
 /* the only scrolling region: visible scrollbar */
@@ -107,6 +118,8 @@ input:focus,select:focus{outline:2px solid #bfdbfe;border-color:var(--primary)}
 .struct{background:#fff;border:1px solid #eef2f6;border-radius:8px;display:grid;place-items:center;padding:4px}.struct svg{width:100%;max-width:210px;height:auto}
 .reasons{margin:0;padding-left:16px;font-size:12px;color:#334155}.reasons li{margin:1px 0}.reasons .x{color:var(--rose-tx)}
 .legend{font-size:11px;color:var(--muted)}
+details.sup>summary{display:inline-flex;list-style:none}details.sup>summary::before{display:none}details.sup .o2{display:none}details.sup[open] .o1{display:none}details.sup[open] .o2{display:inline}
+.supin{margin-top:8px;border-top:1px dashed var(--line);padding-top:8px;font-size:12px;color:#334155}
 /* chk list */
 .chk{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:6px 18px;margin:0;padding:0;list-style:none}
 .chk li{display:flex;gap:8px;font-size:12.5px;align-items:flex-start}
@@ -128,15 +141,15 @@ dialog{border:1px solid var(--line);border-radius:14px;padding:0;max-width:640px
     <a href="#" class="sm">專案資訊</a><a href="#" class="sm">紀錄</a><a href="#" class="sm">引擎與測試</a>
   </nav>
   <div class="hr"><span class="draft">草圖 · 合成樣本，非真實資料</span><button class="btn" onclick="document.getElementById('exp').showModal()">⬇ 匯出報告</button></div>
-</header><div class="steps"><a class="step on" href="#"><span class="n">1</span><span>第 1 頁 訊號標記 <small>上傳・點峰</small></span></a><span class="sep">›</span><a class="step " href="#"><span class="n">2</span><span>第 2 頁 座標校正 <small>像素 → 真實刻度</small></span></a><span class="sep">›</span><a class="step " href="#"><span class="n">3</span><span>第 3 頁 化學判讀 <span class="w" title="尚有光譜未校正">⚠</span> <small>結論・證據・診斷</small></span></a>
+</header><div class="steps"><a class="step on" href="#"><span class="n">1</span><span>第 1 頁 訊號標記 <small>上傳・點峰</small></span></a><span class="sep">›</span><a class="step " href="#"><span class="n">2</span><span>第 2 頁 座標校正 <small>像素 → 真實刻度</small></span></a><span class="sep">›</span><a class="step " href="#"><span class="n">3</span><span>第 3 頁 化學判讀 <span class="w" title="尚有光譜未校正">⚠</span> <small>官能基・結構・診斷</small></span></a>
   <div class="stat"><span class="pill">已標記 14</span><span class="pill w">座標：1 張未校正</span></div></div><main class="scroll"><div class="wrap">
   
-<section class="card"><div class="cb"><div class="strip">
-  <label>Mode A 輸入證據中心</label>
-  <input type="text" aria-label="分子式（選填）" placeholder="分子式（選填）例：C15H16O2" value="" style="width:210px">
-  <input type="text" placeholder="其他化學證據（FeCl₃ 呈色、D₂O 交換…）" style="width:300px">
+<div class="strip" style="gap:8px;padding:2px 2px;font-size:11px;min-height:28px">
+  <label style="font-size:11px;font-weight:600;color:var(--muted)">Mode A 輸入證據中心</label>
+  <input type="text" aria-label="分子式（選填）" placeholder="分子式（選填）例：C15H16O2" value="" style="width:190px;padding:2px 6px;font-size:11px">
+  <input type="text" placeholder="其他化學證據（FeCl₃ 呈色、D₂O 交換…）" style="width:260px;padding:2px 6px;font-size:11px">
   <span class="pill g">光譜：IR、¹H</span><span class="pill">分子式：未提供</span>
-  <button class="btn sm gray" style="margin-left:auto">重置空白未知物</button></div></div></section>
+  <button class="btn sm gray" style="margin-left:auto">重置空白未知物</button></div>
   <section class="card"><div class="cb"><div class="row wrapf gap8"><div class="chips">
     <div class="chip on"><b>IR</b><span class="fn">synthetic-fixture.csv</span><span class="tag">10 標記</span><span class="st-ok">座標來自數值檔</span><button class="btn sm danger" title="移除此光譜">×</button><label class="btn sm gray" style="cursor:pointer">更換<input type="file" hidden></label></div>
     <div class="chip"><b>¹H</b><span class="fn">h1-scan.png</span><span class="tag">4 標記</span><span class="st-w" title="圖片的 x 軸目前用程式預設的 0–12 ppm 推定，不是使用者校正過的">⚠ 預設座標（未校正）</span><button class="btn sm danger" title="移除此光譜">×</button><label class="btn sm gray" style="cursor:pointer">更換<input type="file" hidden></label></div>
