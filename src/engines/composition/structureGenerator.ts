@@ -284,7 +284,7 @@ export async function generateForCompositions(args:{userFormula:string|null;comp
 function addRejected(a:RejectionStats|null,b:RejectionStats|null):RejectionStats|null {
  if(!a||!b)return a??b;
  const sum=(x:Record<string,number>,y:Record<string,number>)=>{const o={...x};for(const [k,v] of Object.entries(y))o[k]=(o[k]??0)+v;return o;};
- const v12=a.v12||b.v12?{aromaticFailed:(a.v12?.aromaticFailed??0)+(b.v12?.aromaticFailed??0),requiredFailed:(a.v12?.requiredFailed??0)+(b.v12?.requiredFailed??0),equivalenceFailed:(a.v12?.equivalenceFailed??0)+(b.v12?.equivalenceFailed??0),alkeneFailed:(a.v12?.alkeneFailed??0)+(b.v12?.alkeneFailed??0),requiredById:sum(a.v12?.requiredById??{},b.v12?.requiredById??{})}:undefined;
+ const v12=a.v12||b.v12?{aromaticFailed:(a.v12?.aromaticFailed??0)+(b.v12?.aromaticFailed??0),requiredFailed:(a.v12?.requiredFailed??0)+(b.v12?.requiredFailed??0),equivalenceFailed:(a.v12?.equivalenceFailed??0)+(b.v12?.equivalenceFailed??0),alkeneFailed:(a.v12?.alkeneFailed??0)+(b.v12?.alkeneFailed??0),requiredById:sum(a.v12?.requiredById??{},b.v12?.requiredById??{}),...(a.v12?.forbiddenById||b.v12?.forbiddenById?{forbiddenById:sum(a.v12?.forbiddenById??{},b.v12?.forbiddenById??{})}:{})}:undefined;
  return {sanitizeFailed:a.sanitizeFailed+b.sanitizeFailed,duplicatesMerged:a.duplicatesMerged+b.duplicatesMerged,notConnected:a.notConnected+b.notConnected,forbiddenByRule:sum(a.forbiddenByRule,b.forbiddenByRule),strainByRule:sum(a.strainByRule,b.strainByRule),approximate:a.approximate||b.approximate,...(v12?{v12}:{})};
 }
 /**

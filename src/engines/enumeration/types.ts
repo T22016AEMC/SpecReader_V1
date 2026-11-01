@@ -1,4 +1,5 @@
 import type {PlausibilityEvidence} from '../scientificEngines/structurePlausibility';
+import type {ForbiddenFragment} from '../constraints/forbiddenFragments';
 import type {StrainProfile, StrainProfileId} from './enumerationConfig';
 
 /** Element counts including hydrogen, e.g. {C:3,H:8,O:1}; or a formula string such as "C3H8O". */
@@ -89,6 +90,10 @@ export interface ForbiddenSpec {
   plausibilityLeaf?: boolean;
   /** Optional ring/bond strain rules: a profile id, an explicit profile, or absent/null = off. */
   strain?: StrainProfileId | StrainProfile | null;
+  /**
+   * v1.2.1 (B1, B2): forbidden fragments checked at the leaf. Absent = the default list (FORBIDDEN_FRAGMENTS) while forbiddenFragmentsActive(), else none; [] = none.
+   */
+  fragments?: ForbiddenFragment[];
 }
 export interface EnumerationRequest {
   formula: FormulaInput;
@@ -158,7 +163,7 @@ export interface RejectionStats {
   /** True when more rejected structures occurred than `maxTrackedRejected`; the by-rule counts may then count a structure twice. */
   approximate: boolean;
   /** v1.2 leaf checks: structures rejected by the aromatic / required-substructure / equivalence checks (absent when none ran). */
-  v12?: {aromaticFailed: number; requiredFailed: number; equivalenceFailed: number; alkeneFailed: number; /** structures missing each required substructure (first one that failed) */ requiredById?: Record<string, number>};
+  v12?: {aromaticFailed: number; requiredFailed: number; equivalenceFailed: number; alkeneFailed: number; /** structures missing each required substructure (first one that failed) */ requiredById?: Record<string, number>; /** v1.2.1: molecules containing each forbidden fragment (first one found; one count per molecule) */ forbiddenById?: Record<string, number>};
 }
 export interface SetOutcome {
   id: string;
@@ -227,7 +232,7 @@ export interface EnumerationRunDiagnostic {
   /** Every reading was complete but none holds a molecule with the formula: the run was relaxed to formula-only enumeration. */
   relaxedToFormulaOnly?: {candidates: number; complete: boolean};
   /** Candidates the bounded legacy beam search added after a budget-limited enumeration. */
-  legacySupplement?: {candidates: number; added: number; visited: number};
+  legacySupplement?: {candidates: number; added: number; visited: number; /** v1.2.1 (B1, B2): supplement candidates dropped for containing a forbidden fragment (absent when the rule set is off) */ droppedByForbidden?: number; droppedByForbiddenById?: Record<string, number>};
   conversions: AdaptedConversion[];
   notes: string[];
   /** v1.2 constraint layer (absent unless useV12Constraints was on for this formula). */

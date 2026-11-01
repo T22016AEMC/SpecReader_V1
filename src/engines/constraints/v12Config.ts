@@ -65,6 +65,13 @@ export const V12_CONFIG = {
   useV121Planning: true as boolean,
   /** ENGINEERING DEFAULTS, NOT CALIBRATED (chosen from the step counts of the five synthetic shapes S1/G1/E1/G3/D1, not from any measured compound). */
   planning: {
+    /**
+     * v1.2.1 B class sub-switches (tests and diagnostics only, not in the UI). Each one works only while planningActive() is true; false switches off just that rule set.
+     * forbiddenFragments: B1 short para/meta bridge + B2 cyclic C(OH)(OR)(OR). vinylWindows: B3 =CH2 / =CH shift windows (no-formula path). carbonylBand: B4 missing-carbonyl-band deduction.
+     */
+    forbiddenFragments: true as boolean,
+    vinylWindows: true as boolean,
+    carbonylBand: true as boolean,
     /** O variants kept per (k, C) key: only formulas with O in [floor, floor + 1] qualify, best score first. */
     maxOxygenVariantsPerKey: 2,
     /** k ≥ 2: the O window is [floor, k × floor + oxygenAllowedAboveFloor] and this many O variants are kept per (k, C) key (k = 1 keeps the value above). */

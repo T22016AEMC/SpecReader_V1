@@ -8,21 +8,21 @@ import type {LeafCost} from './types';
 const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
 const AROMATIC_BOND_LABEL = 10;
 
-export type LeafStage = 'aromatic' | 'required' | 'equivalence' | 'alkene';
+export type LeafStage = 'aromatic' | 'required' | 'equivalence' | 'alkene' | 'forbidden';
 export type LeafVerdict =
   | {kind: 'invalid'}
   /** The molecule is already a candidate. */
   | {kind: 'known'; smiles: string}
   /** The molecule was rejected earlier by a check that does not depend on how the atoms are labelled (it can be skipped). */
   | {kind: 'seenRejected'; smiles: string}
-  | {kind: 'rejected'; smiles: string; stage: LeafStage; /** true: the verdict is a property of the molecule alone */ remember: boolean; /** stage 'required': the substructure that is missing */ requiredId?: string}
+  | {kind: 'rejected'; smiles: string; stage: LeafStage; /** true: the verdict is a property of the molecule alone */ remember: boolean; /** stage 'required': the substructure that is missing */ requiredId?: string; /** stage 'forbidden': index of the forbidden fragment (in the list the queries were compiled from) */ forbiddenIndex?: number}
   | {kind: 'ok'; smiles: string};
 
 export const emptyLeafCost = (): LeafCost => ({leaves: 0, parseMs: 0, checksMs: 0, orbitChecks: 0, orbitMs: 0, requiredMatches: 0});
 
 /**
  * The v1.2 leaf pipeline for one assembled molecule, cheapest first: one RDKit parse (sanitize; canonical SMILES) → already known? →
- * required substructures → aromatic atoms → equivalence (exact orbits). The aromatic and equivalence verdicts depend on how the output
+ * required substructures → forbidden fragments (v1.2.1) → aromatic atoms → equivalence (exact orbits). The aromatic and equivalence verdicts depend on how the output
  * molecule is labelled by the search, so a molecule is only reported as rejected once ("remember: false"): another labelling of the same
  * molecule may still pass, and a molecule is a candidate as soon as one labelling passes.
  */
@@ -42,6 +42,10 @@ export function analyseLeaf(P: Problem, newBonds: NewBond[], queries: LeafQuerie
     for (let i = 0; i < P.required.length; i++) {
       cost.requiredMatches++;
       if (mol.matchCount(i, P.required[i].minMatches) < P.required[i].minMatches) { cost.checksMs += now() - t1; return {kind: 'rejected', smiles, stage: 'required', remember: true, requiredId: P.required[i].id}; }
+    }
+    if (queries.forbidden.length) {
+      const hit = mol.forbiddenHit();
+      if (hit >= 0) { cost.checksMs += now() - t1; return {kind: 'rejected', smiles, stage: 'forbidden', remember: true, forbiddenIndex: hit}; }
     }
     const needOrbits = P.eqGroups.length > 0 || P.pools.length > 0;
     const hasAlkene = P.alkene.some(Boolean);

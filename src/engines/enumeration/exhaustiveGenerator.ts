@@ -10,7 +10,9 @@ import {readingKinds} from '../constraints/readingKinds';
 /** v1.2 (W5): the pipeline applies the strain profile of the v1.2 layer while the flag is on. */
 const pipelineStrain = (v12: boolean) => (v12 ? V12_CONFIG.pipelineStrainProfile : CFG.pipelineStrainProfile);
 import {h1SignalsFromObservations, irAldehydeContext} from '../constraints/v12Evidence';
-import {matchesSMARTS} from '../scientificEngines/rdkitAdapter';
+import {matchesSMARTS, matchingSMARTS} from '../scientificEngines/rdkitAdapter';
+import {forbiddenFragmentsActive} from '../composition/planningGate';
+import {FORBIDDEN_FRAGMENTS} from '../constraints/forbiddenFragments';
 import {parseFormula} from './problem';
 import {adaptLocalStructures} from './adapter';
 import {ENUMERATION_CONFIG as CFG} from './enumerationConfig';
@@ -135,12 +137,24 @@ export function createExhaustiveGenerator(legacy: StructureGenerator): Structure
         supplement = await legacy.generateStructures(req);
         const seen = new Set(smiles);
         let added = 0, droppedByRequired = 0;
+        // v1.2.1 (B1, B2): the same forbidden-fragment list as the leaf and the downstream gate (checked only for candidates that pass the required check).
+        const forbiddenOn = forbiddenFragmentsActive();
+        const droppedForbidden: Record<string, number> = {};
+        let droppedByForbidden = 0;
+        const passesForbidden = (s: string) => {
+          if (!forbiddenOn) return true;
+          const hit = matchingSMARTS(s, FORBIDDEN_FRAGMENTS.map(f => f.smarts));
+          if (!hit?.length) return true;
+          droppedByForbidden++; const id = FORBIDDEN_FRAGMENTS[hit[0]].id; droppedForbidden[id] = (droppedForbidden[id] ?? 0) + 1;
+          return false;
+        };
         // v1.2: strong-evidence substructures hold on every path, so the legacy candidates are filtered by them too.
         const passesRequired = (s: string) => !ext?.required?.length || ext.required.every(r => matchesSMARTS(s, r.smarts) !== false);
         for (const s of supplement.smiles) if (!seen.has(s) && !passesRequired(s)) droppedByRequired++;
-        for (const s of supplement.smiles) if (!seen.has(s) && passesRequired(s)) { seen.add(s); smiles.push(s); origins[s] = {source: 'LEGACY_SUPPLEMENT', relaxed: false, ...(fellBack ? {v12Fallback: true} : {})}; added++; if (ext?.v12) supplementV12.add(s); }
+        for (const s of supplement.smiles) if (!seen.has(s) && passesRequired(s) && passesForbidden(s)) { seen.add(s); smiles.push(s); origins[s] = {source: 'LEGACY_SUPPLEMENT', relaxed: false, ...(fellBack ? {v12Fallback: true} : {})}; added++; if (ext?.v12) supplementV12.add(s); }
         run.notes = [...run.notes, forceSupplement ? `1H 約束的清單路徑與退回路徑都沒有候選：另以舊 beam 搜尋補充一次，${supplement.smiles.length} 個候選中 ${added} 個為新（這些候選不受 1H 約束）` : `窮舉未完成（${run.incompleteReasons.join('、')}）：另以舊 beam 搜尋補充，${supplement.smiles.length} 個候選中 ${added} 個為新（舊搜尋 ${supplement.visited} 步）`];
-        run.legacySupplement = {candidates: supplement.smiles.length, added, visited: supplement.visited};
+        run.legacySupplement = {candidates: supplement.smiles.length, added, visited: supplement.visited, ...(forbiddenOn ? {droppedByForbidden, droppedByForbiddenById: droppedForbidden} : {})};
+        if (droppedByForbidden) run.notes = [...run.notes, `舊 beam 補充的候選中 ${droppedByForbidden} 個含禁含片段，已排除`];
         if (droppedByRequired) run.notes = [...run.notes, `舊 beam 補充的候選中 ${droppedByRequired} 個不含強證據要求的子結構，已排除`];
         run.candidates = smiles.length;
       }
