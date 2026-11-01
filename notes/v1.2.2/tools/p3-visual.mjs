@@ -180,7 +180,7 @@ async function runScenario(browser, w, h, kind) {
   }
   await page.emulateMedia({media: 'screen'});
   // uploading an IMAGE runs the optional AI auto-detect on page 1 (checkbox default on); the server answers 503 when no Gemini key is configured (v1.2.1 behaviour, unrelated to the result page)
-  const known = consoleErrors.filter(e => //api/digitize-spectrum|status of 503/.test(e));
+  const known = consoleErrors.filter(e => /digitize-spectrum|status of 503/.test(e));
   const unexpected = consoleErrors.filter(e => !known.includes(e));
   note(L('no page errors / unexpected console errors'), {pageErrors: errors, unexpected, knownAutoDetect503: known.length}, errors.length === 0 && unexpected.length === 0);
   await ctx.close();

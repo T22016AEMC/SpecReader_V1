@@ -1,0 +1,1348 @@
+[
+ {
+  "name": "[1280x720 csv] while running: the prediction tab is open",
+  "value": "true",
+  "ok": true
+ },
+ {
+  "name": "[1280x720 csv] after completion: the first tab is open",
+  "value": "true",
+  "ok": true
+ },
+ {
+  "name": "[1280x720 csv] tab 圖譜官能基: no horizontal scroll",
+  "value": "1280 <= 1280",
+  "ok": true
+ },
+ {
+  "name": "[1280x720 csv] tab 圖譜官能基: the document itself does not scroll",
+  "value": "scrollHeight 720 vs innerHeight 720",
+  "ok": true
+ },
+ {
+  "name": "[1280x720 csv] tab 圖譜官能基: <main> scrollbar width (offsetWidth - clientWidth >= 12)",
+  "value": 14,
+  "ok": true
+ },
+ {
+  "name": "[1280x720 csv] tab 圖譜官能基: vertical scrollers outside <main>",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720 csv] tab 圖譜官能基: scroll containers inside <main> that actually scroll (nested scrollbars) [P5 carry-over, informational]",
+  "value": [
+   "DIV.mt-2 space-y-1.5 max-h-44 overflow-y-aut"
+  ],
+  "ok": null
+ },
+ {
+  "name": "[1280x720 csv] tab 圖譜官能基: fixed area (header, data check, analysis bar, tab bar) unchanged after scrolling the content 191 px",
+  "value": "{\"header\":\"0,116,0,1280\",\"zone\":\"116,198,0,1280\",\"dataCheck\":\"116,149,0,1280\",\"analysis\":\"157,189,16,653\",\"tabs\":\"151,195,669,1264\",\"main\":\"198,720,0,1280\"} -> {\"header\":\"0,116,0,1280\",\"zone\":\"116,198,0,1280\",\"dataCheck\":\"116,149,0,1280\",\"analysis\":\"157,189,16,653\",\"tabs\":\"151,195,669,1264\",\"main\":\"198,720,0,1280\"}",
+  "ok": true
+ },
+ {
+  "name": "[1280x720 csv] tab 圖譜官能基: panel is the visible one",
+  "value": false,
+  "ok": true
+ },
+ {
+  "name": "[1280x720 csv] tab 圖譜官能基: no 可信度 NN% text",
+  "value": false,
+  "ok": true
+ },
+ {
+  "name": "[1280x720 csv] fg tab: fixed zone height (px)",
+  "value": 198,
+  "ok": null
+ },
+ {
+  "name": "[1280x720 csv] tab 預測結構: no horizontal scroll",
+  "value": "1280 <= 1280",
+  "ok": true
+ },
+ {
+  "name": "[1280x720 csv] tab 預測結構: the document itself does not scroll",
+  "value": "scrollHeight 720 vs innerHeight 720",
+  "ok": true
+ },
+ {
+  "name": "[1280x720 csv] tab 預測結構: <main> scrollbar width (offsetWidth - clientWidth >= 12)",
+  "value": 14,
+  "ok": true
+ },
+ {
+  "name": "[1280x720 csv] tab 預測結構: vertical scrollers outside <main>",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720 csv] tab 預測結構: scroll containers inside <main> that actually scroll (nested scrollbars)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720 csv] tab 預測結構: fixed area (header, data check, analysis bar, tab bar) unchanged after scrolling the content 199 px",
+  "value": "{\"header\":\"0,116,0,1280\",\"zone\":\"116,198,0,1280\",\"dataCheck\":\"116,149,0,1280\",\"analysis\":\"157,189,16,653\",\"tabs\":\"151,195,669,1264\",\"main\":\"198,720,0,1280\"} -> {\"header\":\"0,116,0,1280\",\"zone\":\"116,198,0,1280\",\"dataCheck\":\"116,149,0,1280\",\"analysis\":\"157,189,16,653\",\"tabs\":\"151,195,669,1264\",\"main\":\"198,720,0,1280\"}",
+  "ok": true
+ },
+ {
+  "name": "[1280x720 csv] tab 預測結構: panel is the visible one",
+  "value": false,
+  "ok": true
+ },
+ {
+  "name": "[1280x720 csv] tab 預測結構: no 可信度 NN% text",
+  "value": false,
+  "ok": true
+ },
+ {
+  "name": "[1280x720 csv] prediction tab: details[open] = 0",
+  "value": 0,
+  "ok": true
+ },
+ {
+  "name": "[1280x720 csv] prediction tab: no number with three or more decimals (A8)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720 csv] A16: rank 1 score and structure drawing visible without scrolling",
+  "value": {
+   "zoneBottom": 198,
+   "scoreTop": 350,
+   "scoreBottom": 374,
+   "depTop": 408,
+   "depBottom": 610,
+   "svgBottom": 570,
+   "innerH": 720,
+   "cards": 2,
+   "warning": "窮舉未完整——清單只是目前限制下找到的結構",
+   "score": "模型相容度：71/100"
+  },
+  "ok": true
+ },
+ {
+  "name": "[1280x720 csv] prediction tab: expanded blocks (details open / evidence areas open)",
+  "value": {
+   "details": 0,
+   "evidenceOpen": 0
+  },
+  "ok": true
+ },
+ {
+  "name": "[1280x720 csv] opening 支持與矛盾 keeps the prediction tab",
+  "value": "true",
+  "ok": true
+ },
+ {
+  "name": "[1280x720 csv] tab 分子式與搜尋: no horizontal scroll",
+  "value": "1280 <= 1280",
+  "ok": true
+ },
+ {
+  "name": "[1280x720 csv] tab 分子式與搜尋: the document itself does not scroll",
+  "value": "scrollHeight 720 vs innerHeight 720",
+  "ok": true
+ },
+ {
+  "name": "[1280x720 csv] tab 分子式與搜尋: <main> scrollbar width (offsetWidth - clientWidth >= 12)",
+  "value": 14,
+  "ok": true
+ },
+ {
+  "name": "[1280x720 csv] tab 分子式與搜尋: vertical scrollers outside <main>",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720 csv] tab 分子式與搜尋: scroll containers inside <main> that actually scroll (nested scrollbars)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720 csv] tab 分子式與搜尋: content shorter than the viewport, scroll check not applicable (fixed rects)",
+  "value": {
+   "header": "0,116,0,1280",
+   "zone": "116,198,0,1280",
+   "dataCheck": "116,149,0,1280",
+   "analysis": "157,189,16,653",
+   "tabs": "151,195,669,1264",
+   "main": "198,720,0,1280"
+  },
+  "ok": null
+ },
+ {
+  "name": "[1280x720 csv] tab 分子式與搜尋: panel is the visible one",
+  "value": false,
+  "ok": true
+ },
+ {
+  "name": "[1280x720 csv] tab 分子式與搜尋: no 可信度 NN% text",
+  "value": false,
+  "ok": true
+ },
+ {
+  "name": "[1280x720 csv] tab 輸入與校正: no horizontal scroll",
+  "value": "1280 <= 1280",
+  "ok": true
+ },
+ {
+  "name": "[1280x720 csv] tab 輸入與校正: the document itself does not scroll",
+  "value": "scrollHeight 720 vs innerHeight 720",
+  "ok": true
+ },
+ {
+  "name": "[1280x720 csv] tab 輸入與校正: <main> scrollbar width (offsetWidth - clientWidth >= 12)",
+  "value": 14,
+  "ok": true
+ },
+ {
+  "name": "[1280x720 csv] tab 輸入與校正: vertical scrollers outside <main>",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720 csv] tab 輸入與校正: scroll containers inside <main> that actually scroll (nested scrollbars)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720 csv] tab 輸入與校正: content shorter than the viewport, scroll check not applicable (fixed rects)",
+  "value": {
+   "header": "0,116,0,1280",
+   "zone": "116,198,0,1280",
+   "dataCheck": "116,149,0,1280",
+   "analysis": "157,189,16,653",
+   "tabs": "151,195,669,1264",
+   "main": "198,720,0,1280"
+  },
+  "ok": null
+ },
+ {
+  "name": "[1280x720 csv] tab 輸入與校正: panel is the visible one",
+  "value": false,
+  "ok": true
+ },
+ {
+  "name": "[1280x720 csv] tab 輸入與校正: no 可信度 NN% text",
+  "value": false,
+  "ok": true
+ },
+ {
+  "name": "[1280x720 csv] tab 診斷: no horizontal scroll",
+  "value": "1280 <= 1280",
+  "ok": true
+ },
+ {
+  "name": "[1280x720 csv] tab 診斷: the document itself does not scroll",
+  "value": "scrollHeight 720 vs innerHeight 720",
+  "ok": true
+ },
+ {
+  "name": "[1280x720 csv] tab 診斷: <main> scrollbar width (offsetWidth - clientWidth >= 12)",
+  "value": 14,
+  "ok": true
+ },
+ {
+  "name": "[1280x720 csv] tab 診斷: vertical scrollers outside <main>",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720 csv] tab 診斷: scroll containers inside <main> that actually scroll (nested scrollbars)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720 csv] tab 診斷: fixed area (header, data check, analysis bar, tab bar) unchanged after scrolling the content 800 px",
+  "value": "{\"header\":\"0,116,0,1280\",\"zone\":\"116,198,0,1280\",\"dataCheck\":\"116,149,0,1280\",\"analysis\":\"157,189,16,653\",\"tabs\":\"151,195,669,1264\",\"main\":\"198,720,0,1280\"} -> {\"header\":\"0,116,0,1280\",\"zone\":\"116,198,0,1280\",\"dataCheck\":\"116,149,0,1280\",\"analysis\":\"157,189,16,653\",\"tabs\":\"151,195,669,1264\",\"main\":\"198,720,0,1280\"}",
+  "ok": true
+ },
+ {
+  "name": "[1280x720 csv] tab 診斷: panel is the visible one",
+  "value": false,
+  "ok": true
+ },
+ {
+  "name": "[1280x720 csv] tab 診斷: no 可信度 NN% text",
+  "value": false,
+  "ok": true
+ },
+ {
+  "name": "[1280x720 csv] whole page: data-testid unique (except the per-candidate markers and per-row markers)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720 csv] whole page: buttons/links named 第 N 頁 are exactly the 3 step buttons (A13)",
+  "value": [
+   "第 1 頁訊號標記",
+   "第 2 頁座標校正",
+   "第 3 頁化學判讀與結構推論⚠（資料檢查有疑慮）"
+  ],
+  "ok": true
+ },
+ {
+  "name": "[1280x720 csv] whole page: exactly one role=status",
+  "value": [
+   "分析完成（使用已保存輸入快照）"
+  ],
+  "ok": true
+ },
+ {
+  "name": "[1280x720 csv] print, tab 圖譜官能基: <main> does not clip",
+  "value": {
+   "mainOverflowY": "visible",
+   "mainClientH": 713,
+   "mainScrollH": 713,
+   "docScrollH": 862,
+   "innerH": 720
+  },
+  "ok": true
+ },
+ {
+  "name": "[1280x720 csv] print, tab 預測結構: <main> does not clip",
+  "value": {
+   "mainOverflowY": "visible",
+   "mainClientH": 721,
+   "mainScrollH": 721,
+   "docScrollH": 870,
+   "innerH": 720
+  },
+  "ok": true
+ },
+ {
+  "name": "[1280x720 csv] print, tab 診斷: <main> does not clip",
+  "value": {
+   "mainOverflowY": "visible",
+   "mainClientH": 1534,
+   "mainScrollH": 1534,
+   "docScrollH": 1683,
+   "innerH": 720
+  },
+  "ok": true
+ },
+ {
+  "name": "[1280x720 csv] no page errors / unexpected console errors",
+  "value": {
+   "pageErrors": [],
+   "unexpected": [],
+   "knownAutoDetect503": 0
+  },
+  "ok": true
+ },
+ {
+  "name": "[1280x720 image-h1] while running: the prediction tab is open",
+  "value": "true",
+  "ok": true
+ },
+ {
+  "name": "[1280x720 image-h1] after completion: the first tab is open",
+  "value": "true",
+  "ok": true
+ },
+ {
+  "name": "[1280x720 image-h1] tab 圖譜官能基: no horizontal scroll",
+  "value": "1280 <= 1280",
+  "ok": true
+ },
+ {
+  "name": "[1280x720 image-h1] tab 圖譜官能基: the document itself does not scroll",
+  "value": "scrollHeight 720 vs innerHeight 720",
+  "ok": true
+ },
+ {
+  "name": "[1280x720 image-h1] tab 圖譜官能基: <main> scrollbar width (offsetWidth - clientWidth >= 12)",
+  "value": 14,
+  "ok": true
+ },
+ {
+  "name": "[1280x720 image-h1] tab 圖譜官能基: vertical scrollers outside <main>",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720 image-h1] tab 圖譜官能基: scroll containers inside <main> that actually scroll (nested scrollbars) [P5 carry-over, informational]",
+  "value": [],
+  "ok": null
+ },
+ {
+  "name": "[1280x720 image-h1] tab 圖譜官能基: content shorter than the viewport, scroll check not applicable (fixed rects)",
+  "value": {
+   "header": "0,116,0,1280",
+   "zone": "116,198,0,1280",
+   "dataCheck": "116,149,0,1280",
+   "analysis": "157,189,16,647",
+   "tabs": "151,195,663,1264",
+   "main": "198,720,0,1280"
+  },
+  "ok": null
+ },
+ {
+  "name": "[1280x720 image-h1] tab 圖譜官能基: panel is the visible one",
+  "value": false,
+  "ok": true
+ },
+ {
+  "name": "[1280x720 image-h1] tab 圖譜官能基: no 可信度 NN% text",
+  "value": false,
+  "ok": true
+ },
+ {
+  "name": "[1280x720 image-h1] tab 預測結構: no horizontal scroll",
+  "value": "1280 <= 1280",
+  "ok": true
+ },
+ {
+  "name": "[1280x720 image-h1] tab 預測結構: the document itself does not scroll",
+  "value": "scrollHeight 720 vs innerHeight 720",
+  "ok": true
+ },
+ {
+  "name": "[1280x720 image-h1] tab 預測結構: <main> scrollbar width (offsetWidth - clientWidth >= 12)",
+  "value": 14,
+  "ok": true
+ },
+ {
+  "name": "[1280x720 image-h1] tab 預測結構: vertical scrollers outside <main>",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720 image-h1] tab 預測結構: scroll containers inside <main> that actually scroll (nested scrollbars)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720 image-h1] tab 預測結構: fixed area (header, data check, analysis bar, tab bar) unchanged after scrolling the content 800 px",
+  "value": "{\"header\":\"0,116,0,1280\",\"zone\":\"116,198,0,1280\",\"dataCheck\":\"116,149,0,1280\",\"analysis\":\"157,189,16,647\",\"tabs\":\"151,195,663,1264\",\"main\":\"198,720,0,1280\"} -> {\"header\":\"0,116,0,1280\",\"zone\":\"116,198,0,1280\",\"dataCheck\":\"116,149,0,1280\",\"analysis\":\"157,189,16,647\",\"tabs\":\"151,195,663,1264\",\"main\":\"198,720,0,1280\"}",
+  "ok": true
+ },
+ {
+  "name": "[1280x720 image-h1] tab 預測結構: panel is the visible one",
+  "value": false,
+  "ok": true
+ },
+ {
+  "name": "[1280x720 image-h1] tab 預測結構: no 可信度 NN% text",
+  "value": false,
+  "ok": true
+ },
+ {
+  "name": "[1280x720 image-h1] prediction tab: details[open] = 0",
+  "value": 0,
+  "ok": true
+ },
+ {
+  "name": "[1280x720 image-h1] prediction tab: no number with three or more decimals (A8)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720 image-h1] A16: rank 1 score and structure drawing visible without scrolling",
+  "value": {
+   "zoneBottom": 198,
+   "scoreTop": 353,
+   "scoreBottom": 377,
+   "depTop": 411,
+   "depBottom": 613,
+   "svgBottom": 573,
+   "innerH": 720,
+   "cards": 3,
+   "warning": "¹H 未經校正——排名可能不可靠回第 2 頁校正",
+   "score": "模型相容度：0/100"
+  },
+  "ok": true
+ },
+ {
+  "name": "[1280x720 image-h1] prediction tab: expanded blocks (details open / evidence areas open)",
+  "value": {
+   "details": 0,
+   "evidenceOpen": 0
+  },
+  "ok": true
+ },
+ {
+  "name": "[1280x720 image-h1] opening 支持與矛盾 keeps the prediction tab",
+  "value": "true",
+  "ok": true
+ },
+ {
+  "name": "[1280x720 image-h1] tab 分子式與搜尋: no horizontal scroll",
+  "value": "1280 <= 1280",
+  "ok": true
+ },
+ {
+  "name": "[1280x720 image-h1] tab 分子式與搜尋: the document itself does not scroll",
+  "value": "scrollHeight 720 vs innerHeight 720",
+  "ok": true
+ },
+ {
+  "name": "[1280x720 image-h1] tab 分子式與搜尋: <main> scrollbar width (offsetWidth - clientWidth >= 12)",
+  "value": 14,
+  "ok": true
+ },
+ {
+  "name": "[1280x720 image-h1] tab 分子式與搜尋: vertical scrollers outside <main>",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720 image-h1] tab 分子式與搜尋: scroll containers inside <main> that actually scroll (nested scrollbars)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720 image-h1] tab 分子式與搜尋: content shorter than the viewport, scroll check not applicable (fixed rects)",
+  "value": {
+   "header": "0,116,0,1280",
+   "zone": "116,198,0,1280",
+   "dataCheck": "116,149,0,1280",
+   "analysis": "157,189,16,647",
+   "tabs": "151,195,663,1264",
+   "main": "198,720,0,1280"
+  },
+  "ok": null
+ },
+ {
+  "name": "[1280x720 image-h1] tab 分子式與搜尋: panel is the visible one",
+  "value": false,
+  "ok": true
+ },
+ {
+  "name": "[1280x720 image-h1] tab 分子式與搜尋: no 可信度 NN% text",
+  "value": false,
+  "ok": true
+ },
+ {
+  "name": "[1280x720 image-h1] tab 輸入與校正: no horizontal scroll",
+  "value": "1280 <= 1280",
+  "ok": true
+ },
+ {
+  "name": "[1280x720 image-h1] tab 輸入與校正: the document itself does not scroll",
+  "value": "scrollHeight 720 vs innerHeight 720",
+  "ok": true
+ },
+ {
+  "name": "[1280x720 image-h1] tab 輸入與校正: <main> scrollbar width (offsetWidth - clientWidth >= 12)",
+  "value": 14,
+  "ok": true
+ },
+ {
+  "name": "[1280x720 image-h1] tab 輸入與校正: vertical scrollers outside <main>",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720 image-h1] tab 輸入與校正: scroll containers inside <main> that actually scroll (nested scrollbars)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720 image-h1] tab 輸入與校正: content shorter than the viewport, scroll check not applicable (fixed rects)",
+  "value": {
+   "header": "0,116,0,1280",
+   "zone": "116,198,0,1280",
+   "dataCheck": "116,149,0,1280",
+   "analysis": "157,189,16,647",
+   "tabs": "151,195,663,1264",
+   "main": "198,720,0,1280"
+  },
+  "ok": null
+ },
+ {
+  "name": "[1280x720 image-h1] tab 輸入與校正: panel is the visible one",
+  "value": false,
+  "ok": true
+ },
+ {
+  "name": "[1280x720 image-h1] tab 輸入與校正: no 可信度 NN% text",
+  "value": false,
+  "ok": true
+ },
+ {
+  "name": "[1280x720 image-h1] tab 診斷: no horizontal scroll",
+  "value": "1280 <= 1280",
+  "ok": true
+ },
+ {
+  "name": "[1280x720 image-h1] tab 診斷: the document itself does not scroll",
+  "value": "scrollHeight 720 vs innerHeight 720",
+  "ok": true
+ },
+ {
+  "name": "[1280x720 image-h1] tab 診斷: <main> scrollbar width (offsetWidth - clientWidth >= 12)",
+  "value": 14,
+  "ok": true
+ },
+ {
+  "name": "[1280x720 image-h1] tab 診斷: vertical scrollers outside <main>",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720 image-h1] tab 診斷: scroll containers inside <main> that actually scroll (nested scrollbars)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720 image-h1] tab 診斷: fixed area (header, data check, analysis bar, tab bar) unchanged after scrolling the content 800 px",
+  "value": "{\"header\":\"0,116,0,1280\",\"zone\":\"116,198,0,1280\",\"dataCheck\":\"116,149,0,1280\",\"analysis\":\"157,189,16,647\",\"tabs\":\"151,195,663,1264\",\"main\":\"198,720,0,1280\"} -> {\"header\":\"0,116,0,1280\",\"zone\":\"116,198,0,1280\",\"dataCheck\":\"116,149,0,1280\",\"analysis\":\"157,189,16,647\",\"tabs\":\"151,195,663,1264\",\"main\":\"198,720,0,1280\"}",
+  "ok": true
+ },
+ {
+  "name": "[1280x720 image-h1] tab 診斷: panel is the visible one",
+  "value": false,
+  "ok": true
+ },
+ {
+  "name": "[1280x720 image-h1] tab 診斷: no 可信度 NN% text",
+  "value": false,
+  "ok": true
+ },
+ {
+  "name": "[1280x720 image-h1] whole page: data-testid unique (except the per-candidate markers and per-row markers)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720 image-h1] whole page: buttons/links named 第 N 頁 are exactly the 3 step buttons (A13)",
+  "value": [
+   "第 1 頁訊號標記",
+   "第 2 頁座標校正",
+   "第 3 頁化學判讀與結構推論⚠（尚有光譜未校正）"
+  ],
+  "ok": true
+ },
+ {
+  "name": "[1280x720 image-h1] whole page: exactly one role=status",
+  "value": [
+   "分析完成（使用已保存輸入快照）"
+  ],
+  "ok": true
+ },
+ {
+  "name": "[1280x720 image-h1] print, tab 圖譜官能基: <main> does not clip",
+  "value": {
+   "mainOverflowY": "visible",
+   "mainClientH": 394,
+   "mainScrollH": 394,
+   "docScrollH": 720,
+   "innerH": 720
+  },
+  "ok": true
+ },
+ {
+  "name": "[1280x720 image-h1] print, tab 預測結構: <main> does not clip",
+  "value": {
+   "mainOverflowY": "visible",
+   "mainClientH": 2812,
+   "mainScrollH": 2812,
+   "docScrollH": 2961,
+   "innerH": 720
+  },
+  "ok": true
+ },
+ {
+  "name": "[1280x720 image-h1] print, tab 診斷: <main> does not clip",
+  "value": {
+   "mainOverflowY": "visible",
+   "mainClientH": 2971,
+   "mainScrollH": 2971,
+   "docScrollH": 3120,
+   "innerH": 720
+  },
+  "ok": true
+ },
+ {
+  "name": "[1280x720 image-h1] no page errors / unexpected console errors",
+  "value": {
+   "pageErrors": [],
+   "unexpected": [],
+   "knownAutoDetect503": 2
+  },
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 csv] while running: the prediction tab is open",
+  "value": "true",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 csv] after completion: the first tab is open",
+  "value": "true",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 csv] tab 圖譜官能基: no horizontal scroll",
+  "value": "1920 <= 1920",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 csv] tab 圖譜官能基: the document itself does not scroll",
+  "value": "scrollHeight 1080 vs innerHeight 1080",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 csv] tab 圖譜官能基: <main> scrollbar width (offsetWidth - clientWidth >= 12)",
+  "value": 14,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 csv] tab 圖譜官能基: vertical scrollers outside <main>",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 csv] tab 圖譜官能基: scroll containers inside <main> that actually scroll (nested scrollbars) [P5 carry-over, informational]",
+  "value": [
+   "DIV.mt-2 space-y-1.5 max-h-44 overflow-y-aut"
+  ],
+  "ok": null
+ },
+ {
+  "name": "[1920x1080 csv] tab 圖譜官能基: content shorter than the viewport, scroll check not applicable (fixed rects)",
+  "value": {
+   "header": "0,116,0,1920",
+   "zone": "116,198,0,1920",
+   "dataCheck": "116,149,0,1920",
+   "analysis": "157,189,176,1133",
+   "tabs": "151,195,1149,1744",
+   "main": "198,1080,0,1920"
+  },
+  "ok": null
+ },
+ {
+  "name": "[1920x1080 csv] tab 圖譜官能基: panel is the visible one",
+  "value": false,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 csv] tab 圖譜官能基: no 可信度 NN% text",
+  "value": false,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 csv] fg tab: fixed zone height (px)",
+  "value": 198,
+  "ok": null
+ },
+ {
+  "name": "[1920x1080 csv] tab 預測結構: no horizontal scroll",
+  "value": "1920 <= 1920",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 csv] tab 預測結構: the document itself does not scroll",
+  "value": "scrollHeight 1080 vs innerHeight 1080",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 csv] tab 預測結構: <main> scrollbar width (offsetWidth - clientWidth >= 12)",
+  "value": 14,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 csv] tab 預測結構: vertical scrollers outside <main>",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 csv] tab 預測結構: scroll containers inside <main> that actually scroll (nested scrollbars)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 csv] tab 預測結構: content shorter than the viewport, scroll check not applicable (fixed rects)",
+  "value": {
+   "header": "0,116,0,1920",
+   "zone": "116,198,0,1920",
+   "dataCheck": "116,149,0,1920",
+   "analysis": "157,189,176,1133",
+   "tabs": "151,195,1149,1744",
+   "main": "198,1080,0,1920"
+  },
+  "ok": null
+ },
+ {
+  "name": "[1920x1080 csv] tab 預測結構: panel is the visible one",
+  "value": false,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 csv] tab 預測結構: no 可信度 NN% text",
+  "value": false,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 csv] prediction tab: details[open] = 0",
+  "value": 0,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 csv] prediction tab: no number with three or more decimals (A8)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 csv] A16: rank 1 score and structure drawing visible without scrolling",
+  "value": {
+   "zoneBottom": 198,
+   "scoreTop": 350,
+   "scoreBottom": 374,
+   "depTop": 408,
+   "depBottom": 610,
+   "svgBottom": 570,
+   "innerH": 1080,
+   "cards": 2,
+   "warning": "窮舉未完整——清單只是目前限制下找到的結構",
+   "score": "模型相容度：71/100"
+  },
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 csv] prediction tab: expanded blocks (details open / evidence areas open)",
+  "value": {
+   "details": 0,
+   "evidenceOpen": 0
+  },
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 csv] opening 支持與矛盾 keeps the prediction tab",
+  "value": "true",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 csv] tab 分子式與搜尋: no horizontal scroll",
+  "value": "1920 <= 1920",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 csv] tab 分子式與搜尋: the document itself does not scroll",
+  "value": "scrollHeight 1080 vs innerHeight 1080",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 csv] tab 分子式與搜尋: <main> scrollbar width (offsetWidth - clientWidth >= 12)",
+  "value": 14,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 csv] tab 分子式與搜尋: vertical scrollers outside <main>",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 csv] tab 分子式與搜尋: scroll containers inside <main> that actually scroll (nested scrollbars)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 csv] tab 分子式與搜尋: content shorter than the viewport, scroll check not applicable (fixed rects)",
+  "value": {
+   "header": "0,116,0,1920",
+   "zone": "116,198,0,1920",
+   "dataCheck": "116,149,0,1920",
+   "analysis": "157,189,176,1133",
+   "tabs": "151,195,1149,1744",
+   "main": "198,1080,0,1920"
+  },
+  "ok": null
+ },
+ {
+  "name": "[1920x1080 csv] tab 分子式與搜尋: panel is the visible one",
+  "value": false,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 csv] tab 分子式與搜尋: no 可信度 NN% text",
+  "value": false,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 csv] tab 輸入與校正: no horizontal scroll",
+  "value": "1920 <= 1920",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 csv] tab 輸入與校正: the document itself does not scroll",
+  "value": "scrollHeight 1080 vs innerHeight 1080",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 csv] tab 輸入與校正: <main> scrollbar width (offsetWidth - clientWidth >= 12)",
+  "value": 14,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 csv] tab 輸入與校正: vertical scrollers outside <main>",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 csv] tab 輸入與校正: scroll containers inside <main> that actually scroll (nested scrollbars)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 csv] tab 輸入與校正: content shorter than the viewport, scroll check not applicable (fixed rects)",
+  "value": {
+   "header": "0,116,0,1920",
+   "zone": "116,198,0,1920",
+   "dataCheck": "116,149,0,1920",
+   "analysis": "157,189,176,1133",
+   "tabs": "151,195,1149,1744",
+   "main": "198,1080,0,1920"
+  },
+  "ok": null
+ },
+ {
+  "name": "[1920x1080 csv] tab 輸入與校正: panel is the visible one",
+  "value": false,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 csv] tab 輸入與校正: no 可信度 NN% text",
+  "value": false,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 csv] tab 診斷: no horizontal scroll",
+  "value": "1920 <= 1920",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 csv] tab 診斷: the document itself does not scroll",
+  "value": "scrollHeight 1080 vs innerHeight 1080",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 csv] tab 診斷: <main> scrollbar width (offsetWidth - clientWidth >= 12)",
+  "value": 14,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 csv] tab 診斷: vertical scrollers outside <main>",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 csv] tab 診斷: scroll containers inside <main> that actually scroll (nested scrollbars)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 csv] tab 診斷: fixed area (header, data check, analysis bar, tab bar) unchanged after scrolling the content 620 px",
+  "value": "{\"header\":\"0,116,0,1920\",\"zone\":\"116,198,0,1920\",\"dataCheck\":\"116,149,0,1920\",\"analysis\":\"157,189,176,1133\",\"tabs\":\"151,195,1149,1744\",\"main\":\"198,1080,0,1920\"} -> {\"header\":\"0,116,0,1920\",\"zone\":\"116,198,0,1920\",\"dataCheck\":\"116,149,0,1920\",\"analysis\":\"157,189,176,1133\",\"tabs\":\"151,195,1149,1744\",\"main\":\"198,1080,0,1920\"}",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 csv] tab 診斷: panel is the visible one",
+  "value": false,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 csv] tab 診斷: no 可信度 NN% text",
+  "value": false,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 csv] whole page: data-testid unique (except the per-candidate markers and per-row markers)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 csv] whole page: buttons/links named 第 N 頁 are exactly the 3 step buttons (A13)",
+  "value": [
+   "第 1 頁訊號標記",
+   "第 2 頁座標校正",
+   "第 3 頁化學判讀與結構推論⚠（資料檢查有疑慮）"
+  ],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 csv] whole page: exactly one role=status",
+  "value": [
+   "分析完成（使用已保存輸入快照）"
+  ],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 csv] print, tab 圖譜官能基: <main> does not clip",
+  "value": {
+   "mainOverflowY": "visible",
+   "mainClientH": 693,
+   "mainScrollH": 693,
+   "docScrollH": 1080,
+   "innerH": 1080
+  },
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 csv] print, tab 預測結構: <main> does not clip",
+  "value": {
+   "mainOverflowY": "visible",
+   "mainClientH": 705,
+   "mainScrollH": 705,
+   "docScrollH": 1080,
+   "innerH": 1080
+  },
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 csv] print, tab 診斷: <main> does not clip",
+  "value": {
+   "mainOverflowY": "visible",
+   "mainClientH": 1502,
+   "mainScrollH": 1502,
+   "docScrollH": 1651,
+   "innerH": 1080
+  },
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 csv] no page errors / unexpected console errors",
+  "value": {
+   "pageErrors": [],
+   "unexpected": [],
+   "knownAutoDetect503": 0
+  },
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 image-h1] while running: the prediction tab is open",
+  "value": "true",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 image-h1] after completion: the first tab is open",
+  "value": "true",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 image-h1] tab 圖譜官能基: no horizontal scroll",
+  "value": "1920 <= 1920",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 image-h1] tab 圖譜官能基: the document itself does not scroll",
+  "value": "scrollHeight 1080 vs innerHeight 1080",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 image-h1] tab 圖譜官能基: <main> scrollbar width (offsetWidth - clientWidth >= 12)",
+  "value": 14,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 image-h1] tab 圖譜官能基: vertical scrollers outside <main>",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 image-h1] tab 圖譜官能基: scroll containers inside <main> that actually scroll (nested scrollbars) [P5 carry-over, informational]",
+  "value": [],
+  "ok": null
+ },
+ {
+  "name": "[1920x1080 image-h1] tab 圖譜官能基: content shorter than the viewport, scroll check not applicable (fixed rects)",
+  "value": {
+   "header": "0,116,0,1920",
+   "zone": "116,198,0,1920",
+   "dataCheck": "116,149,0,1920",
+   "analysis": "157,189,176,1127",
+   "tabs": "151,195,1143,1744",
+   "main": "198,1080,0,1920"
+  },
+  "ok": null
+ },
+ {
+  "name": "[1920x1080 image-h1] tab 圖譜官能基: panel is the visible one",
+  "value": false,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 image-h1] tab 圖譜官能基: no 可信度 NN% text",
+  "value": false,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 image-h1] tab 預測結構: no horizontal scroll",
+  "value": "1920 <= 1920",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 image-h1] tab 預測結構: the document itself does not scroll",
+  "value": "scrollHeight 1080 vs innerHeight 1080",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 image-h1] tab 預測結構: <main> scrollbar width (offsetWidth - clientWidth >= 12)",
+  "value": 14,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 image-h1] tab 預測結構: vertical scrollers outside <main>",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 image-h1] tab 預測結構: scroll containers inside <main> that actually scroll (nested scrollbars)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 image-h1] tab 預測結構: fixed area (header, data check, analysis bar, tab bar) unchanged after scrolling the content 800 px",
+  "value": "{\"header\":\"0,116,0,1920\",\"zone\":\"116,198,0,1920\",\"dataCheck\":\"116,149,0,1920\",\"analysis\":\"157,189,176,1127\",\"tabs\":\"151,195,1143,1744\",\"main\":\"198,1080,0,1920\"} -> {\"header\":\"0,116,0,1920\",\"zone\":\"116,198,0,1920\",\"dataCheck\":\"116,149,0,1920\",\"analysis\":\"157,189,176,1127\",\"tabs\":\"151,195,1143,1744\",\"main\":\"198,1080,0,1920\"}",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 image-h1] tab 預測結構: panel is the visible one",
+  "value": false,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 image-h1] tab 預測結構: no 可信度 NN% text",
+  "value": false,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 image-h1] prediction tab: details[open] = 0",
+  "value": 0,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 image-h1] prediction tab: no number with three or more decimals (A8)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 image-h1] A16: rank 1 score and structure drawing visible without scrolling",
+  "value": {
+   "zoneBottom": 198,
+   "scoreTop": 353,
+   "scoreBottom": 377,
+   "depTop": 411,
+   "depBottom": 613,
+   "svgBottom": 573,
+   "innerH": 1080,
+   "cards": 3,
+   "warning": "¹H 未經校正——排名可能不可靠回第 2 頁校正",
+   "score": "模型相容度：0/100"
+  },
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 image-h1] prediction tab: expanded blocks (details open / evidence areas open)",
+  "value": {
+   "details": 0,
+   "evidenceOpen": 0
+  },
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 image-h1] opening 支持與矛盾 keeps the prediction tab",
+  "value": "true",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 image-h1] tab 分子式與搜尋: no horizontal scroll",
+  "value": "1920 <= 1920",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 image-h1] tab 分子式與搜尋: the document itself does not scroll",
+  "value": "scrollHeight 1080 vs innerHeight 1080",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 image-h1] tab 分子式與搜尋: <main> scrollbar width (offsetWidth - clientWidth >= 12)",
+  "value": 14,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 image-h1] tab 分子式與搜尋: vertical scrollers outside <main>",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 image-h1] tab 分子式與搜尋: scroll containers inside <main> that actually scroll (nested scrollbars)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 image-h1] tab 分子式與搜尋: content shorter than the viewport, scroll check not applicable (fixed rects)",
+  "value": {
+   "header": "0,116,0,1920",
+   "zone": "116,198,0,1920",
+   "dataCheck": "116,149,0,1920",
+   "analysis": "157,189,176,1127",
+   "tabs": "151,195,1143,1744",
+   "main": "198,1080,0,1920"
+  },
+  "ok": null
+ },
+ {
+  "name": "[1920x1080 image-h1] tab 分子式與搜尋: panel is the visible one",
+  "value": false,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 image-h1] tab 分子式與搜尋: no 可信度 NN% text",
+  "value": false,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 image-h1] tab 輸入與校正: no horizontal scroll",
+  "value": "1920 <= 1920",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 image-h1] tab 輸入與校正: the document itself does not scroll",
+  "value": "scrollHeight 1080 vs innerHeight 1080",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 image-h1] tab 輸入與校正: <main> scrollbar width (offsetWidth - clientWidth >= 12)",
+  "value": 14,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 image-h1] tab 輸入與校正: vertical scrollers outside <main>",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 image-h1] tab 輸入與校正: scroll containers inside <main> that actually scroll (nested scrollbars)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 image-h1] tab 輸入與校正: content shorter than the viewport, scroll check not applicable (fixed rects)",
+  "value": {
+   "header": "0,116,0,1920",
+   "zone": "116,198,0,1920",
+   "dataCheck": "116,149,0,1920",
+   "analysis": "157,189,176,1127",
+   "tabs": "151,195,1143,1744",
+   "main": "198,1080,0,1920"
+  },
+  "ok": null
+ },
+ {
+  "name": "[1920x1080 image-h1] tab 輸入與校正: panel is the visible one",
+  "value": false,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 image-h1] tab 輸入與校正: no 可信度 NN% text",
+  "value": false,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 image-h1] tab 診斷: no horizontal scroll",
+  "value": "1920 <= 1920",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 image-h1] tab 診斷: the document itself does not scroll",
+  "value": "scrollHeight 1080 vs innerHeight 1080",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 image-h1] tab 診斷: <main> scrollbar width (offsetWidth - clientWidth >= 12)",
+  "value": 14,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 image-h1] tab 診斷: vertical scrollers outside <main>",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 image-h1] tab 診斷: scroll containers inside <main> that actually scroll (nested scrollbars)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 image-h1] tab 診斷: fixed area (header, data check, analysis bar, tab bar) unchanged after scrolling the content 800 px",
+  "value": "{\"header\":\"0,116,0,1920\",\"zone\":\"116,198,0,1920\",\"dataCheck\":\"116,149,0,1920\",\"analysis\":\"157,189,176,1127\",\"tabs\":\"151,195,1143,1744\",\"main\":\"198,1080,0,1920\"} -> {\"header\":\"0,116,0,1920\",\"zone\":\"116,198,0,1920\",\"dataCheck\":\"116,149,0,1920\",\"analysis\":\"157,189,176,1127\",\"tabs\":\"151,195,1143,1744\",\"main\":\"198,1080,0,1920\"}",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 image-h1] tab 診斷: panel is the visible one",
+  "value": false,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 image-h1] tab 診斷: no 可信度 NN% text",
+  "value": false,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 image-h1] whole page: data-testid unique (except the per-candidate markers and per-row markers)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 image-h1] whole page: buttons/links named 第 N 頁 are exactly the 3 step buttons (A13)",
+  "value": [
+   "第 1 頁訊號標記",
+   "第 2 頁座標校正",
+   "第 3 頁化學判讀與結構推論⚠（尚有光譜未校正）"
+  ],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 image-h1] whole page: exactly one role=status",
+  "value": [
+   "分析完成（使用已保存輸入快照）"
+  ],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 image-h1] print, tab 圖譜官能基: <main> does not clip",
+  "value": {
+   "mainOverflowY": "visible",
+   "mainClientH": 394,
+   "mainScrollH": 394,
+   "docScrollH": 1080,
+   "innerH": 1080
+  },
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 image-h1] print, tab 預測結構: <main> does not clip",
+  "value": {
+   "mainOverflowY": "visible",
+   "mainClientH": 2812,
+   "mainScrollH": 2812,
+   "docScrollH": 2961,
+   "innerH": 1080
+  },
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 image-h1] print, tab 診斷: <main> does not clip",
+  "value": {
+   "mainOverflowY": "visible",
+   "mainClientH": 2971,
+   "mainScrollH": 2971,
+   "docScrollH": 3120,
+   "innerH": 1080
+  },
+  "ok": true
+ },
+ {
+  "name": "[1920x1080 image-h1] no page errors / unexpected console errors",
+  "value": {
+   "pageErrors": [],
+   "unexpected": [],
+   "knownAutoDetect503": 2
+  },
+  "ok": true
+ }
+]
