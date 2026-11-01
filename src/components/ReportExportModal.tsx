@@ -17,6 +17,65 @@ interface ReportExportModalProps {
   orchestrationState: WorkbenchOrchestrationState;
 }
 
+export function buildMarkdownReport(orchestrationState: WorkbenchOrchestrationState, aiCommentary: string | null): string {
+  const { modeAReport, rankedCandidates, validationMatrix } = orchestrationState;
+  const topCandidate = rankedCandidates[0];
+  const lines: string[] = [
+    `# SpecReader 規則與證據導向多光譜結構解析報告`,
+    `生成時間：${new Date().toLocaleString()}`,
+    `已載入模態：${modeAReport.activeModalities.join(", ") || "無"}`,
+    ``,
+    `## 一、首選結構結論 (Top #1 Candidate)`,
+    topCandidate
+      ? `- **化合物名稱**：${topCandidate.name} (${topCandidate.iupacName})\n- **分子式**：${topCandidate.molecularFormula} (IHD = ${topCandidate.unsaturationIndex})\n- **SMILES**：\`${topCandidate.smiles}\`\n- **綜合光譜吻合度**：${topCandidate.scoreBreakdown.totalScore}%`
+      : `- 尚未生成候選結構`,
+    ``,
+    `## 二、跨模態結構約束匯總 (Structural Constraints)`,
+    `- **使用者輸入分子式 (Formula Input)**：${modeAReport.constraints.userSuppliedFormula ? `${modeAReport.constraints.userSuppliedFormula.normalizedFormula} (IHD = ${modeAReport.constraints.userSuppliedFormula.ihd})` : "NOT PROVIDED"}`,
+    `- **推估標稱分子量 (MS)**：${modeAReport.constraints.estimatedMolecularWeight ?? "NOT PROVIDED"}`,
+    `- **氮規則奇偶性**：${modeAReport.constraints.nitrogenRuleParity ?? "NOT PROVIDED"}`,
+    `- **¹H NMR 總積分**：${modeAReport.constraints.estimatedProtonCount ?? "NOT PROVIDED"} H`,
+    `- **¹³C NMR 碳化學環境數**：${modeAReport.constraints.estimatedCarbonEnvironmentCount ?? "NOT PROVIDED"} 組`,
+    `- **芳環取代型態**：${modeAReport.constraints.aromaticSubstitutionPattern ?? "UNKNOWN"}`,
+    ``,
+    `## 三、跨光譜驗證矩陣 (Cross-Spectrum Validation Matrix)`,
+    `| 排名 | 候選結構 | 分子式 | IR | ¹H NMR | ¹³C NMR | MS | MS/MS | ToF-SIMS | 總分 |`,
+    `| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |`,
+    ...validationMatrix.map(
+      (row, idx) =>
+        `| #${idx + 1} | ${row.candidateName} | ${row.formula} | ${row.modalityStatus.IR} | ${row.modalityStatus["1H_NMR"]} | ${row.modalityStatus["13C_NMR"]} | ${row.modalityStatus.MS} | ${row.modalityStatus["MS/MS"] ?? "NOT_PROVIDED"} | ${row.modalityStatus["ToF-SIMS"] ?? "NOT_PROVIDED"} | ${row.totalScore}% |`
+    ),
+    ``,
+    `## 四、確定性證據鏈 (Evidence Chain)`,
+    ...modeAReport.evidenceChain.map(
+      (step) =>
+        `${step.stepOrder}. **[${step.modality}]** ${step.observation}\n   - 化學意義：${step.chemicalMeaning}\n   - 結構約束：${step.structuralConstraint}`
+    ),
+  ];
+
+  if (aiCommentary) {
+    lines.push(
+      ``,
+      `## 五、AI 輔助科學評論 (AI Augmentation — 不覆蓋確定性引擎結論)`,
+      aiCommentary
+    );
+  }
+
+  return lines.join("\n");
+}
+
+/** Full JSON evidence package (the same bytes whether it is downloaded from the export window or from the 診斷 tab). */
+export function downloadEvidenceJson(orchestrationState: WorkbenchOrchestrationState): void {
+  const payload = JSON.stringify(orchestrationState, null, 2);
+  const blob = new Blob([payload], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `SpecReader_Analysis_${Date.now()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export const ReportExportModal: React.FC<ReportExportModalProps> = ({
   isOpen,
   onClose,
@@ -32,50 +91,7 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
   const { modeAReport, rankedCandidates, validationMatrix } = orchestrationState;
   const topCandidate = rankedCandidates[0];
 
-  const generateMarkdownReport = (): string => {
-    const lines: string[] = [
-      `# SpecReader 規則與證據導向多光譜結構解析報告`,
-      `生成時間：${new Date().toLocaleString()}`,
-      `已載入模態：${modeAReport.activeModalities.join(", ") || "無"}`,
-      ``,
-      `## 一、首選結構結論 (Top #1 Candidate)`,
-      topCandidate
-        ? `- **化合物名稱**：${topCandidate.name} (${topCandidate.iupacName})\n- **分子式**：${topCandidate.molecularFormula} (IHD = ${topCandidate.unsaturationIndex})\n- **SMILES**：\`${topCandidate.smiles}\`\n- **綜合光譜吻合度**：${topCandidate.scoreBreakdown.totalScore}%`
-        : `- 尚未生成候選結構`,
-      ``,
-      `## 二、跨模態結構約束匯總 (Structural Constraints)`,
-      `- **使用者輸入分子式 (Formula Input)**：${modeAReport.constraints.userSuppliedFormula ? `${modeAReport.constraints.userSuppliedFormula.normalizedFormula} (IHD = ${modeAReport.constraints.userSuppliedFormula.ihd})` : "NOT PROVIDED"}`,
-      `- **推估標稱分子量 (MS)**：${modeAReport.constraints.estimatedMolecularWeight ?? "NOT PROVIDED"}`,
-      `- **氮規則奇偶性**：${modeAReport.constraints.nitrogenRuleParity ?? "NOT PROVIDED"}`,
-      `- **¹H NMR 總積分**：${modeAReport.constraints.estimatedProtonCount ?? "NOT PROVIDED"} H`,
-      `- **¹³C NMR 碳化學環境數**：${modeAReport.constraints.estimatedCarbonEnvironmentCount ?? "NOT PROVIDED"} 組`,
-      `- **芳環取代型態**：${modeAReport.constraints.aromaticSubstitutionPattern ?? "UNKNOWN"}`,
-      ``,
-      `## 三、跨光譜驗證矩陣 (Cross-Spectrum Validation Matrix)`,
-      `| 排名 | 候選結構 | 分子式 | IR | ¹H NMR | ¹³C NMR | MS | MS/MS | ToF-SIMS | 總分 |`,
-      `| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |`,
-      ...validationMatrix.map(
-        (row, idx) =>
-          `| #${idx + 1} | ${row.candidateName} | ${row.formula} | ${row.modalityStatus.IR} | ${row.modalityStatus["1H_NMR"]} | ${row.modalityStatus["13C_NMR"]} | ${row.modalityStatus.MS} | ${row.modalityStatus["MS/MS"] ?? "NOT_PROVIDED"} | ${row.modalityStatus["ToF-SIMS"] ?? "NOT_PROVIDED"} | ${row.totalScore}% |`
-      ),
-      ``,
-      `## 四、確定性證據鏈 (Evidence Chain)`,
-      ...modeAReport.evidenceChain.map(
-        (step) =>
-          `${step.stepOrder}. **[${step.modality}]** ${step.observation}\n   - 化學意義：${step.chemicalMeaning}\n   - 結構約束：${step.structuralConstraint}`
-      ),
-    ];
-
-    if (aiCommentary) {
-      lines.push(
-        ``,
-        `## 五、AI 輔助科學評論 (AI Augmentation — 不覆蓋確定性引擎結論)`,
-        aiCommentary
-      );
-    }
-
-    return lines.join("\n");
-  };
+  const generateMarkdownReport = (): string => buildMarkdownReport(orchestrationState, aiCommentary);
 
   const handleCopyMarkdown = () => {
     navigator.clipboard.writeText(generateMarkdownReport());
@@ -83,16 +99,7 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleDownloadJson = () => {
-    const payload = JSON.stringify(orchestrationState, null, 2);
-    const blob = new Blob([payload], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `SpecReader_Analysis_${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
+  const handleDownloadJson = () => downloadEvidenceJson(orchestrationState);
 
   const handleRequestAiCommentary = async () => {
     setLoadingAi(true);

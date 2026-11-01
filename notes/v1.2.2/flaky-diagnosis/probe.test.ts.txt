@@ -1,0 +1,40 @@
+// TEMPORARY diagnosis probe (not committed): re-runs the two scenarios of v121FlagGolden that failed, idle and under CPU stress, and logs what differs from the golden.
+import fs from 'node:fs';
+import path from 'node:path';
+import {spawn} from 'node:child_process';
+import {beforeAll, it} from 'vitest';
+import {initializeRDKit} from '../src/engines/scientificEngines/rdkitAdapter';
+import {V12_CONFIG} from '../src/engines/constraints/v12Config';
+import {ENUMERATION_CONFIG} from '../src/engines/enumeration/enumerationConfig';
+import {compactSnapshot, compareGolden, pipelineSnapshotV121, STEP_ONLY_TIME_MS} from './helpers/v121Golden';
+import {h1Ethyl, msC9} from './helpers/p1bScenarios';
+
+beforeAll(() => initializeRDKit(), 60000);
+if (process.env.PROBE_LEGACY_MS) (ENUMERATION_CONFIG as any).legacySupplement.timeMsPerRun = Number(process.env.PROBE_LEGACY_MS);
+const logFile = process.env.PROBE_LOG!;
+const log = (s: string) => fs.appendFileSync(logFile, s + '\n');
+const golden = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'goldens', 'v12.v120.pipeline.compact.json'), 'utf8')) as Record<string, any>;
+
+async function once(label: string) {
+  const cfg = ENUMERATION_CONFIG as {legacySupplementWhenIncomplete: boolean};
+  const old = cfg.legacySupplementWhenIncomplete, was = V12_CONFIG.useV121Planning;
+  cfg.legacySupplementWhenIncomplete = false; V12_CONFIG.useV121Planning = false;
+  try {
+    const t0 = Date.now();
+    const a = JSON.parse(JSON.stringify(await pipelineSnapshotV121({MS: msC9(), '1H_NMR': h1Ethyl()}, {}, {timeMs: STEP_ONLY_TIME_MS, maxStates: 60000})));
+    const b = JSON.parse(JSON.stringify(await pipelineSnapshotV121({'1H_NMR': h1Ethyl()}, {}, {timeMs: STEP_ONLY_TIME_MS, maxStates: 60000})));
+    const pa = compareGolden(compactSnapshot(a), golden.ethylNoFormula, 'ethyl'), pb = compareGolden(compactSnapshot(b), golden.h1OnlyNoFormula, 'h1only');
+    log(`${label}: ${Date.now() - t0} ms; ethylNoFormula problems ${pa.length}; h1OnlyNoFormula problems ${pb.length}`);
+    for (const p of [...pa, ...pb].slice(0, 12)) log(`    ${p.slice(0, 200)}`);
+    if (pa.length || pb.length) {
+      log(`    ethyl runs: ${JSON.stringify(a.runs?.map((r: any) => [r.formula, r.termination, r.visited, r.candidates, r.complete, r.incompleteReasons]))}`);
+      log(`    golden ethyl runs: ${JSON.stringify(golden.ethylNoFormula.runs?.map((r: any) => [r.formula, r.termination, r.visited, r.candidates, r.complete, r.incompleteReasons]))}`);
+    }
+  } finally { cfg.legacySupplementWhenIncomplete = old; V12_CONFIG.useV121Planning = was; }
+}
+
+it('probe idle', async () => { for (let i = 1; i <= Number(process.env.PROBE_N ?? 6); i++) await once(`idle ${i}`); }, 900000);
+it.skipIf(process.env.PROBE_SKIP_STRESS==='1')('probe stressed', async () => {
+  const burners = Array.from({length: Number(process.env.PROBE_BURNERS ?? 16)}, () => spawn(process.execPath, ['-e', 'for(;;){}'], {stdio: 'ignore'}));
+  try { for (let i = 1; i <= Number(process.env.PROBE_N ?? 6); i++) await once(`stressed ${i}`); } finally { burners.forEach(b => b.kill()); }
+}, 900000);

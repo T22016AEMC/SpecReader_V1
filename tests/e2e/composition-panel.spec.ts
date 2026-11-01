@@ -1,4 +1,5 @@
 import {test,expect,type Page} from '@playwright/test';
+import {openTab} from './helpers/ui';
 // P1b composition panel. Synthetic input only (a two-row IR table and a user formula); the tests check the panel's behaviour and
 // wording, never chemical accuracy. IR 1715 gives a carbonyl reading that cannot hold C2H6O, so the run is relaxed to formula-only.
 async function analyse(page:Page,formulaText='C2H6O'){
@@ -12,6 +13,7 @@ async function analyse(page:Page,formulaText='C2H6O'){
 test('組成推斷面板：預設收合；展開後有未校準、完整與約束說明；資料變更後標示舊結果',async({page})=>{
  test.setTimeout(120000);const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  await analyse(page);
+ await openTab(page,'分子式與搜尋');
  const panel=page.getByTestId('composition-panel');
  await expect(panel).toBeVisible();
  await expect(panel).not.toHaveAttribute('open','');
@@ -35,6 +37,7 @@ test('組成推斷面板：預設收合；展開後有未校準、完整與約�
 test('約束被放寬時，收合狀態下摘要列可見琥珀色徽章；候選卡片標示來源',async({page})=>{
  test.setTimeout(120000);
  await analyse(page);
+ await openTab(page,'分子式與搜尋');
  const panel=page.getByTestId('composition-panel');
  await expect(panel).not.toHaveAttribute('open','');
  const badge=page.getByTestId('composition-panel-summary').getByTestId('composition-badge');

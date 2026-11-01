@@ -1,13 +1,20 @@
-import React from 'react';
+import React, {useState} from 'react';
 import type {ModeAResult} from '../engines/analysisSession';
 import {carbonylBandStatusOfIr} from '../engines/scientificEngines/carbonylClasses';
+import {isSearchedRow} from '../ui/diagnosticSummary';
 import {buildCompositionPanel, type PanelBadge, type PanelModel, type ReasonLine} from '../engines/enumeration/compositionPanelModel';
 
 const Badge = ({b}: {b: PanelBadge}) => <span data-testid="composition-badge" data-badge={b.id} className="mr-1 rounded border border-amber-500/60 bg-amber-950/60 px-1.5 py-0.5 text-[10px] font-bold text-amber-300">{b.text}</span>;
 const Reasons = ({title, items}: {title: string; items: ReasonLine[]}) => items.length === 0 ? null : <div><p className="font-semibold text-slate-300">{title}</p><ul className="ml-4 list-disc">{items.map((r, i) => <li key={i}>{r.text}（{r.source}，{r.strength}）</li>)}</ul></div>;
 
 /** Read-only, collapsible composition panel (P1b stage 3/4). Rendering only: all wording comes from compositionPanelModel. */
-export function CompositionPanelView({model, stale}: {model: PanelModel; stale: boolean}) {
+export function CompositionPanelView({model, stale, unsearchedRowLimit}: {model: PanelModel; stale: boolean; unsearchedRowLimit?: number}) {
+  // v1.2.2 display parameter: the hypothesis table lists every searched row plus the first N not-searched rows; 「展開全部」 shows all (nothing is removed from the model).
+  const [showAllRows, setShowAllRows] = useState(false);
+  const limited = unsearchedRowLimit !== undefined && !showAllRows;
+  let unsearchedSeen = 0;
+  const visibleRows = limited ? model.rows.filter(r => isSearchedRow(r) || ++unsearchedSeen <= unsearchedRowLimit) : model.rows;
+  const hiddenRowCount = model.rows.length - visibleRows.length;
   return <details data-testid="composition-panel" className="rounded border border-slate-700 bg-slate-950 p-3 text-xs">
     <summary data-testid="composition-panel-summary" className="cursor-pointer font-bold text-cyan-300">
       {model.summary}
@@ -24,7 +31,7 @@ export function CompositionPanelView({model, stale}: {model: PanelModel; stale: 
             <th className="px-2" title="對稱單元倍數：總 H ≈ k × 單元 H；沒有 1H 積分時為 —">k</th><th className="px-2">質量依據</th>
             <th className="px-2" title="各假設間的相對比較，不是機率，也沒有以實測準確度校準">相對信心（未校準）</th><th className="px-2">大小</th><th className="px-2">窮舉結果</th>
           </tr></thead>
-          <tbody className="divide-y divide-slate-800/60 align-top">{model.rows.map(r => <tr key={r.rank} data-formula={r.formula}>
+          <tbody className="divide-y divide-slate-800/60 align-top">{visibleRows.map(r => <tr key={r.rank} data-formula={r.formula}>
             <td className="py-1 pr-2">{r.rank}</td>
             <td className="px-2 font-mono">{r.formula}{r.unsupportedNote && <span className="block text-[10px] text-slate-400">{r.unsupportedNote}</span>}</td>
             <td className="px-2">{r.dbe}</td><td className="px-2">{r.k}</td>
@@ -41,6 +48,11 @@ export function CompositionPanelView({model, stale}: {model: PanelModel; stale: 
             </td>
           </tr>)}</tbody>
         </table>}
+        {unsearchedRowLimit !== undefined && (hiddenRowCount > 0 || showAllRows) && (
+          <button type="button" data-testid="composition-rows-toggle" aria-expanded={showAllRows} onClick={() => setShowAllRows(v => !v)} className="mt-1.5 text-[11px] font-semibold text-cyan-300 hover:text-cyan-200">
+            {showAllRows ? '只顯示已搜尋的列與前幾個未搜尋列' : `展開全部 ${model.rows.length} 筆（目前顯示 ${visibleRows.length} 筆：所有被搜尋的列＋前 ${unsearchedRowLimit} 個未搜尋列）`}
+          </button>
+        )}
       </details>
       {model.planning && <details open data-testid="composition-planning">
         <summary className="font-semibold text-slate-200">{model.planning.title}</summary>
@@ -109,7 +121,7 @@ export function CompositionPanelView({model, stale}: {model: PanelModel; stale: 
 }
 
 /** Builds the model from an analysis result; renders nothing when the result has no composition inference. */
-export function CompositionPanel({result, stale}: {result: ModeAResult; stale: boolean}) {
+export function CompositionPanel({result, stale, unsearchedRowLimit}: {result: ModeAResult; stale: boolean; unsearchedRowLimit?: number}) {
   const model = buildCompositionPanel({
     composition: result.compositionInference,
     runs: result.reasoningTrace?.compositionSearch?.runs ?? [],
@@ -119,5 +131,5 @@ export function CompositionPanel({result, stale}: {result: ModeAResult; stale: b
     rejectedCandidates: result.rejectedCandidates,
     carbonylBand: carbonylBandStatusOfIr(result.inputSpectra?.IR),
   });
-  return model ? <CompositionPanelView model={model} stale={stale}/> : null;
+  return model ? <CompositionPanelView model={model} stale={stale} unsearchedRowLimit={unsearchedRowLimit}/> : null;
 }

@@ -24,7 +24,7 @@ export function IRCalibrationPanel({s,settings,onDraft,onApply}:{s:ExperimentalS
  const curve=previewCurve,ys=curve.map(p=>p.y),lo=Math.min(...ys,0),hi=Math.max(...ys,1);
  const display=curve.filter((_,i)=>i%Math.max(1,Math.ceil(curve.length/1000))===0);
  return <div className="mb-2 rounded border border-amber-600/40 bg-slate-950 p-2 text-xs text-slate-300" data-testid="ir-calibration-panel">
-   <p className="font-semibold text-amber-200">IR 五點基線 · 與原圖座標校正共用畫布</p>
+   <p className="font-semibold text-amber-200">IR 基線<span className="font-normal text-slate-400">：標出吸收的零點線，只影響強度，不影響峰的位置（與「座標校正」共用同一張圖）</span></p>
    <div className="flex flex-wrap gap-2 my-2">
     <label>吸收方向 <select aria-label="IR 吸收方向" className="bg-slate-900" value={settings.direction} onChange={e=>onDraft({...settings,direction:e.target.value as IRManualSettings['direction']})}><option value="AUTO">自動辨識</option><option value="DOWN">吸收峰朝下</option><option value="UP">吸收峰朝上</option></select></label>
     <label>原始尺度 <select aria-label="IR 原始尺度" className="bg-slate-900" value={settings.intensityScale??'UNKNOWN'} onChange={e=>onDraft({...settings,intensityScale:e.target.value as IRManualSettings['intensityScale']})}><option value="UNKNOWN">未知／相對影像</option><option value="PERCENT_TRANSMITTANCE">%T</option><option value="TRANSMITTANCE">T (0–1)</option><option value="ABSORBANCE">Absorbance</option><option value="NORMALIZED">相對數值</option></select></label>

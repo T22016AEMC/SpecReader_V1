@@ -1,0 +1,42 @@
+[
+ {
+  "case": "ethanol",
+  "bytes": {
+   "v121": 251045,
+   "branch": 251043
+  },
+  "rawIdentical": false,
+  "rawIdenticalTwoV121Runs": false,
+  "afterDroppingTimingKeys": {
+   "v121_vs_branch_identical": true,
+   "v121_vs_v121_identical": true,
+   "hash": {
+    "v121": "acbf094e2fc141c3",
+    "v121_second_run": "acbf094e2fc141c3",
+    "branch": "acbf094e2fc141c3"
+   }
+  },
+  "differencesV121vsV121": [],
+  "differencesV121vsBranch": []
+ },
+ {
+  "case": "propanone",
+  "bytes": {
+   "v121": 275097,
+   "branch": 275115
+  },
+  "rawIdentical": false,
+  "rawIdenticalTwoV121Runs": false,
+  "afterDroppingTimingKeys": {
+   "v121_vs_branch_identical": true,
+   "v121_vs_v121_identical": true,
+   "hash": {
+    "v121": "7f2d605fe9484759",
+    "v121_second_run": "7f2d605fe9484759",
+    "branch": "7f2d605fe9484759"
+   }
+  },
+  "differencesV121vsV121": [],
+  "differencesV121vsBranch": []
+ }
+]

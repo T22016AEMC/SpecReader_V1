@@ -1,4 +1,5 @@
 import {test, expect, type Page} from '@playwright/test';
+import {openTab} from './helpers/ui';
 // v1.2.1 A class in the composition panel: the search plan block (O floor, S decision, rounds, "未搜尋" reasons), the round badges and the fixed limitation.
 // SYNTHETIC peak tables only (a single-ring + alkyl shape written for this test); the tests check wording and behaviour, never chemical accuracy.
 // The panel is data driven: with the planning flag off (tests/v12/v121FlagGolden.test.ts) or with a user formula there is no plan, and none of these blocks exists.
@@ -12,6 +13,7 @@ async function analyse(page: Page, formula: string) {
   if (formula) await page.getByLabel('分子式（選填）', {exact: true}).fill(formula);
   await page.getByRole('button', {name: '開始分析', exact: true}).click();
   await expect(page.getByTestId('analysis-control')).toHaveAttribute('data-result-current', 'true', {timeout: 90000});
+  await openTab(page, '分子式與搜尋');
   await page.getByTestId('composition-panel-summary').click();
 }
 

@@ -1,0 +1,1406 @@
+[
+ {
+  "name": "[1280x720] page 1 empty: title bar + step bar height",
+  "value": 116,
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1 empty: no horizontal scroll",
+  "value": "1280 <= 1280",
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1 empty: the document itself does not scroll",
+  "value": "scrollHeight 720 vs innerHeight 720",
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1 empty: <main> scrollbar width (offsetWidth - clientWidth >= 12)",
+  "value": 14,
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1 empty: vertical scrollers outside <main>",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1 empty: scrollbars inside <main> (nested scrolling boxes)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1 empty: input[type=file] count and DOM order",
+  "value": [
+   "IR",
+   "¹H NMR",
+   "¹³C NMR",
+   "MS",
+   "MS/MS",
+   "ToF-SIMS"
+  ],
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1 empty: data-testid unique (except the per-row observation-row and ir-relative-intensity)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1 empty: buttons/links named 第 N 頁 are exactly the 3 step buttons",
+  "value": [
+   "第 1 頁訊號標記",
+   "第 2 頁座標校正",
+   "第 3 頁化學判讀與結構推論"
+  ],
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1 empty: no 可信度 NN% text; no 資料已變更 status",
+  "value": {
+   "confidencePercent": false,
+   "statusChanged": 0
+  },
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1 empty: content shorter than the viewport (fixed-area check done on the long states)",
+  "value": "n/a",
+  "ok": null
+ },
+ {
+  "name": "[1280x720] page 1, IR csv loaded (IR in focus): title bar + step bar height",
+  "value": 116,
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1, IR csv loaded (IR in focus): no horizontal scroll",
+  "value": "1280 <= 1280",
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1, IR csv loaded (IR in focus): the document itself does not scroll",
+  "value": "scrollHeight 720 vs innerHeight 720",
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1, IR csv loaded (IR in focus): <main> scrollbar width (offsetWidth - clientWidth >= 12)",
+  "value": 14,
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1, IR csv loaded (IR in focus): vertical scrollers outside <main>",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1, IR csv loaded (IR in focus): scrollbars inside <main> (nested scrolling boxes)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1, IR csv loaded (IR in focus): input[type=file] count and DOM order",
+  "value": [
+   "IR",
+   "¹H NMR",
+   "¹³C NMR",
+   "MS",
+   "MS/MS",
+   "ToF-SIMS"
+  ],
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1, IR csv loaded (IR in focus): data-testid unique (except the per-row observation-row and ir-relative-intensity)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1, IR csv loaded (IR in focus): buttons/links named 第 N 頁 are exactly the 3 step buttons",
+  "value": [
+   "第 1 頁訊號標記",
+   "第 2 頁座標校正",
+   "第 3 頁化學判讀與結構推論"
+  ],
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1, IR csv loaded (IR in focus): no 可信度 NN% text; no 資料已變更 status",
+  "value": {
+   "confidencePercent": false,
+   "statusChanged": 0
+  },
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1, IR csv loaded (IR in focus): manual-add form keeps two number inputs (position, intensity)",
+  "value": 2,
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1, IR csv loaded (IR in focus): fixed area unchanged after scrolling the content 549 px",
+  "value": "{\"top\":0,\"bottom\":116,\"height\":116} -> {\"top\":0,\"bottom\":116,\"height\":116}",
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1 IR: spectrum viewer top edge y <= 400",
+  "value": 356,
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1, 1H csv loaded (1H in focus): title bar + step bar height",
+  "value": 116,
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1, 1H csv loaded (1H in focus): no horizontal scroll",
+  "value": "1280 <= 1280",
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1, 1H csv loaded (1H in focus): the document itself does not scroll",
+  "value": "scrollHeight 720 vs innerHeight 720",
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1, 1H csv loaded (1H in focus): <main> scrollbar width (offsetWidth - clientWidth >= 12)",
+  "value": 14,
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1, 1H csv loaded (1H in focus): vertical scrollers outside <main>",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1, 1H csv loaded (1H in focus): scrollbars inside <main> (nested scrolling boxes)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1, 1H csv loaded (1H in focus): input[type=file] count and DOM order",
+  "value": [
+   "IR",
+   "¹H NMR",
+   "¹³C NMR",
+   "MS",
+   "MS/MS",
+   "ToF-SIMS"
+  ],
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1, 1H csv loaded (1H in focus): data-testid unique (except the per-row observation-row and ir-relative-intensity)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1, 1H csv loaded (1H in focus): buttons/links named 第 N 頁 are exactly the 3 step buttons",
+  "value": [
+   "第 1 頁訊號標記",
+   "第 2 頁座標校正",
+   "第 3 頁化學判讀與結構推論"
+  ],
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1, 1H csv loaded (1H in focus): no 可信度 NN% text; no 資料已變更 status",
+  "value": {
+   "confidencePercent": false,
+   "statusChanged": 0
+  },
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1, 1H csv loaded (1H in focus): manual-add form keeps two number inputs (position, intensity)",
+  "value": 2,
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1, 1H csv loaded (1H in focus): fixed area unchanged after scrolling the content 129 px",
+  "value": "{\"top\":0,\"bottom\":116,\"height\":116} -> {\"top\":0,\"bottom\":116,\"height\":116}",
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1 1H: spectrum viewer top edge y <= 400",
+  "value": 356,
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1: viewer svg box (viewBox height 420)",
+  "value": {
+   "w": 687,
+   "h": 336,
+   "viewBox": "0 0 860 420"
+  },
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1: row details closed by default, opens on click",
+  "value": {
+   "rows": 4,
+   "before": false,
+   "after": true
+  },
+  "ok": true
+ },
+ {
+  "name": "[1280x720] plot click adds a mark at 420 px height",
+  "value": "4 -> 5",
+  "ok": true
+ },
+ {
+  "name": "[1280x720] plot marker drag changes a mark position",
+  "value": "7.08,7.08,6.73,4.75,1.62 -> 7.08,4.75,6.73,4.75,1.62",
+  "ok": true
+ },
+ {
+  "name": "[1280x720] zoom in / reset work",
+  "value": "svg text nodes while zoomed 19",
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 2, numeric files: title bar + step bar height",
+  "value": 116,
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 2, numeric files: no horizontal scroll",
+  "value": "1280 <= 1280",
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 2, numeric files: the document itself does not scroll",
+  "value": "scrollHeight 720 vs innerHeight 720",
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 2, numeric files: <main> scrollbar width (offsetWidth - clientWidth >= 12)",
+  "value": 14,
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 2, numeric files: vertical scrollers outside <main>",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 2, numeric files: scrollbars inside <main> (nested scrolling boxes)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 2, numeric files: data-testid unique (except the per-row observation-row and ir-relative-intensity)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 2, numeric files: buttons/links named 第 N 頁 are exactly the 3 step buttons",
+  "value": [
+   "第 1 頁訊號標記",
+   "第 2 頁座標校正",
+   "第 3 頁化學判讀與結構推論"
+  ],
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 2, numeric files: no 可信度 NN% text; no 資料已變更 status",
+  "value": {
+   "confidencePercent": false,
+   "statusChanged": 0
+  },
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 2, numeric files: fixed area unchanged after scrolling the content 206 px",
+  "value": "{\"top\":0,\"bottom\":116,\"height\":116} -> {\"top\":0,\"bottom\":116,\"height\":116}",
+  "ok": true
+ },
+ {
+  "name": "[1280x720] JavaScript errors (scenario A)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720] console resource errors (scenario A; information only)",
+  "value": [],
+  "ok": null
+ },
+ {
+  "name": "[1280x720] page 1, IR image (IR in focus): title bar + step bar height",
+  "value": 116,
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1, IR image (IR in focus): no horizontal scroll",
+  "value": "1280 <= 1280",
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1, IR image (IR in focus): the document itself does not scroll",
+  "value": "scrollHeight 720 vs innerHeight 720",
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1, IR image (IR in focus): <main> scrollbar width (offsetWidth - clientWidth >= 12)",
+  "value": 14,
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1, IR image (IR in focus): vertical scrollers outside <main>",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1, IR image (IR in focus): scrollbars inside <main> (nested scrolling boxes)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1, IR image (IR in focus): input[type=file] count and DOM order",
+  "value": [
+   "IR",
+   "¹H NMR",
+   "¹³C NMR",
+   "MS",
+   "MS/MS",
+   "ToF-SIMS"
+  ],
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1, IR image (IR in focus): data-testid unique (except the per-row observation-row and ir-relative-intensity)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1, IR image (IR in focus): buttons/links named 第 N 頁 are exactly the 3 step buttons",
+  "value": [
+   "第 1 頁訊號標記",
+   "第 2 頁座標校正",
+   "第 3 頁化學判讀與結構推論⚠（尚有光譜未校正）"
+  ],
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1, IR image (IR in focus): no 可信度 NN% text; no 資料已變更 status",
+  "value": {
+   "confidencePercent": false,
+   "statusChanged": 0
+  },
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1, IR image (IR in focus): manual-add form keeps two number inputs (position, intensity)",
+  "value": 2,
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1, IR image (IR in focus): fixed area unchanged after scrolling the content 709 px",
+  "value": "{\"top\":0,\"bottom\":116,\"height\":116} -> {\"top\":0,\"bottom\":116,\"height\":116}",
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1 IR image: spectrum viewer top edge y <= 400",
+  "value": 356,
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1, 1H image (1H in focus): title bar + step bar height",
+  "value": 116,
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1, 1H image (1H in focus): no horizontal scroll",
+  "value": "1280 <= 1280",
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1, 1H image (1H in focus): the document itself does not scroll",
+  "value": "scrollHeight 720 vs innerHeight 720",
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1, 1H image (1H in focus): <main> scrollbar width (offsetWidth - clientWidth >= 12)",
+  "value": 14,
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1, 1H image (1H in focus): vertical scrollers outside <main>",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1, 1H image (1H in focus): scrollbars inside <main> (nested scrolling boxes)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1, 1H image (1H in focus): input[type=file] count and DOM order",
+  "value": [
+   "IR",
+   "¹H NMR",
+   "¹³C NMR",
+   "MS",
+   "MS/MS",
+   "ToF-SIMS"
+  ],
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1, 1H image (1H in focus): data-testid unique (except the per-row observation-row and ir-relative-intensity)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1, 1H image (1H in focus): buttons/links named 第 N 頁 are exactly the 3 step buttons",
+  "value": [
+   "第 1 頁訊號標記",
+   "第 2 頁座標校正",
+   "第 3 頁化學判讀與結構推論⚠（尚有光譜未校正）"
+  ],
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1, 1H image (1H in focus): no 可信度 NN% text; no 資料已變更 status",
+  "value": {
+   "confidencePercent": false,
+   "statusChanged": 0
+  },
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1, 1H image (1H in focus): manual-add form keeps two number inputs (position, intensity)",
+  "value": 2,
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1, 1H image (1H in focus): fixed area unchanged after scrolling the content 276 px",
+  "value": "{\"top\":0,\"bottom\":116,\"height\":116} -> {\"top\":0,\"bottom\":116,\"height\":116}",
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1 1H image: spectrum viewer top edge y <= 400",
+  "value": 356,
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1 tags before calibration",
+  "value": [
+   "FAILED: ⚠ 尚未校正",
+   "DEFAULT_COORDS: ⚠ 預設座標（尚未校正）"
+  ],
+  "ok": true
+ },
+ {
+  "name": "[1280x720] image click adds a mark at the new height",
+  "value": "0 -> 1",
+  "ok": true
+ },
+ {
+  "name": "[1280x720] image marker drag changes the mark position",
+  "value": "299 -> 359",
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 2, IR image: title bar + step bar height",
+  "value": 116,
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 2, IR image: no horizontal scroll",
+  "value": "1280 <= 1280",
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 2, IR image: the document itself does not scroll",
+  "value": "scrollHeight 720 vs innerHeight 720",
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 2, IR image: <main> scrollbar width (offsetWidth - clientWidth >= 12)",
+  "value": 14,
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 2, IR image: vertical scrollers outside <main>",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 2, IR image: scrollbars inside <main> (nested scrolling boxes)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 2, IR image: data-testid unique (except the per-row observation-row and ir-relative-intensity)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 2, IR image: buttons/links named 第 N 頁 are exactly the 3 step buttons",
+  "value": [
+   "第 1 頁訊號標記",
+   "第 2 頁座標校正",
+   "第 3 頁化學判讀與結構推論⚠（尚有光譜未校正）"
+  ],
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 2, IR image: no 可信度 NN% text; no 資料已變更 status",
+  "value": {
+   "confidencePercent": false,
+   "statusChanged": 0
+  },
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 2, IR image: fixed area unchanged after scrolling the content 533 px",
+  "value": "{\"top\":0,\"bottom\":116,\"height\":116} -> {\"top\":0,\"bottom\":116,\"height\":116}",
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 2: ir-calibration-panel present exactly once; piecewise-toggle once",
+  "value": {
+   "panel": 1,
+   "toggle": 1
+  },
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 2 chips (calibration status per spectrum)",
+  "value": [
+   "FAILED: ⚠ 尚未校正",
+   "DEFAULT_COORDS: ⚠ 預設座標（未校正）"
+  ],
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 2 reminder (non-blocking)",
+  "value": "⚠ 還有 2 張光譜尚未校正：IR、¹H NMR。仍可直接前往第 3 頁。",
+  "ok": true
+ },
+ {
+  "name": "[1280x720] step 3 button keeps a name starting with 第 3 頁 and carries the warning mark",
+  "value": "第 3 頁化學判讀與結構推論⚠（尚有光譜未校正）",
+  "ok": true
+ },
+ {
+  "name": "[1280x720] IR baseline handle 3 drags (main scrolled 120 px)",
+  "value": "data-y 110.5 -> 134.70676664048693",
+  "ok": true
+ },
+ {
+  "name": "[1280x720] IR baseline handle 3 drags while zoomed in",
+  "value": "data-y 134.70676664048693 -> 105.63239586878551",
+  "ok": true
+ },
+ {
+  "name": "[1280x720] piecewise opened: controls shown, two-point hint hidden",
+  "value": {
+   "panel": 1,
+   "hint": 0
+  },
+  "ok": true
+ },
+ {
+  "name": "[1280x720] piecewise: clicking the image sets calibration point A pixel X",
+  "value": "79 -> 350",
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 2, 1H image: title bar + step bar height",
+  "value": 116,
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 2, 1H image: no horizontal scroll",
+  "value": "1280 <= 1280",
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 2, 1H image: the document itself does not scroll",
+  "value": "scrollHeight 720 vs innerHeight 720",
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 2, 1H image: <main> scrollbar width (offsetWidth - clientWidth >= 12)",
+  "value": 14,
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 2, 1H image: vertical scrollers outside <main>",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 2, 1H image: scrollbars inside <main> (nested scrolling boxes)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 2, 1H image: data-testid unique (except the per-row observation-row and ir-relative-intensity)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 2, 1H image: buttons/links named 第 N 頁 are exactly the 3 step buttons",
+  "value": [
+   "第 1 頁訊號標記",
+   "第 2 頁座標校正",
+   "第 3 頁化學判讀與結構推論⚠（尚有光譜未校正）"
+  ],
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 2, 1H image: no 可信度 NN% text; no 資料已變更 status",
+  "value": {
+   "confidencePercent": false,
+   "statusChanged": 0
+  },
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 2, 1H image: fixed area unchanged after scrolling the content 340 px",
+  "value": "{\"top\":0,\"bottom\":116,\"height\":116} -> {\"top\":0,\"bottom\":116,\"height\":116}",
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 2 chips before calibrating 1H",
+  "value": [
+   "FAILED: ⚠ 尚未校正",
+   "DEFAULT_COORDS: ⚠ 預設座標（未校正）"
+  ],
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 2 chips after the two-point calibration of 1H",
+  "value": [
+   "FAILED: ⚠ 尚未校正",
+   "USER: 已校正 ✓（兩點）"
+  ],
+  "ok": true
+ },
+ {
+  "name": "[1280x720] page 1 tags after calibrating 1H",
+  "value": [
+   "FAILED: ⚠ 尚未校正",
+   "USER: ✓ 已由你校正（兩點）"
+  ],
+  "ok": true
+ },
+ {
+  "name": "[1280x720] JavaScript errors (scenario B)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1280x720] console resource errors (scenario B; information only)",
+  "value": [
+   "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+  ],
+  "ok": null
+ },
+ {
+  "name": "[1920x1080] page 1 empty: title bar + step bar height",
+  "value": 116,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1 empty: no horizontal scroll",
+  "value": "1920 <= 1920",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1 empty: the document itself does not scroll",
+  "value": "scrollHeight 1080 vs innerHeight 1080",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1 empty: <main> scrollbar width (offsetWidth - clientWidth >= 12)",
+  "value": 14,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1 empty: vertical scrollers outside <main>",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1 empty: scrollbars inside <main> (nested scrolling boxes)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1 empty: input[type=file] count and DOM order",
+  "value": [
+   "IR",
+   "¹H NMR",
+   "¹³C NMR",
+   "MS",
+   "MS/MS",
+   "ToF-SIMS"
+  ],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1 empty: data-testid unique (except the per-row observation-row and ir-relative-intensity)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1 empty: buttons/links named 第 N 頁 are exactly the 3 step buttons",
+  "value": [
+   "第 1 頁訊號標記",
+   "第 2 頁座標校正",
+   "第 3 頁化學判讀與結構推論"
+  ],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1 empty: no 可信度 NN% text; no 資料已變更 status",
+  "value": {
+   "confidencePercent": false,
+   "statusChanged": 0
+  },
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1 empty: content shorter than the viewport (fixed-area check done on the long states)",
+  "value": "n/a",
+  "ok": null
+ },
+ {
+  "name": "[1920x1080] page 1, IR csv loaded (IR in focus): title bar + step bar height",
+  "value": 116,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1, IR csv loaded (IR in focus): no horizontal scroll",
+  "value": "1920 <= 1920",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1, IR csv loaded (IR in focus): the document itself does not scroll",
+  "value": "scrollHeight 1080 vs innerHeight 1080",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1, IR csv loaded (IR in focus): <main> scrollbar width (offsetWidth - clientWidth >= 12)",
+  "value": 14,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1, IR csv loaded (IR in focus): vertical scrollers outside <main>",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1, IR csv loaded (IR in focus): scrollbars inside <main> (nested scrolling boxes)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1, IR csv loaded (IR in focus): input[type=file] count and DOM order",
+  "value": [
+   "IR",
+   "¹H NMR",
+   "¹³C NMR",
+   "MS",
+   "MS/MS",
+   "ToF-SIMS"
+  ],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1, IR csv loaded (IR in focus): data-testid unique (except the per-row observation-row and ir-relative-intensity)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1, IR csv loaded (IR in focus): buttons/links named 第 N 頁 are exactly the 3 step buttons",
+  "value": [
+   "第 1 頁訊號標記",
+   "第 2 頁座標校正",
+   "第 3 頁化學判讀與結構推論"
+  ],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1, IR csv loaded (IR in focus): no 可信度 NN% text; no 資料已變更 status",
+  "value": {
+   "confidencePercent": false,
+   "statusChanged": 0
+  },
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1, IR csv loaded (IR in focus): manual-add form keeps two number inputs (position, intensity)",
+  "value": 2,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1, IR csv loaded (IR in focus): fixed area unchanged after scrolling the content 173 px",
+  "value": "{\"top\":0,\"bottom\":116,\"height\":116} -> {\"top\":0,\"bottom\":116,\"height\":116}",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1 IR: spectrum viewer top edge y <= 400",
+  "value": 356,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1, 1H csv loaded (1H in focus): title bar + step bar height",
+  "value": 116,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1, 1H csv loaded (1H in focus): no horizontal scroll",
+  "value": "1920 <= 1920",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1, 1H csv loaded (1H in focus): the document itself does not scroll",
+  "value": "scrollHeight 1080 vs innerHeight 1080",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1, 1H csv loaded (1H in focus): <main> scrollbar width (offsetWidth - clientWidth >= 12)",
+  "value": 14,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1, 1H csv loaded (1H in focus): vertical scrollers outside <main>",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1, 1H csv loaded (1H in focus): scrollbars inside <main> (nested scrolling boxes)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1, 1H csv loaded (1H in focus): input[type=file] count and DOM order",
+  "value": [
+   "IR",
+   "¹H NMR",
+   "¹³C NMR",
+   "MS",
+   "MS/MS",
+   "ToF-SIMS"
+  ],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1, 1H csv loaded (1H in focus): data-testid unique (except the per-row observation-row and ir-relative-intensity)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1, 1H csv loaded (1H in focus): buttons/links named 第 N 頁 are exactly the 3 step buttons",
+  "value": [
+   "第 1 頁訊號標記",
+   "第 2 頁座標校正",
+   "第 3 頁化學判讀與結構推論"
+  ],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1, 1H csv loaded (1H in focus): no 可信度 NN% text; no 資料已變更 status",
+  "value": {
+   "confidencePercent": false,
+   "statusChanged": 0
+  },
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1, 1H csv loaded (1H in focus): manual-add form keeps two number inputs (position, intensity)",
+  "value": 2,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1, 1H csv loaded (1H in focus): content shorter than the viewport (fixed-area check done on the long states)",
+  "value": "n/a",
+  "ok": null
+ },
+ {
+  "name": "[1920x1080] page 1 1H: spectrum viewer top edge y <= 400",
+  "value": 356,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1: viewer svg box (viewBox height 420)",
+  "value": {
+   "w": 882,
+   "h": 431,
+   "viewBox": "0 0 860 420"
+  },
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1: row details closed by default, opens on click",
+  "value": {
+   "rows": 4,
+   "before": false,
+   "after": true
+  },
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] plot click adds a mark at 420 px height",
+  "value": "4 -> 5",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] plot marker drag changes a mark position",
+  "value": "7.08,7.08,6.73,4.75,1.62 -> 7.08,4.75,6.73,4.75,1.62",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] zoom in / reset work",
+  "value": "svg text nodes while zoomed 19",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 2, numeric files: title bar + step bar height",
+  "value": 116,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 2, numeric files: no horizontal scroll",
+  "value": "1920 <= 1920",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 2, numeric files: the document itself does not scroll",
+  "value": "scrollHeight 1080 vs innerHeight 1080",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 2, numeric files: <main> scrollbar width (offsetWidth - clientWidth >= 12)",
+  "value": 14,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 2, numeric files: vertical scrollers outside <main>",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 2, numeric files: scrollbars inside <main> (nested scrolling boxes)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 2, numeric files: data-testid unique (except the per-row observation-row and ir-relative-intensity)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 2, numeric files: buttons/links named 第 N 頁 are exactly the 3 step buttons",
+  "value": [
+   "第 1 頁訊號標記",
+   "第 2 頁座標校正",
+   "第 3 頁化學判讀與結構推論"
+  ],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 2, numeric files: no 可信度 NN% text; no 資料已變更 status",
+  "value": {
+   "confidencePercent": false,
+   "statusChanged": 0
+  },
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 2, numeric files: content shorter than the viewport (fixed-area check done on the long states)",
+  "value": "n/a",
+  "ok": null
+ },
+ {
+  "name": "[1920x1080] JavaScript errors (scenario A)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] console resource errors (scenario A; information only)",
+  "value": [],
+  "ok": null
+ },
+ {
+  "name": "[1920x1080] page 1, IR image (IR in focus): title bar + step bar height",
+  "value": 116,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1, IR image (IR in focus): no horizontal scroll",
+  "value": "1920 <= 1920",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1, IR image (IR in focus): the document itself does not scroll",
+  "value": "scrollHeight 1080 vs innerHeight 1080",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1, IR image (IR in focus): <main> scrollbar width (offsetWidth - clientWidth >= 12)",
+  "value": 14,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1, IR image (IR in focus): vertical scrollers outside <main>",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1, IR image (IR in focus): scrollbars inside <main> (nested scrolling boxes)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1, IR image (IR in focus): input[type=file] count and DOM order",
+  "value": [
+   "IR",
+   "¹H NMR",
+   "¹³C NMR",
+   "MS",
+   "MS/MS",
+   "ToF-SIMS"
+  ],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1, IR image (IR in focus): data-testid unique (except the per-row observation-row and ir-relative-intensity)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1, IR image (IR in focus): buttons/links named 第 N 頁 are exactly the 3 step buttons",
+  "value": [
+   "第 1 頁訊號標記",
+   "第 2 頁座標校正",
+   "第 3 頁化學判讀與結構推論⚠（尚有光譜未校正）"
+  ],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1, IR image (IR in focus): no 可信度 NN% text; no 資料已變更 status",
+  "value": {
+   "confidencePercent": false,
+   "statusChanged": 0
+  },
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1, IR image (IR in focus): manual-add form keeps two number inputs (position, intensity)",
+  "value": 2,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1, IR image (IR in focus): fixed area unchanged after scrolling the content 531 px",
+  "value": "{\"top\":0,\"bottom\":116,\"height\":116} -> {\"top\":0,\"bottom\":116,\"height\":116}",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1 IR image: spectrum viewer top edge y <= 400",
+  "value": 356,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1, 1H image (1H in focus): title bar + step bar height",
+  "value": 116,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1, 1H image (1H in focus): no horizontal scroll",
+  "value": "1920 <= 1920",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1, 1H image (1H in focus): the document itself does not scroll",
+  "value": "scrollHeight 1080 vs innerHeight 1080",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1, 1H image (1H in focus): <main> scrollbar width (offsetWidth - clientWidth >= 12)",
+  "value": 14,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1, 1H image (1H in focus): vertical scrollers outside <main>",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1, 1H image (1H in focus): scrollbars inside <main> (nested scrolling boxes)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1, 1H image (1H in focus): input[type=file] count and DOM order",
+  "value": [
+   "IR",
+   "¹H NMR",
+   "¹³C NMR",
+   "MS",
+   "MS/MS",
+   "ToF-SIMS"
+  ],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1, 1H image (1H in focus): data-testid unique (except the per-row observation-row and ir-relative-intensity)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1, 1H image (1H in focus): buttons/links named 第 N 頁 are exactly the 3 step buttons",
+  "value": [
+   "第 1 頁訊號標記",
+   "第 2 頁座標校正",
+   "第 3 頁化學判讀與結構推論⚠（尚有光譜未校正）"
+  ],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1, 1H image (1H in focus): no 可信度 NN% text; no 資料已變更 status",
+  "value": {
+   "confidencePercent": false,
+   "statusChanged": 0
+  },
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1, 1H image (1H in focus): manual-add form keeps two number inputs (position, intensity)",
+  "value": 2,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1, 1H image (1H in focus): fixed area unchanged after scrolling the content 33 px",
+  "value": "{\"top\":0,\"bottom\":116,\"height\":116} -> {\"top\":0,\"bottom\":116,\"height\":116}",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1 1H image: spectrum viewer top edge y <= 400",
+  "value": 356,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1 tags before calibration",
+  "value": [
+   "FAILED: ⚠ 尚未校正",
+   "DEFAULT_COORDS: ⚠ 預設座標（尚未校正）"
+  ],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] image click adds a mark at the new height",
+  "value": "0 -> 1",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] image marker drag changes the mark position",
+  "value": "300 -> 346",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 2, IR image: title bar + step bar height",
+  "value": 116,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 2, IR image: no horizontal scroll",
+  "value": "1920 <= 1920",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 2, IR image: the document itself does not scroll",
+  "value": "scrollHeight 1080 vs innerHeight 1080",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 2, IR image: <main> scrollbar width (offsetWidth - clientWidth >= 12)",
+  "value": 14,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 2, IR image: vertical scrollers outside <main>",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 2, IR image: scrollbars inside <main> (nested scrolling boxes)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 2, IR image: data-testid unique (except the per-row observation-row and ir-relative-intensity)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 2, IR image: buttons/links named 第 N 頁 are exactly the 3 step buttons",
+  "value": [
+   "第 1 頁訊號標記",
+   "第 2 頁座標校正",
+   "第 3 頁化學判讀與結構推論⚠（尚有光譜未校正）"
+  ],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 2, IR image: no 可信度 NN% text; no 資料已變更 status",
+  "value": {
+   "confidencePercent": false,
+   "statusChanged": 0
+  },
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 2, IR image: fixed area unchanged after scrolling the content 102 px",
+  "value": "{\"top\":0,\"bottom\":116,\"height\":116} -> {\"top\":0,\"bottom\":116,\"height\":116}",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 2: ir-calibration-panel present exactly once; piecewise-toggle once",
+  "value": {
+   "panel": 1,
+   "toggle": 1
+  },
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 2 chips (calibration status per spectrum)",
+  "value": [
+   "FAILED: ⚠ 尚未校正",
+   "DEFAULT_COORDS: ⚠ 預設座標（未校正）"
+  ],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 2 reminder (non-blocking)",
+  "value": "⚠ 還有 2 張光譜尚未校正：IR、¹H NMR。仍可直接前往第 3 頁。",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] step 3 button keeps a name starting with 第 3 頁 and carries the warning mark",
+  "value": "第 3 頁化學判讀與結構推論⚠（尚有光譜未校正）",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] IR baseline handle 3 drags (main scrolled 120 px)",
+  "value": "data-y 110.5 -> 125.80321946990621",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] IR baseline handle 3 drags while zoomed in",
+  "value": "data-y 125.80321946990621 -> 99.82283049938725",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] piecewise opened: controls shown, two-point hint hidden",
+  "value": {
+   "panel": 1,
+   "hint": 0
+  },
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] piecewise: clicking the image sets calibration point A pixel X",
+  "value": "79 -> 350",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 2, 1H image: title bar + step bar height",
+  "value": 116,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 2, 1H image: no horizontal scroll",
+  "value": "1920 <= 1920",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 2, 1H image: the document itself does not scroll",
+  "value": "scrollHeight 1080 vs innerHeight 1080",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 2, 1H image: <main> scrollbar width (offsetWidth - clientWidth >= 12)",
+  "value": 14,
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 2, 1H image: vertical scrollers outside <main>",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 2, 1H image: scrollbars inside <main> (nested scrolling boxes)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 2, 1H image: data-testid unique (except the per-row observation-row and ir-relative-intensity)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 2, 1H image: buttons/links named 第 N 頁 are exactly the 3 step buttons",
+  "value": [
+   "第 1 頁訊號標記",
+   "第 2 頁座標校正",
+   "第 3 頁化學判讀與結構推論⚠（尚有光譜未校正）"
+  ],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 2, 1H image: no 可信度 NN% text; no 資料已變更 status",
+  "value": {
+   "confidencePercent": false,
+   "statusChanged": 0
+  },
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 2, 1H image: fixed area unchanged after scrolling the content 39 px",
+  "value": "{\"top\":0,\"bottom\":116,\"height\":116} -> {\"top\":0,\"bottom\":116,\"height\":116}",
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 2 chips before calibrating 1H",
+  "value": [
+   "FAILED: ⚠ 尚未校正",
+   "DEFAULT_COORDS: ⚠ 預設座標（未校正）"
+  ],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 2 chips after the two-point calibration of 1H",
+  "value": [
+   "FAILED: ⚠ 尚未校正",
+   "USER: 已校正 ✓（兩點）"
+  ],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] page 1 tags after calibrating 1H",
+  "value": [
+   "FAILED: ⚠ 尚未校正",
+   "USER: ✓ 已由你校正（兩點）"
+  ],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] JavaScript errors (scenario B)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[1920x1080] console resource errors (scenario B; information only)",
+  "value": [
+   "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+  ],
+  "ok": null
+ }
+]
