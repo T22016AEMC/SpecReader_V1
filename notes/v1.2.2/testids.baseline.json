@@ -1,0 +1,201 @@
+{
+ "source": "origin/main 4d55117 (v1.2.1)",
+ "count": 65,
+ "ids": {
+  "analysis-cancel": [
+   "src/App.tsx:2777"
+  ],
+  "analysis-control": [
+   "src/App.tsx:2776"
+  ],
+  "analysis-progress": [
+   "src/components/ReasoningPanel.tsx:9"
+  ],
+  "calibration-check": [
+   "src/components/CalibrationCheckTable.tsx:8"
+  ],
+  "candidate-reasoning": [
+   "src/components/ReasoningPanel.tsx:17"
+  ],
+  "candidate-source": [
+   "src/App.tsx:3354"
+  ],
+  "candidate-v12-assembly": [
+   "src/components/ReasoningPanel.tsx:17"
+  ],
+  "composition-badge": [
+   "src/components/CompositionPanel.tsx:6"
+  ],
+  "composition-carbonyl-band": [
+   "src/components/CompositionPanel.tsx:53"
+  ],
+  "composition-carbonyl-band-status": [
+   "src/components/CompositionPanel.tsx:55"
+  ],
+  "composition-confidence": [
+   "src/components/CompositionPanel.tsx:32"
+  ],
+  "composition-constraints": [
+   "src/components/CompositionPanel.tsx:76"
+  ],
+  "composition-constraints-formula": [
+   "src/components/CompositionPanel.tsx:78"
+  ],
+  "composition-excluded-local": [
+   "src/components/CompositionPanel.tsx:39"
+  ],
+  "composition-exclusions": [
+   "src/components/CompositionPanel.tsx:87"
+  ],
+  "composition-hypotheses": [
+   "src/components/CompositionPanel.tsx:18"
+  ],
+  "composition-inventory": [
+   "src/components/CompositionPanel.tsx:58"
+  ],
+  "composition-inventory-combinations": [
+   "src/components/CompositionPanel.tsx:64"
+  ],
+  "composition-inventory-formula": [
+   "src/components/CompositionPanel.tsx:60"
+  ],
+  "composition-inventory-preview": [
+   "src/components/CompositionPanel.tsx:70"
+  ],
+  "composition-inventory-reason": [
+   "src/components/CompositionPanel.tsx:63"
+  ],
+  "composition-inventory-signals": [
+   "src/components/CompositionPanel.tsx:66"
+  ],
+  "composition-inventory-status": [
+   "src/components/CompositionPanel.tsx:62"
+  ],
+  "composition-limitations": [
+   "src/components/CompositionPanel.tsx:104"
+  ],
+  "composition-not-searched": [
+   "src/components/CompositionPanel.tsx:51"
+  ],
+  "composition-overview": [
+   "src/components/CompositionPanel.tsx:90"
+  ],
+  "composition-oxygen": [
+   "src/components/CompositionPanel.tsx:48"
+  ],
+  "composition-panel": [
+   "src/components/CompositionPanel.tsx:11"
+  ],
+  "composition-panel-summary": [
+   "src/components/CompositionPanel.tsx:12"
+  ],
+  "composition-planning": [
+   "src/components/CompositionPanel.tsx:45"
+  ],
+  "composition-planning-summary": [
+   "src/components/CompositionPanel.tsx:47"
+  ],
+  "composition-required": [
+   "src/components/CompositionPanel.tsx:82"
+  ],
+  "composition-round": [
+   "src/components/CompositionPanel.tsx:35"
+  ],
+  "composition-scoring": [
+   "src/components/CompositionPanel.tsx:88"
+  ],
+  "composition-search-cell": [
+   "src/components/CompositionPanel.tsx:34"
+  ],
+  "composition-sulfur": [
+   "src/components/CompositionPanel.tsx:49"
+  ],
+  "composition-vinyl-windows": [
+   "src/components/CompositionPanel.tsx:50"
+  ],
+  "generation-status": [
+   "src/App.tsx:2783"
+  ],
+  "ir-analysis-version": [
+   "src/App.tsx:3275"
+  ],
+  "ir-baseline-line": [
+   "src/components/IRCalibrationTools.tsx:48"
+  ],
+  "ir-baseline-overlay": [
+   "src/components/IRCalibrationTools.tsx:47"
+  ],
+  "ir-calibration-panel": [
+   "src/components/IRCalibrationTools.tsx:26"
+  ],
+  "ir-draft-status": [
+   "src/components/IRCalibrationTools.tsx:37"
+  ],
+  "ir-preview-features": [
+   "src/components/IRCalibrationTools.tsx:40"
+  ],
+  "ir-relative-intensity": [
+   "src/components/PeakObservationTable.tsx:42"
+  ],
+  "linearity-warning": [
+   "src/App.tsx:2638"
+  ],
+  "local-structure-hypotheses": [
+   "src/App.tsx:2785"
+  ],
+  "local-structure-plan": [
+   "src/components/ReasoningPanel.tsx:11"
+  ],
+  "mass-experiment-conditions": [
+   "src/components/MassExperimentConditions.tsx:5"
+  ],
+  "molecular-depiction": [
+   "src/components/StructureRenderer2D.tsx:8"
+  ],
+  "observation-row": [
+   "src/components/PeakObservationTable.tsx:40"
+  ],
+  "observation-table": [
+   "src/components/PeakObservationTable.tsx:35"
+  ],
+  "piecewise-calibration": [
+   "src/components/PiecewiseCalibrationControls.tsx:23"
+  ],
+  "piecewise-error": [
+   "src/components/PiecewiseCalibrationControls.tsx:48"
+  ],
+  "piecewise-inferred-knots": [
+   "src/components/PiecewiseCalibrationControls.tsx:46"
+  ],
+  "piecewise-toggle": [
+   "src/App.tsx:2576"
+  ],
+  "reasoning-step-*": [
+   "src/components/ReasoningPanel.tsx:10"
+  ],
+  "six-step-reasoning": [
+   "src/components/ReasoningPanel.tsx:7"
+  ],
+  "two-point-linearity-hint": [
+   "src/App.tsx:2628"
+  ],
+  "zero-candidate-blocked": [
+   "src/App.tsx:3309"
+  ],
+  "zero-candidate-blocked-empty": [
+   "src/App.tsx:3309"
+  ],
+  "zero-candidate-explanation": [
+   "src/App.tsx:3306"
+  ],
+  "zero-candidate-headline": [
+   "src/App.tsx:3307"
+  ],
+  "zero-candidate-suggestions": [
+   "src/App.tsx:3311"
+  ],
+  "zero-candidate-unfinished": [
+   "src/App.tsx:3310"
+  ]
+ }
+}
