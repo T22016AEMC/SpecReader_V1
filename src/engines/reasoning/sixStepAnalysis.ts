@@ -6,7 +6,7 @@ import {generateForCompositions} from '../composition/structureGenerator';
 import {ENUMERATION_CONFIG as ENUM} from '../enumeration/enumerationConfig';
 import {buildPlausibilityEvidence} from '../scientificEngines/structurePlausibility';
 import {V12_CONFIG} from '../constraints/v12Config';
-import {irRangeCovered} from '../scientificEngines/irSignalProcessing';
+import {irCalibrationTrusted,irRangeCovered} from '../scientificEngines/irSignalProcessing';
 import {sourceSpectra} from '../scientificEngines/evidenceLedger';
 import type {AnalysisInput,ModeAResult} from '../analysisSession';
 import type {AnalysisProgress,ReasoningPlan} from './types';
@@ -31,7 +31,7 @@ export async function executeSixStepAnalysis(input:AnalysisInput,options:{should
  // Composition inference (P1a) belongs to progress step 3; the generator bridge keeps the original total budget.
  // v1.2: only built when the flag is on (with the flag off nothing below differs from v1.1.8).
  const ir=V12_CONFIG.useV12Constraints?sourceSpectra(prepared.bundle).IR:undefined;
- const constraintEvidence=V12_CONFIG.useV12Constraints?{observations:plan.observations,irCoversAldehydeRegion:Boolean(ir)&&irRangeCovered(ir!,V12_CONFIG.aldehydeIr.rangeCm1[0],V12_CONFIG.aldehydeIr.rangeCm1[1]),nitrogenAllowed:plan.nitrogenEvidence?.mode==='EVIDENCE'}:undefined;
+ const constraintEvidence=V12_CONFIG.useV12Constraints?{observations:plan.observations,irCoversAldehydeRegion:Boolean(ir)&&irRangeCovered(ir!,V12_CONFIG.aldehydeIr.rangeCm1[0],V12_CONFIG.aldehydeIr.rangeCm1[1]),nitrogenAllowed:plan.nitrogenEvidence?.mode==='EVIDENCE',...(ir?{irImage:{isImage:Boolean(ir.digitizedFromImage||ir.sourceType==='IMAGE_EXPERIMENTAL'||ir.sourceType==='IMAGE_DIGITIZED'),calibrationTrusted:irCalibrationTrusted(ir,V12_CONFIG.conjugatedCarbonylIr.rangeCm1[0],V12_CONFIG.conjugatedCarbonylIr.rangeCm1[1])}}:{})}:undefined;
  const outcome=await generateForCompositions({userFormula:plan.userFormula,composition:plan.composition??null,hints,constraintEvidence,
   plausibility:buildPlausibilityEvidence({observations:plan.observations,userFormula:plan.userFormula,nitrogenEvidence:plan.nitrogenEvidence?.mode==='EVIDENCE'}),
   sharedPool:options.timeMs!==undefined||options.maxStates!==undefined,

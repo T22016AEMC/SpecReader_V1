@@ -69,6 +69,8 @@ export interface InventorySignalSummary {
   classes: ShiftClassId[];
   singletRuleApplied: boolean;
   equivalenceRequired: boolean;
+  /** v1.2.1 (B3): a vinyl H count of this signal exists only because of the extended window (IR conjugated C=O). */
+  vinylRelaxed?: boolean;
 }
 /** One way to read the integrals: integer ratio × k (+ unobserved exchangeable H) = the formula's hydrogens. */
 export interface InventoryCombination {k: number; extraExchangeable: number; ratio: number[]; ratioSum: number}
@@ -100,6 +102,8 @@ export interface AtomInventoryInput {
   ir?: IrAldehydeContext;
   /** N-specific evidence exists (opens N_CH, pyridine and N as exchangeable-atom element). */
   nitrogenAllowed?: boolean;
+  /** v1.2.1 (B3): the =CH2 / =CH shift windows apply (the no-formula path only; a user formula keeps the v1.2.0 range). */
+  vinylWindows?: boolean;
 }
 
 // ------------------------------------------------------------------------------------------------ ring patterns
@@ -231,11 +235,12 @@ export function buildAtomInventory(input: AtomInventoryInput): AtomInventoryResu
   const bump = (kind: VoidKind, reason: string) => { const key = `${kind}|${reason}`; const old = voided.get(key); if (old) old.count++; else voided.set(key, {kind, reason, count: 1}); };
   const result: AtomInventoryResult = {...base, status: 'BUILT', kCombinations, ratioSum: S, signals: []};
   const classNotes: string[] = [];
-  const classified = signals.map(s => { const c = classifySignal(s, {solvent: input.solvent, formulaElements, nitrogenAllowed, ir}); classNotes.push(...c.notes); return c; });
+  const classified = signals.map(s => { const c = classifySignal(s, {solvent: input.solvent, formulaElements, nitrogenAllowed, ir, vinylWindows: input.vinylWindows}); classNotes.push(...c.notes); return c; });
   const singletClean = signals.map((s, i) => s.multiplicity === 's' && !s.broad && signals.every((o, j) => j === i || Math.abs(o.shiftPpm - s.shiftPpm) > cfg.singletOverlapPpm));
   signals.forEach((s, i) => result.signals.push({
     observationId: s.observationId, shiftPpm: s.shiftPpm, relativeIntegral: s.relativeIntegral, ratio: ratio[i], multiplicity: s.multiplicity, broad: s.broad,
     classes: [...new Set(classified[i].matches.map(m => m.classId))], singletRuleApplied: singletClean[i], equivalenceRequired: !isRelaxed(s),
+    ...(classified[i].matches.some(m => m.relaxed) ? {vinylRelaxed: true} : {}),
   }));
   if (!kCombinations.length) {
     result.reason = `分子式 H=${H} 與積分的整數比總和 S=${S} 不相容：沒有 k∈1…${cfg.maxK}、額外可交換 H∈0…${cfg.maxExtraExchangeable} 使 H − e = k·S`;
@@ -274,7 +279,7 @@ export function buildAtomInventory(input: AtomInventoryInput): AtomInventoryResu
           continue;
         }
         const elements: ('C' | 'O' | 'N')[] = def.exchangeable ? exchangeElements() : ['C'];
-        for (const element of elements) for (const h of def.hPerAtom) {
+        for (const element of elements) for (const h of m.hPerAtom ?? def.hPerAtom) {
           if (n % h !== 0) continue;
           const key = `${element}|${h}|${def.exchangeable ? 'x' : 'c'}`;
           const o = merged.get(key);

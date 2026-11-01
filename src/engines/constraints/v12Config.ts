@@ -13,6 +13,12 @@ export interface ShiftClassDef {
   hPerAtom: number[];
   hybrid: Hybrid;
   exchangeable: boolean;
+  /**
+   * v1.2.1 (B3, no-formula path only): shift windows per H count. The H count h is allowed at a shift inside `base`; inside `extended` only when the IR shows a
+   * conjugated C=O (IrAldehydeContext.conjugatedCarbonyl === true). A class with windows is used instead of `rangePpm` / `hPerAtom` while the windows are active.
+   * 工程判斷，未查證 (engineering judgement, not verified): every window below.
+   */
+  hPerAtomWindows?: {h: number; base: [number, number]; extended?: [number, number]}[];
   /** Heteroatom the carbon is bound to (informs applicability only: the class needs that element in the formula). */
   heteroatom?: 'O' | 'N';
   basis: string;
@@ -141,7 +147,11 @@ export const V12_CONFIG = {
   // ---------------------------------------------------------------- shift classes (D5)
   shiftClasses: [
     {id: 'ARO_CH', rangePpm: [6.3, 8.5], hPerAtom: [1], hybrid: 'AR', exchangeable: false, basis: '芳香 CH；上限沿用 h1AromaticRange、下限沿用 graphSearchHints'},
-    {id: 'VINYL_CH', rangePpm: [4.5, 7.5], hPerAtom: [1, 2], hybrid: 'SP2', exchangeable: false, basis: '烯基 CH／=CH2（D5：4.5–7.5；與 ARO_CH 重疊的區段兩種解讀都保留）'},
+    {
+      id: 'VINYL_CH', rangePpm: [4.5, 7.5], hPerAtom: [1, 2], hybrid: 'SP2', exchangeable: false, basis: '烯基 CH／=CH2（D5：4.5–7.5；與 ARO_CH 重疊的區段兩種解讀都保留）',
+      // v1.2.1 B3: =CH2 4.5–6.0 (6.0–6.5 with a conjugated C=O), =CH 4.5–7.5 (7.5–7.8 with a conjugated C=O). 工程判斷，未查證
+      hPerAtomWindows: [{h: 2, base: [4.5, 6.0], extended: [6.0, 6.5]}, {h: 1, base: [4.5, 7.5], extended: [7.5, 7.8]}],
+    },
     {id: 'ALDEHYDE', rangePpm: [9.0, 10.5], hPerAtom: [1], hybrid: 'SP2', exchangeable: false, basis: '醛基 H；需要 IR 在 1680–1740 cm-1 有強 C=O（D5）'},
     {id: 'O_CH', rangePpm: [3.2, 5.0], hPerAtom: [1, 2, 3], hybrid: 'SP3', exchangeable: false, heteroatom: 'O', basis: '接 O 的 sp3 碳（OCH3 3.2–4.0、OCH2 3.4–4.5、OCH 3.5–5.0）'},
     {id: 'N_CH', rangePpm: [2.2, 3.8], hPerAtom: [1, 2, 3], hybrid: 'SP3', exchangeable: false, heteroatom: 'N', basis: '接 N 的 sp3 碳'},
@@ -159,6 +169,14 @@ export const V12_CONFIG = {
   },
   /** D5: the ALDEHYDE reading needs a strong C=O band in this window when the IR covers it. */
   aldehydeIr: {rangeCm1: [1680, 1740] as [number, number], strongRelativeIntensity: 0.5},
+  /**
+   * v1.2.1 B4: a candidate with a carbonyl class (engines/scientificEngines/carbonylClasses.ts) whose windows have no strong IR band, on an image IR whose calibration is trusted and
+   * whose trace covers the windows, gets a deduction entry (compatibility 0, weight = weight × irDataQuality; never a rejection).
+   * 工程判斷，未查證 (engineering judgement, not verified, not calibrated): weight, strongRelativeIntensity, minCurvePoints, minUserCalibrationPoints and the 0.5 % residual limit (AXIS_CALIBRATION_CONFIG).
+   */
+  irMissingBand: {weight: 0.8, strongRelativeIntensity: 0.5, minCurvePoints: 50, minUserCalibrationPoints: 3},
+  /** v1.2.1 B3: a conjugated C=O is read from a band with at least this share of the strongest band in this window. 工程判斷，未查證 (window and share). */
+  conjugatedCarbonylIr: {rangeCm1: [1630, 1735] as [number, number], strongRelativeIntensity: 0.5},
 
   // ---------------------------------------------------------------- aromatic ring templates (D4)
   /** Rings (a fused pair counts 2) that the templates may use for the aromatic CH of one alternative. */
