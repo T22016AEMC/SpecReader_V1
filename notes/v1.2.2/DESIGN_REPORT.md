@@ -155,7 +155,7 @@
 標題；「核心原則」說明；`生成 Gemini 輔助科學評論`（呼叫伺服器端，可選）；Markdown 報告預覽（最多 420 px、內部捲動）；`複製 Markdown 報告`、`下載完整 JSON 證據包`、`列印報告`、`完成`。**無測試用標記，E2E 沒有測試這個視窗。** 會不會用到：中。
 
 ## 1.9 測試用標記總表（65 個）與新位置
-自動核對清單：`notes/v1.2.2/testids.baseline.json`（由 `node notes/v1.2.2/tools/check-testids.mjs --write` 從 v1.2.1 原始碼產生，附檔案與行號）；實作期間每個階段執行 `node notes/v1.2.2/tools/check-testids.mjs`，**只要有任何一個消失就失敗**。
+自動核對清單：`notes/v1.2.2/testids.baseline.json`（由 `node scripts/check-testids.mjs --write` 從 v1.2.1 原始碼產生，附檔案與行號）；實作期間每個階段執行 `node notes/v1.2.2/tools/check-testids.mjs`，**只要有任何一個消失就失敗**。
 
 | 測試用標記（群組） | 現在所在 | 新位置 | E2E 是否要求「看得見」 |
 |---|---|---|---|
@@ -685,4 +685,4 @@ Tailwind v4 產生的工具類使用 CSS 變數（建置結果可見 `.bg-slate-
 - 第 2 版（停點 1）：依規劃者審核更新本報告與 8 張草圖（`tools/build-mockup.mjs` 重新產生）；實作 P0（`src/ui/*.ts`、`tests/ui/*.test.ts`、`scripts/check-testids.mjs`）與 P1（樣式變數、標題列、`<main>` 單一捲動區）。沒有 push、沒有開 PR、沒有改 `src/engines`、`src/workers`、`src/types`。
 - 閱讀：`App.tsx` 全部畫面段落、`CompositionPanel`、`ReasoningPanel`、`PeakObservationTable`、`IRCalibrationTools`、`PiecewiseCalibrationControls`、`CalibrationCheckTable`、`ReportExportModal`、`SpectrumViewer`／Mode B 的標題與控制項、`spectrumParser` 的校正判斷、`nmrEngine` 的預設頻率、11 個 E2E 規格；CheMScutter 的 `App.tsx`／Logo／`index.html`（唯讀）；兩個 logo PNG（取樣色票）。
 - 實跑：用合成樣本 `tests/fixtures/v121/S1.json` 經 `executeSixStepAnalysis` 跑一次，取得結果資料的形狀與數字；草圖用 Chrome 在 1280×720 與 1920×1080 截圖檢查（沒有 JavaScript 錯誤；捲軸可見；固定區 188 px）。
-- 產出：`DESIGN_REPORT.md`、`mockup/`（8 張＋index）、`testids.baseline.json`、`tools/check-testids.mjs`（自動比對 65 個測試用標記）、`tools/build-mockup.mjs`（重新產生草圖）。
+- 產出：`DESIGN_REPORT.md`、`mockup/`（8 張＋index）、`testids.baseline.json`、`scripts/check-testids.mjs`（由 tools/ 轉入；自動比對 65 個測試用標記）、`tools/build-mockup.mjs`（重新產生草圖）。

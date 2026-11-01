@@ -1,14 +1,14 @@
 // Compares the data-testid values found in src/**/*.tsx with notes/v1.2.2/testids.baseline.json (taken from origin/main = v1.2.1).
-// Usage:  node notes/v1.2.2/tools/check-testids.mjs            -> exit 1 if any baseline id has disappeared
-//         node notes/v1.2.2/tools/check-testids.mjs --write    -> (re)write the baseline from the current src (only on the v1.2.1 commit)
+// Usage:  node scripts/check-testids.mjs            -> exit 1 if any baseline id has disappeared
+//         node scripts/check-testids.mjs --write    -> (re)write the baseline from the current src (only on the v1.2.1 commit)
 // Dynamic ids written as template literals are stored with their static prefix and a `*`, e.g. reasoning-step-*.
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const root = path.resolve(here, '..', '..', '..');
-const baselineFile = path.join(here, '..', 'testids.baseline.json');
+const root = path.resolve(here, '..');
+const baselineFile = path.join(root, 'notes', 'v1.2.2', 'testids.baseline.json');
 const posix = p => p.split(path.sep).join('/');
 const walk = d => fs.readdirSync(d, {withFileTypes: true}).flatMap(e => e.isDirectory() ? walk(path.join(d, e.name)) : /\.tsx$/.test(e.name) ? [path.join(d, e.name)] : []);
 
