@@ -27,7 +27,7 @@ beforeAll(async () => {
   const t = r.reasoningTrace!;
   fgProps = {
     hasResult: true,
-    groups: r.modeAReport!.constraints.functionalGroups,
+    groups: r.modeAReport!.constraints.functionalGroups ?? [],
     irFindings: r.modeAReport!.irFindings,
     evidenceList: r.spectrumEvidenceList,
     observations: t.observations as unknown as ObservationLike[],
