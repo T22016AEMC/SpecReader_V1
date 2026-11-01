@@ -21,3 +21,17 @@ export async function openTab(page: Page, name: ResultTab): Promise<void> {
   const tab = page.getByRole('tab', {name});
   if ((await tab.getAttribute('aria-selected')) !== 'true') await tab.click();
 }
+
+/**
+ * v1.2.2 (P5): the 圖譜官能基 tab lists one folded row per functional group, and groups with too little IR evidence sit behind one folded notice.
+ * This helper ONLY opens those folds (the notice, then every row); it never reads, asserts or edits anything. Safe to call when everything is already open.
+ */
+export async function openFgRows(page: Page): Promise<void> {
+  const panel = page.getByTestId('result-panel-fg');
+  const notice = panel.getByTestId('fg-hidden-groups');
+  if ((await notice.count()) > 0 && !(await notice.evaluate((d) => (d as HTMLDetailsElement).open))) await notice.locator('summary').first().click();
+  for (const row of await panel.getByTestId('fg-group').all()) {
+    const details = row.locator('details').first();
+    if (!(await details.evaluate((d) => (d as HTMLDetailsElement).open))) await details.locator('summary').click();
+  }
+}

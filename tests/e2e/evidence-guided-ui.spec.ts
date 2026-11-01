@@ -1,5 +1,5 @@
 import {test,expect} from '@playwright/test';
-import {openRow} from './helpers/ui';
+import {openFgRows,openRow} from './helpers/ui';
 test('IR 真實取樣的寬窄自動判斷、人工覆寫及非機率證據顯示',async({page})=>{
  test.setTimeout(90000);let workers=0;page.on('worker',()=>workers++);const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/');
  const data='wavenumber,Absorbance\n'+Array.from({length:401},(_,i)=>`${3100+i},${Math.exp(-.5*((3100+i-3300)/12)**2)}`).join('\n');
@@ -8,7 +8,7 @@ test('IR 真實取樣的寬窄自動判斷、人工覆寫及非機率證據顯�
  const row=page.getByTestId('observation-row').filter({has:page.locator('input[value="3300"]')}).first(),shape=row.getByRole('combobox');await openRow(row);await expect(shape).toHaveValue('sharp');await expect(shape.locator('option:not([hidden])')).toHaveText(['窄峰（Narrow band）','寬峰（Broad band）']);
  await shape.selectOption('broad');await row.getByLabel(/備註/).fill('人工外觀覆寫');await expect(shape).toHaveValue('broad');await expect(row.getByLabel(/寬峰起點|寬峰終點|峰寬/)).toHaveCount(0);expect(workers).toBe(0);
  await page.getByRole('button',{name:/^第 3 頁.*化學判讀/}).click();expect(workers).toBe(0);await page.getByRole('button',{name:'開始分析',exact:true}).click();await expect(page.getByTestId('analysis-control')).toHaveAttribute('data-result-current','true',{timeout:45000});expect(workers).toBe(1);
- await expect(page.getByText(/可信度\s*\d+%/)).toHaveCount(0);await expect(page.getByText('未提供確認（不等於缺失）',{exact:false}).filter({visible:true}).first()).toBeVisible();
+ await expect(page.getByText(/可信度\s*\d+%/)).toHaveCount(0);await openFgRows(page);await expect(page.getByText('未提供確認（不等於缺失）',{exact:false}).filter({visible:true}).first()).toBeVisible();
  await page.getByRole('button',{name:/^第 1 頁/}).click();await expect(page.getByTestId('observation-row').filter({has:page.locator('input[value="3300"]')}).first().getByRole('combobox')).toHaveValue('broad');expect(errors).toEqual([]);
 });
 test('MS、MSMS、ToF 實驗條件在光譜層級保存，峰列只記實測值',async({page})=>{

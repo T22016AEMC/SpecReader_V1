@@ -59,7 +59,7 @@ export function PredictionTab(p: PredictionTabProps) {
               <p className="text-[11px] text-slate-400">模型相容度不是機率（未校準；同一原始觀測僅計一次）。有界搜尋，資訊不足時不能確認完整結構。</p>
             </div>
             <div>
-              <p data-testid="evidence-method-note" className="text-[11px] text-slate-400">各峰的相容分：候選分子圖選出區間／環境知識，與實測峰型／寬度／伴隨峰比較；每原始峰只計一次。展開「支持與矛盾」看每個峰的結果。</p>
+              <p data-testid="evidence-method-note" className="text-[11px] text-slate-400">各峰的相容分：候選分子圖選出區間／環境知識，與實測峰型／寬度／伴隨峰比較；每原始峰只計一次。展開「支持與矛盾」看每個峰的結果；排名相近時，請到「診斷」頁對照跨譜驗證矩陣。</p>
             </div>
             {p.candidates.length === 0 ? (
               p.zeroCandidate
