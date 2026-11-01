@@ -1,4 +1,8 @@
-import {ReasoningPanel,CandidateReasoningDetails} from './components/ReasoningPanel';
+import {ReasoningPanel,CandidateReasoningDetails,progressLine} from './components/ReasoningPanel';
+import {AnalysisBar,ResultPanels,ResultTabBar,type ResultTabId} from './ui/ResultView';
+import {DataCheckBar,type IrVersionInfo} from './ui/DataCheckBar';
+import {InputSummaryTab,type InputSummaryRow} from './ui/InputSummaryTab';
+import {buildDataCheck} from './ui/dataCheck';
 import type {AnalysisProgress} from './engines/reasoning/types';
 import {MassExperimentConditions} from './components/MassExperimentConditions';
 import {emptyModeAState,executeAnalysisWorker,type ModeAResult} from './engines/analysisSession';
@@ -312,6 +316,8 @@ export default function App() {
     });
   const [autoDetectOnUpload, setAutoDetectOnUpload] = useState<boolean>(true);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  // 結果頁（第 3 頁）目前的分頁：分析完成回到「圖譜官能基」，分析中與被取消後停在「預測結構」
+  const [resultTab, setResultTab] = useState<ResultTabId>("fg");
   const [historyRecords, setHistoryRecords] = useState<AnalysisHistoryRecord[]>(
     []
   );
@@ -624,9 +630,9 @@ export default function App() {
   const modeAOrchestration=completedAnalysis?.result??emptyModeAState();
   const handleStartAnalysis=async()=>{
     if(analysisLock.current)return;
-    analysisLock.current=true;setAnalysisBusy(true);setAnalysisError(null);setAnalysisProgress(null);setCancelRequested(false);analysisAbort.current=new AbortController();setAnalysisRuns(n=>n+1);
+    analysisLock.current=true;setAnalysisBusy(true);setAnalysisError(null);setAnalysisProgress(null);setCancelRequested(false);analysisAbort.current=new AbortController();setAnalysisRuns(n=>n+1);setResultTab('pred');
     const key=currentInputKey,snapshot=structuredClone(spectra),extra=structuredClone(extraChemicalInput);
-    try{const result=await executeAnalysisWorker({spectra:snapshot,extraInput:extra},{signal:analysisAbort.current.signal,onProgress:p=>setAnalysisProgress(old=>({...old,...p,localStructures:p.localStructures??old?.localStructures}))});setCompletedAnalysis({result,key,spectra:result.inputSpectra??snapshot});}
+    try{const result=await executeAnalysisWorker({spectra:snapshot,extraInput:extra},{signal:analysisAbort.current.signal,onProgress:p=>setAnalysisProgress(old=>({...old,...p,localStructures:p.localStructures??old?.localStructures}))});setCompletedAnalysis({result,key,spectra:result.inputSpectra??snapshot});setResultTab(result.generationStatus?.code==='CANCELLED'?'pred':'fg');}
     catch(error){setAnalysisError(error instanceof Error?error.message:'分析執行失敗');}
     finally{analysisLock.current=false;setAnalysisBusy(false);analysisAbort.current=null;}
   };
@@ -750,6 +756,66 @@ export default function App() {
   // ============================================================================
   // 8. 事件處理函式：重置、載入範例、檔案上傳、訊號標記、座標校正
   // ============================================================================
+  // ============================================================================
+  // 結果頁（第 3 頁）的顯示資料：資料檢查、輸入摘要、分析列文字。只讀現有資料，不改任何分析。
+  // ============================================================================
+  // 資料檢查：分析結果仍是最新時用「分析當時的輸入快照」；資料已變更或尚未分析時用目前輸入
+  const dataCheck = useMemo(() => {
+    const base = completedAnalysis && !analysisStale ? completedAnalysis.spectra : spectra;
+    return buildDataCheck(
+      {
+        IR: base.IR,
+        "1H_NMR": base["1H_NMR"],
+        "13C_NMR": base["13C_NMR"],
+        MS: base.MS,
+        "MS/MS": auxSpectraMap["MS/MS"],
+        "ToF-SIMS": auxSpectraMap["ToF-SIMS"],
+      },
+      { stale: analysisStale }
+    );
+  }, [completedAnalysis, analysisStale, spectra, auxSpectraMap]);
+  const irSnapshot = completedAnalysis?.spectra.IR?.irAnalysisSnapshot;
+  const irVersionInfo: IrVersionInfo | null = irSnapshot
+    ? {
+        version: irSnapshot.settingsVersion,
+        signature: irSnapshot.curveSignature,
+        text: `IR 已使用設定 v${irSnapshot.settingsVersion} · ${irSnapshot.curvePoints} 個相對吸收數值／${irSnapshot.peakCount} 個峰 · ${irSnapshot.featureChanged ? "峰特徵已更新" : "設定已使用，峰特徵未實質改變"} · ${irSnapshot.previousRankingKey === rankedCandidates.map((c) => c.smiles).join("|") ? "證據不足以改變候選順序" : "候選順序已重新計算"}`,
+      }
+    : null;
+  const inputSummaryRows: InputSummaryRow[] = ALL_EXTENDED_MODALITIES.flatMap((m) => {
+    const spec = getSpectrumForModality(m.id);
+    if (!spec) return [];
+    const st = calibrationStatus(spec);
+    const isNmr = m.id === "1H_NMR" || m.id === "13C_NMR";
+    return [
+      {
+        key: m.id,
+        label: m.shortLabel,
+        fileName: spec.fileName,
+        peakCount: spec.peaks.length,
+        calibrationLabel: st.label,
+        calibrationDetail: st.detail,
+        level: st.level,
+        solvent: isNmr ? spec.nmrSolvent ?? "" : undefined,
+        frequencyMHz: m.id === "1H_NMR" ? spec.spectrometerFrequencyMHz ?? null : undefined,
+      },
+    ];
+  });
+  // 分析中與被取消後：「分析過程」卡在「預測結構」；分析完成後只放在「診斷」（同一個 data-testid 全頁只能出現一處）
+  const processInPred =
+    analysisBusy ||
+    completedAnalysis?.result.generationStatus?.code === "CANCELLED" ||
+    (!completedAnalysis && !!analysisProgress);
+  const analysisStatusText = analysisError
+    ? "分析失敗；輸入已保留，舊結果供參考。"
+    : analysisStale
+      ? "資料已變更，請重新分析"
+      : completedAnalysis
+        ? completedAnalysis.result.generationStatus?.code === "CANCELLED"
+          ? "搜尋已取消，顯示保留的部分結果"
+          : "分析完成（使用已保存輸入快照）"
+        : "尚未分析；上傳與編輯不執行科學推論。";
+
   const handleResetToEmptyUnknownSample = () => {
     setActivePresetId("");
     setSpectra({});
@@ -1398,14 +1464,14 @@ export default function App() {
                 ).map((pg, idx) => {
                   const Icon = pg.icon;
                   const isCurrent = modeAPage === pg.id;
-                  const warnHere = pg.id === "PAGE_3_INTERPRETATION" && calibrationReminderInfo !== null;
+                  const warnHere = pg.id === "PAGE_3_INTERPRETATION" && (calibrationReminderInfo !== null || dataCheck.warnCount > 0);
                   return (
                     <React.Fragment key={pg.id}>
                       <button
                         type="button"
                         onClick={() => setModeAPage(pg.id)}
                         aria-current={isCurrent ? "step" : undefined}
-                        title={warnHere ? `${pg.hint}（${calibrationReminderInfo!.count} 張光譜尚未校正，仍可前往）` : pg.hint}
+                        title={warnHere ? `${pg.hint}（${calibrationReminderInfo ? `${calibrationReminderInfo.count} 張光譜尚未校正` : `資料檢查有 ${dataCheck.warnCount} 項 ⚠`}，仍可前往）` : pg.hint}
                         className={`flex items-center gap-2 whitespace-nowrap rounded-lg border px-3 py-1.5 text-left transition ${
                           isCurrent
                             ? "border-cyan-500 bg-cyan-950/70 text-cyan-100 shadow-sm"
@@ -1429,7 +1495,7 @@ export default function App() {
                         </span>
                         {warnHere && (
                           <span className="text-amber-300">
-                            ⚠<span className="sr-only">（尚有光譜未校正）</span>
+                            ⚠<span className="sr-only">{calibrationReminderInfo ? "（尚有光譜未校正）" : "（資料檢查有疑慮）"}</span>
                           </span>
                         )}
                       </button>
@@ -1471,6 +1537,44 @@ export default function App() {
           </div>
         )}
       </header>
+
+      {/* ===================================================================== */}
+      {/* 結果頁（第 3 頁）固定區：資料檢查一行、分析列＋分頁列。不隨內容捲動   */}
+      {/* ===================================================================== */}
+      {primaryMode === "MODE_A" && modeAPage === "PAGE_3_INTERPRETATION" && (
+        <div className="relative z-20 shrink-0 bg-slate-950" data-testid="result-fixed-zone">
+          {dataCheck.unprovided.length < 6 && (
+            <DataCheckBar check={dataCheck} irVersion={irVersionInfo} onGoCalibration={() => setModeAPage("PAGE_2_CALIBRATION")} />
+          )}
+          <div className="border-b border-slate-800 bg-slate-950">
+            <div className="mx-auto flex h-12 max-w-[1600px] items-center gap-4 px-4">
+              <AnalysisBar
+                runs={analysisRuns}
+                rdkit={completedAnalysis?.result.runtime?.rdkitAvailable ?? false}
+                resultCurrent={!!completedAnalysis && !analysisStale}
+                busy={analysisBusy}
+                cancelRequested={cancelRequested}
+                onStart={handleStartAnalysis}
+                onCancel={() => {
+                  setCancelRequested(true);
+                  analysisAbort.current?.abort();
+                }}
+                statusText={analysisStatusText}
+                progressText={analysisProgress ? progressLine(analysisProgress) : null}
+                error={analysisError}
+              />
+              <ResultTabBar
+                active={resultTab}
+                onChange={setResultTab}
+                badges={{
+                  candidates: completedAnalysis ? rankedCandidates.length : undefined,
+                  inputWarn: dataCheck.warnCount,
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ===================================================================== */}
       {/* 主內容區                                                              */}
@@ -2766,149 +2870,14 @@ export default function App() {
             {/* 第 3 頁：化學判讀與結構推論 (Interpretation)                    */}
             {/* =============================================================== */}
             {modeAPage === "PAGE_3_INTERPRETATION" && (
-              <div className="space-y-5">
-                <div className="rounded border border-cyan-600 p-3 text-sm" data-testid="analysis-control" data-analysis-runs={analysisRuns} data-worker-rdkit={completedAnalysis?.result.runtime?.rdkitAvailable??false} data-result-current={!!completedAnalysis&&!analysisStale}>
-                 <button type="button" disabled={analysisBusy} onClick={handleStartAnalysis} className="rounded bg-cyan-600 px-5 py-2 font-bold disabled:opacity-50">{analysisBusy?'分析中…':'開始分析'}</button>{analysisBusy&&<button type="button" data-testid="analysis-cancel" disabled={cancelRequested} className="ml-2 rounded border border-amber-500 px-3 py-2 text-amber-300" onClick={()=>{setCancelRequested(true);analysisAbort.current?.abort();}}>{cancelRequested?'正在取消並保留部分結果…':'取消搜尋'}</button>}
-                 <span className="ml-3" role="status">{analysisBusy?`步驟 ${analysisProgress?.step??1}/6：${analysisProgress?.stage??'初始化本地化學工具'}`:analysisError?'分析失敗；輸入已保留，舊結果供參考。':analysisStale?'資料已變更，請重新分析':completedAnalysis?(completedAnalysis.result.generationStatus?.code==='CANCELLED'?'搜尋已取消，顯示保留的部分結果':'分析完成（使用已保存輸入快照）'):'尚未分析；上傳與編輯不執行科學推論。'}</span>
-                 {analysisError&&<p role="alert">{analysisError}</p>}
-                </div>
-                <ReasoningPanel trace={completedAnalysis?.result.reasoningTrace} progress={analysisProgress} busy={analysisBusy}/>
-                {completedAnalysis&&<>
-                <p data-testid="generation-status" data-code={modeAOrchestration.generationStatus?.code}>{modeAOrchestration.generationStatus?.message} {modeAOrchestration.generationStatus?.limits}</p>
-                <p className="text-xs text-slate-400">組成來源：{modeAOrchestration.generationStatus?.userFormula?`使用者指定 ${modeAOrchestration.generationStatus.userFormula}（完整候選硬限制）`:'未指定；不以前置猜測分子式限制搜尋'}；候選卡分子式由各自分子圖計算。</p>
+              <div className="space-y-3">
+                {/* 舊標題改成視覺隱藏（E2E 以這串文字確認已進入第 3 頁）；步驟列是唯一可見標題 */}
+                <h1 className="sr-only">化學判讀與結構推論（Interpretation）</h1>
+                <ResultPanels active={resultTab} panels={{
+                  fg: (<>
+                    {!completedAnalysis && <p className="rounded-xl border border-dashed border-slate-800 p-6 text-center text-xs text-slate-400">尚未分析。按上方「開始分析」後，這裡會列出圖譜上的官能基證據。</p>}
+                    {completedAnalysis&&<>
                 {!!modeAOrchestration.generationStatus?.partialHypotheses?.length&&<ul data-testid="local-structure-hypotheses" className="text-xs text-slate-300">{modeAOrchestration.generationStatus.partialHypotheses.map((h,i)=><li key={i}>{h}</li>)}</ul>}
-                {completedAnalysis&&<CompositionPanel result={completedAnalysis.result} stale={analysisStale}/>}
-                {/* 第 3 頁頂部工作列（與第 1、2 頁標記及校正工具完全分離） */}
-                <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-500/30 bg-slate-900/90 px-4 py-3">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="rounded bg-emerald-500 px-2 py-0.5 font-mono text-[11px] font-extrabold text-slate-950">
-                        MODE A · 第 3 頁
-                      </span>
-                      <h1 className="text-base font-bold text-slate-50">
-                        化學判讀與結構推論（Interpretation）— 官能基判讀、正反證據鏈與候選結構排名
-                      </h1>
-                    </div>
-                    <p className="mt-0.5 text-xs text-slate-300">
-                      讀取已校正之人工確認訊號、分子式及其他化學證據。每個判讀皆明確列出支持證據、反對證據、相關峰位、可信度與不確定性，絕不單憑單一孤立峰斷言唯一結構。
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setModeAPage("PAGE_1_SIGNAL_MARKING")}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-medium text-slate-200 hover:bg-slate-700"
-                    >
-                      <ArrowLeft className="h-3.5 w-3.5" />
-                      返回第 1 頁修改標記
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setModeAPage("PAGE_2_CALIBRATION")}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-medium text-slate-200 hover:bg-slate-700"
-                    >
-                      <Ruler className="h-3.5 w-3.5 text-amber-400" />
-                      返回第 2 頁重新校正
-                    </button>
-                  </div>
-                </div>
-
-                {/* 未校正訊號警告橫幅（未校正訊號保留顯示，但明確標示座標尚未確定，絕不假裝成可靠物理座標） */}
-                {bundle.uncalibratedSignals &&
-                  bundle.uncalibratedSignals.length > 0 && (
-                    <div className="rounded-xl border border-amber-500/50 bg-amber-950/30 p-4 flex flex-wrap items-center justify-between gap-3">
-                      <div className="flex items-start gap-3">
-                        <AlertTriangle className="h-5 w-5 shrink-0 text-amber-400 mt-0.5" />
-                        <div>
-                          <h3 className="text-xs font-bold text-amber-200">
-                            注意：偵測到 {bundle.uncalibratedSignals.length} 個尚未完成座標校正之原始像素標記（座標尚未確定，不假裝為物理座標納入自動比對）
-                          </h3>
-                          <div className="mt-1 flex flex-wrap gap-1.5">
-                            {bundle.uncalibratedSignals.map((u) => (
-                              <span
-                                key={`${u.modality}-${u.id}`}
-                                className="rounded border border-amber-500/40 bg-slate-950/90 px-2 py-0.5 font-mono text-[11px] text-amber-300"
-                              >
-                                [{u.modality}] px({u.pixelX ?? "?"},{" "}
-                                {u.pixelY ?? "?"}) — 座標尚未確定
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setModeAPage("PAGE_2_CALIBRATION")}
-                        className="rounded-lg bg-amber-500 px-3.5 py-1.5 text-xs font-extrabold text-slate-950 hover:bg-amber-400"
-                      >
-                        前往第 2 頁完成座標校正 →
-                      </button>
-                    </div>
-                  )}
-
-                {/* 量化結構約束與分子式收斂指標列 */}
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-                  <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-3">
-                    <div className="text-[11px] text-slate-400">
-                      使用者指定分子式
-                    </div>
-                    <div className="mt-1 font-mono text-base font-bold text-cyan-300">
-                      {bundle.userSuppliedFormula || "未指定（選填）；組成見各候選"}
-                    </div>
-                  </div>
-                  <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-3">
-                    <div className="text-[11px] text-slate-400">
-                      標稱分子量 (MW)
-                    </div>
-                    <div className="mt-1 font-mono text-base font-bold text-slate-100">
-                      {modeAReport.constraints.estimatedMolecularWeight
-                        ? `${modeAReport.constraints.estimatedMolecularWeight} Da`
-                        : "NOT PROVIDED"}
-                    </div>
-                  </div>
-                  <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-3">
-                    <div className="text-[11px] text-slate-400">
-                      不飽和度範圍 (IHD / DBE)
-                    </div>
-                    <div className="mt-1 font-mono text-base font-bold text-amber-300">
-                      {solvedConstraintSpace.unsaturationRange[0]} –{" "}
-                      {solvedConstraintSpace.unsaturationRange[1]}
-                    </div>
-                  </div>
-                  <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-3">
-                    <div className="text-[11px] text-slate-400">
-                      氮規則奇偶性 (N-Rule)
-                    </div>
-                    <div className="mt-1 font-mono text-base font-bold text-emerald-300">
-                      {modeAReport.constraints.nitrogenRuleParity || "UNKNOWN"}
-                    </div>
-                  </div>
-                  <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-3">
-                    <div className="text-[11px] text-slate-400">
-                      ¹H 積分 / ¹³C 環境數
-                    </div>
-                    <div className="mt-1 font-mono text-sm font-bold text-slate-100">
-                      {modeAReport.constraints.estimatedProtonCount !== undefined
-                        ? `${modeAReport.constraints.estimatedProtonCount}H`
-                        : "—"}{" "}
-                      /{" "}
-                      {modeAReport.constraints
-                        .estimatedCarbonEnvironmentCount !== undefined
-                        ? `${modeAReport.constraints.estimatedCarbonEnvironmentCount}C`
-                        : "—"}
-                    </div>
-                  </div>
-                  <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-3">
-                    <div className="text-[11px] text-slate-400">
-                      芳環取代型態
-                    </div>
-                    <div className="mt-1 font-mono text-xs font-bold text-violet-300">
-                      {modeAReport.constraints.aromaticSubstitutionPattern ||
-                        "UNKNOWN / NONE"}
-                    </div>
-                  </div>
-                </div>
-
                 {/* =========================================================== */}
                 {/* 第一部分：官能基與化學環境判讀（顯示支持證據、反對證據、相關峰位、可信度、不確定性） */}
                 {/* =========================================================== */}
@@ -3264,10 +3233,83 @@ export default function App() {
                     </div>
                   </div>
                 </div>
-
-                {/* =========================================================== */}
-                {completedAnalysis?.spectra.IR?.irAnalysisSnapshot&&<div className="text-xs text-amber-200" data-testid="ir-analysis-version" data-version={completedAnalysis.spectra.IR!.irAnalysisSnapshot!.settingsVersion} data-curve-signature={completedAnalysis.spectra.IR!.irAnalysisSnapshot!.curveSignature}>IR 已使用設定 v{completedAnalysis.spectra.IR!.irAnalysisSnapshot!.settingsVersion} · {completedAnalysis.spectra.IR!.irAnalysisSnapshot!.curvePoints} 個相對吸收數值／{completedAnalysis.spectra.IR!.irAnalysisSnapshot!.peakCount} 個峰 · {completedAnalysis.spectra.IR!.irAnalysisSnapshot!.featureChanged?'峰特徵已更新':'設定已使用，峰特徵未實質改變'} · {completedAnalysis.spectra.IR!.irAnalysisSnapshot!.previousRankingKey===rankedCandidates.map(c=>c.smiles).join('|')?'證據不足以改變候選順序':'候選順序已重新計算'}</div>}
                 {!spectra.IR&&!spectra['1H_NMR']&&!spectra['13C_NMR']&&(spectra.MS||auxSpectraMap['MS/MS']||auxSpectraMap['ToF-SIMS'])&&<p className="text-xs text-amber-200">本版本可利用 MS 質量、可能分子式及碎片資訊提供結構限制，但尚無法僅憑 MS 資料可靠確定完整分子結構，建議搭配 IR 或 NMR。</p>}
+                    </>}
+                    <div className="flex justify-end">
+                      <button type="button" onClick={() => setResultTab("pred")} className="inline-flex items-center gap-1.5 rounded-lg bg-cyan-600 px-4 py-2 text-sm font-bold text-white hover:bg-cyan-500">看預測結構 <ArrowRight className="h-4 w-4" /></button>
+                    </div>
+                  </>),
+                  pred: (<>
+                    <div>
+                      <button type="button" onClick={() => setResultTab("fg")} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-medium text-slate-200 hover:bg-slate-700"><ArrowLeft className="h-3.5 w-3.5" /> 回圖譜官能基</button>
+                    </div>
+                    {processInPred && <ReasoningPanel trace={completedAnalysis?.result.reasoningTrace} progress={analysisProgress} busy={analysisBusy}/>}
+                    {!completedAnalysis && !analysisBusy && <p className="rounded-xl border border-dashed border-slate-800 p-6 text-center text-xs text-slate-400">尚未分析。按上方「開始分析」後，這裡會列出候選結構。</p>}
+                    {completedAnalysis&&<>
+                <p data-testid="generation-status" data-code={modeAOrchestration.generationStatus?.code}>{modeAOrchestration.generationStatus?.message} {modeAOrchestration.generationStatus?.limits}</p>
+                <p className="text-xs text-slate-400">組成來源：{modeAOrchestration.generationStatus?.userFormula?`使用者指定 ${modeAOrchestration.generationStatus.userFormula}（完整候選硬限制）`:'未指定；不以前置猜測分子式限制搜尋'}；候選卡分子式由各自分子圖計算。</p>
+                {/* 量化結構約束與分子式收斂指標列 */}
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+                  <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-3">
+                    <div className="text-[11px] text-slate-400">
+                      使用者指定分子式
+                    </div>
+                    <div className="mt-1 font-mono text-base font-bold text-cyan-300">
+                      {bundle.userSuppliedFormula || "未指定（選填）；組成見各候選"}
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-3">
+                    <div className="text-[11px] text-slate-400">
+                      標稱分子量 (MW)
+                    </div>
+                    <div className="mt-1 font-mono text-base font-bold text-slate-100">
+                      {modeAReport.constraints.estimatedMolecularWeight
+                        ? `${modeAReport.constraints.estimatedMolecularWeight} Da`
+                        : "NOT PROVIDED"}
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-3">
+                    <div className="text-[11px] text-slate-400">
+                      不飽和度範圍 (IHD / DBE)
+                    </div>
+                    <div className="mt-1 font-mono text-base font-bold text-amber-300">
+                      {solvedConstraintSpace.unsaturationRange[0]} –{" "}
+                      {solvedConstraintSpace.unsaturationRange[1]}
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-3">
+                    <div className="text-[11px] text-slate-400">
+                      氮規則奇偶性 (N-Rule)
+                    </div>
+                    <div className="mt-1 font-mono text-base font-bold text-emerald-300">
+                      {modeAReport.constraints.nitrogenRuleParity || "UNKNOWN"}
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-3">
+                    <div className="text-[11px] text-slate-400">
+                      ¹H 積分 / ¹³C 環境數
+                    </div>
+                    <div className="mt-1 font-mono text-sm font-bold text-slate-100">
+                      {modeAReport.constraints.estimatedProtonCount !== undefined
+                        ? `${modeAReport.constraints.estimatedProtonCount}H`
+                        : "—"}{" "}
+                      /{" "}
+                      {modeAReport.constraints
+                        .estimatedCarbonEnvironmentCount !== undefined
+                        ? `${modeAReport.constraints.estimatedCarbonEnvironmentCount}C`
+                        : "—"}
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-3">
+                    <div className="text-[11px] text-slate-400">
+                      芳環取代型態
+                    </div>
+                    <div className="mt-1 font-mono text-xs font-bold text-violet-300">
+                      {modeAReport.constraints.aromaticSubstitutionPattern ||
+                        "UNKNOWN / NONE"}
+                    </div>
+                  </div>
+                </div>
                 {/* 第二部分：候選結構生成、正反證據鏈與排序 (Candidate Structures) */}
                 {/* =========================================================== */}
                 <div className="rounded-xl border border-slate-800 bg-slate-900/90 p-4 space-y-4">
@@ -3458,7 +3500,22 @@ export default function App() {
                     </div>
                   )}
                 </div>
-
+                    </>}
+                  </>),
+                  formula: (<>
+                    {!completedAnalysis && <p className="rounded-xl border border-dashed border-slate-800 p-6 text-center text-xs text-slate-400">尚未分析。分析後，這裡會列出分子式假設與搜尋計畫。</p>}
+                    {completedAnalysis&&<CompositionPanel result={completedAnalysis.result} stale={analysisStale}/>}
+                  </>),
+                  input: (<InputSummaryTab rows={inputSummaryRows} unprovidedText={dataCheck.unprovidedText} onGoPage1={() => setModeAPage("PAGE_1_SIGNAL_MARKING")} onGoPage2={() => setModeAPage("PAGE_2_CALIBRATION")} />),
+                  diag: (<>
+                    {!processInPred && <ReasoningPanel trace={completedAnalysis?.result.reasoningTrace} progress={analysisProgress} busy={analysisBusy}/>}
+                    <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/80 p-3">
+                      <span className="text-xs font-bold text-slate-100">匯出</span>
+                      <button type="button" onClick={() => setIsExportModalOpen(true)} className="rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-200 hover:bg-slate-700">開啟匯出視窗</button>
+                      <span className="text-[11px] text-slate-400">視窗內可複製 Markdown 報告、下載完整 JSON 證據包、列印報告。</span>
+                    </div>
+                    {!completedAnalysis && <p className="rounded-xl border border-dashed border-slate-800 p-6 text-center text-xs text-slate-400">尚未分析。分析後，這裡會列出驗證矩陣與可追溯證據。</p>}
+                    {completedAnalysis&&<>
                 {/* =========================================================== */}
                 {/* 第三部分：跨光譜一致性驗證矩陣 (支援全 6 種光譜模態)             */}
                 {/* =========================================================== */}
@@ -3584,7 +3641,6 @@ export default function App() {
                     </div>
                   </div>
                 )}
-
                 {/* =========================================================== */}
                 {/* 第四部分：Mode A 可追溯證據推理鏈總覽 (Evidence Traceability Chain) */}
                 {/* =========================================================== */}
@@ -3681,7 +3737,6 @@ export default function App() {
                     </div>
                   </div>
                 )}
-
                 {/* 跨模態共識與資料不確定性紀錄 */}
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-4">
@@ -3705,7 +3760,9 @@ export default function App() {
                     </ul>
                   </div>
                 </div>
-                </>}
+                    </>}
+                  </>),
+                }} />
               </div>
             )}
           </div>
