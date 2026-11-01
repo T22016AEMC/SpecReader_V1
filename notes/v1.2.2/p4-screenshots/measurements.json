@@ -1,0 +1,456 @@
+[
+ {
+  "name": "[圖譜官能基] no horizontal scroll",
+  "value": "1280 <= 1280",
+  "ok": true
+ },
+ {
+  "name": "[圖譜官能基] document does not scroll by itself",
+  "value": "720 vs 720",
+  "ok": true
+ },
+ {
+  "name": "[圖譜官能基] <main> scrollbar width >= 12",
+  "value": 14,
+  "ok": true
+ },
+ {
+  "name": "[圖譜官能基] vertical scrollers outside <main>",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[圖譜官能基] vertical scrollers inside <main>",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[圖譜官能基] visible text with 3+ decimals (A8)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[圖譜官能基] no 可信度 NN%",
+  "value": false,
+  "ok": true
+ },
+ {
+  "name": "[圖譜官能基] template sentence \"candidate-method\" count <= 1",
+  "value": 0,
+  "ok": true
+ },
+ {
+  "name": "[圖譜官能基] template sentence \"single-peak\" count <= 1",
+  "value": 1,
+  "ok": true
+ },
+ {
+  "name": "[圖譜官能基] template sentence \"shared-observation\" count <= 1",
+  "value": 1,
+  "ok": true
+ },
+ {
+  "name": "[圖譜官能基] details[open] (all / effective)",
+  "value": {
+   "all": 0,
+   "effective": 0,
+   "ids": []
+  },
+  "ok": null
+ },
+ {
+  "name": "[預測結構] no horizontal scroll",
+  "value": "1280 <= 1280",
+  "ok": true
+ },
+ {
+  "name": "[預測結構] document does not scroll by itself",
+  "value": "720 vs 720",
+  "ok": true
+ },
+ {
+  "name": "[預測結構] <main> scrollbar width >= 12",
+  "value": 14,
+  "ok": true
+ },
+ {
+  "name": "[預測結構] vertical scrollers outside <main>",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[預測結構] vertical scrollers inside <main>",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[預測結構] visible text with 3+ decimals (A8)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[預測結構] no 可信度 NN%",
+  "value": false,
+  "ok": true
+ },
+ {
+  "name": "[預測結構] template sentence \"candidate-method\" count <= 1",
+  "value": 1,
+  "ok": true
+ },
+ {
+  "name": "[預測結構] template sentence \"single-peak\" count <= 1",
+  "value": 0,
+  "ok": true
+ },
+ {
+  "name": "[預測結構] template sentence \"shared-observation\" count <= 1",
+  "value": 0,
+  "ok": true
+ },
+ {
+  "name": "[預測結構] details[open] (all / effective)",
+  "value": {
+   "all": 0,
+   "effective": 0,
+   "ids": []
+  },
+  "ok": null
+ },
+ {
+  "name": "[分子式與搜尋] no horizontal scroll",
+  "value": "1280 <= 1280",
+  "ok": true
+ },
+ {
+  "name": "[分子式與搜尋] document does not scroll by itself",
+  "value": "720 vs 720",
+  "ok": true
+ },
+ {
+  "name": "[分子式與搜尋] <main> scrollbar width >= 12",
+  "value": 14,
+  "ok": true
+ },
+ {
+  "name": "[分子式與搜尋] vertical scrollers outside <main>",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[分子式與搜尋] vertical scrollers inside <main>",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[分子式與搜尋] visible text with 3+ decimals (A8)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[分子式與搜尋] no 可信度 NN%",
+  "value": false,
+  "ok": true
+ },
+ {
+  "name": "[分子式與搜尋] template sentence \"candidate-method\" count <= 1",
+  "value": 0,
+  "ok": true
+ },
+ {
+  "name": "[分子式與搜尋] template sentence \"single-peak\" count <= 1",
+  "value": 0,
+  "ok": true
+ },
+ {
+  "name": "[分子式與搜尋] template sentence \"shared-observation\" count <= 1",
+  "value": 0,
+  "ok": true
+ },
+ {
+  "name": "[分子式與搜尋] details[open] (all / effective)",
+  "value": {
+   "all": 5,
+   "effective": 0,
+   "ids": []
+  },
+  "ok": null
+ },
+ {
+  "name": "[輸入與校正] no horizontal scroll",
+  "value": "1280 <= 1280",
+  "ok": true
+ },
+ {
+  "name": "[輸入與校正] document does not scroll by itself",
+  "value": "720 vs 720",
+  "ok": true
+ },
+ {
+  "name": "[輸入與校正] <main> scrollbar width >= 12",
+  "value": 14,
+  "ok": true
+ },
+ {
+  "name": "[輸入與校正] vertical scrollers outside <main>",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[輸入與校正] vertical scrollers inside <main>",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[輸入與校正] visible text with 3+ decimals (A8)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[輸入與校正] no 可信度 NN%",
+  "value": false,
+  "ok": true
+ },
+ {
+  "name": "[輸入與校正] template sentence \"candidate-method\" count <= 1",
+  "value": 0,
+  "ok": true
+ },
+ {
+  "name": "[輸入與校正] template sentence \"single-peak\" count <= 1",
+  "value": 0,
+  "ok": true
+ },
+ {
+  "name": "[輸入與校正] template sentence \"shared-observation\" count <= 1",
+  "value": 0,
+  "ok": true
+ },
+ {
+  "name": "[輸入與校正] details[open] (all / effective)",
+  "value": {
+   "all": 0,
+   "effective": 0,
+   "ids": []
+  },
+  "ok": null
+ },
+ {
+  "name": "[診斷] no horizontal scroll",
+  "value": "1280 <= 1280",
+  "ok": true
+ },
+ {
+  "name": "[診斷] document does not scroll by itself",
+  "value": "720 vs 720",
+  "ok": true
+ },
+ {
+  "name": "[診斷] <main> scrollbar width >= 12",
+  "value": 14,
+  "ok": true
+ },
+ {
+  "name": "[診斷] vertical scrollers outside <main>",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[診斷] vertical scrollers inside <main>",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[診斷] visible text with 3+ decimals (A8)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "[診斷] no 可信度 NN%",
+  "value": false,
+  "ok": true
+ },
+ {
+  "name": "[診斷] template sentence \"candidate-method\" count <= 1",
+  "value": 0,
+  "ok": true
+ },
+ {
+  "name": "[診斷] template sentence \"single-peak\" count <= 1",
+  "value": 0,
+  "ok": true
+ },
+ {
+  "name": "[診斷] template sentence \"shared-observation\" count <= 1",
+  "value": 0,
+  "ok": true
+ },
+ {
+  "name": "[診斷] details[open] (all / effective)",
+  "value": {
+   "all": 1,
+   "effective": 1,
+   "ids": [
+    "local-structure-plan"
+   ]
+  },
+  "ok": null
+ },
+ {
+  "name": "fg + pred: no details[open] (effective)",
+  "value": [
+   0,
+   0
+  ],
+  "ok": true
+ },
+ {
+  "name": "formula tab: composition panel closed (effective open = 0)",
+  "value": 0,
+  "ok": true
+ },
+ {
+  "name": "input tab: peak tables closed (effective open = 0)",
+  "value": 0,
+  "ok": true
+ },
+ {
+  "name": "A16: first function-group row visible without scrolling (1280x720)",
+  "value": {
+   "zoneBottom": 198,
+   "firstTop": 358,
+   "firstBottom": 392,
+   "innerH": 720,
+   "shown": 8,
+   "hiddenN": 4,
+   "notice": "另有 4 項 IR 證據不足的官能基，已隱藏（點開查看）",
+   "firstRow": "酚 O–H\n— 1 個 IR 峰：3350 cm⁻¹\n較支持\n寬峰",
+   "openedAfterHiddenOpen": null
+  },
+  "ok": true
+ },
+ {
+  "name": "fg tab: shown groups + hidden groups",
+  "value": {
+   "shown": 8,
+   "hidden": 4,
+   "total": 12
+  },
+  "ok": null
+ },
+ {
+  "name": "hidden groups are all visible after opening the notice",
+  "value": {
+   "visibleHidden": 4
+  },
+  "ok": true
+ },
+ {
+  "name": "keyboard: → → → ← switches tabs and moves focus",
+  "value": {
+   "k1": "true",
+   "k2": "true",
+   "k3": "true",
+   "focused": "result-tab-formula"
+  },
+  "ok": true
+ },
+ {
+  "name": "a11y: tablist 1, tab 5, tabpanel 5, selected 1",
+  "value": {
+   "tablist": 1,
+   "tabs": 5,
+   "panels": 5,
+   "selected": 1
+  },
+  "ok": true
+ },
+ {
+  "name": "formula tab: table rows shown and the 展開全部 button",
+  "value": {
+   "rows": 1,
+   "button": null
+  },
+  "ok": null
+ },
+ {
+  "name": "diag: 複製診斷摘要 → clipboard has the 7 sections, <= 120 lines",
+  "value": {
+   "lines": 46,
+   "sections": 7
+  },
+  "ok": true
+ },
+ {
+  "name": "diag: summary names the nitrogen and oxygen sources",
+  "value": {
+   "n": true,
+   "o": true
+  },
+  "ok": true
+ },
+ {
+  "name": "diag: 複製完整分子式表 → one line per hypothesis",
+  "value": {
+   "lines": 5,
+   "hasState": true
+  },
+  "ok": true
+ },
+ {
+  "name": "data-testid unique (except per-row / per-candidate markers)",
+  "value": [],
+  "ok": true
+ },
+ {
+  "name": "A13: buttons/links named 第 1/2/3 頁 are exactly the 3 step buttons",
+  "value": [
+   "第 1 頁訊號標記",
+   "第 2 頁座標校正",
+   "第 3 頁化學判讀與結構推論"
+  ],
+  "ok": true
+ },
+ {
+  "name": "exactly one role=status",
+  "value": [
+   "分析完成（使用已保存輸入快照）"
+  ],
+  "ok": true
+ },
+ {
+  "name": "print, tab 圖譜官能基: <main> does not clip",
+  "value": {
+   "mainOverflowY": "visible",
+   "mainClientH": 1028,
+   "mainScrollH": 1028
+  },
+  "ok": true
+ },
+ {
+  "name": "print, tab 預測結構: <main> does not clip",
+  "value": {
+   "mainOverflowY": "visible",
+   "mainClientH": 780,
+   "mainScrollH": 780
+  },
+  "ok": true
+ },
+ {
+  "name": "print, tab 診斷: <main> does not clip",
+  "value": {
+   "mainOverflowY": "visible",
+   "mainClientH": 2160,
+   "mainScrollH": 2160
+  },
+  "ok": true
+ },
+ {
+  "name": "no page errors / console errors",
+  "value": {
+   "pageErrors": [],
+   "consoleErrors": []
+  },
+  "ok": true
+ }
+]
