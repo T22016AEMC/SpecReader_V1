@@ -81,8 +81,8 @@ export function carbonylBandStatusOfIr(ir: ExperimentalSpectrumData | undefined)
 }
 
 /**
- * B4 ledger entries of one candidate: one `IR:carbonyl-missing:<class>` entry (compatibility 0, weight = irMissingBand.weight × irDataQuality) per carbonyl class the candidate has,
- * when no window of those classes holds a strong band (a band of at least irMissingBand.strongRelativeIntensity of the strongest band; a band inside the union of the windows is enough).
+ * B4 ledger entries of one candidate: at most ONE `IR:carbonyl-missing:<class>[+<class>…]` entry (compatibility 0, weight = irMissingBand.weight × irDataQuality; the id and the text name every
+ * carbonyl class the candidate has), when no window of those classes holds a strong band (a band of at least irMissingBand.strongRelativeIntensity of the strongest band; a band inside the union of the windows is enough).
  * Peak-table / numeric IR and an untrusted calibration produce nothing. The candidate is never rejected.
  */
 export function carbonylBandEntries(smiles: string, ir: ExperimentalSpectrumData, processed: ExperimentalSpectrumData): ScoreLedgerEntry[] {
@@ -95,12 +95,13 @@ export function carbonylBandEntries(smiles: string, ir: ExperimentalSpectrumData
   const present = known.some(p => p.y >= cfg.strongRelativeIntensity * strongest && classes.some(c => p.x >= c.windowCm1[0] && p.x <= c.windowCm1[1]));
   if (present) return [];
   const weight = cfg.weight * (processed.irDataQuality ?? .5);
-  return classes.map(c => {
-    const id = `IR:carbonyl-missing:${c.id}`;
-    const display = `IR（影像）：候選含${c.label}羰基，但在 ${c.windowCm1[0]}–${c.windowCm1[1]} cm⁻¹ 沒有強帶（校正可信、描線涵蓋該範圍）；已扣分，未剔除`;
-    return {
-      evidenceId: id, observationIds: [id], sourceModality: 'IR' as const, compatibility: 0, weight, contribution: 0, method: display, display,
-      limitations: [`缺羰基帶扣分：權重 ${cfg.weight}（未校準，工程判斷，未查證）× IR 資料品質；窗口 ${c.source}`, '只在影像 IR、校正可信、描線涵蓋窗口時啟用；非硬限制'],
-    };
-  });
+  // One item per candidate: the missing band is one fact (no strong band in the union of the windows), however many classes the candidate has (2C-0).
+  const id = `IR:carbonyl-missing:${classes.map(c => c.id).join('+')}`;
+  const labels = classes.map(c => c.label).join('、');
+  const windows = classes.length === 1 ? `${classes[0].windowCm1[0]}–${classes[0].windowCm1[1]}` : classes.map(c => `${c.label} ${c.windowCm1[0]}–${c.windowCm1[1]}`).join('、');
+  const display = `IR（影像）：候選含${labels}羰基，但在 ${windows} cm⁻¹ 沒有強帶（校正可信、描線涵蓋該範圍）；已扣分，未剔除`;
+  return [{
+    evidenceId: id, observationIds: [id], sourceModality: 'IR' as const, compatibility: 0, weight, contribution: 0, method: display, display,
+    limitations: [`缺羰基帶扣分：權重 ${cfg.weight}（未校準，工程判斷，未查證）× IR 資料品質；窗口 ${classes.map(c => c.source).join('；')}`, '只在影像 IR、校正可信、描線涵蓋窗口時啟用；非硬限制'],
+  }];
 }

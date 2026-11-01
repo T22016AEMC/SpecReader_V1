@@ -333,10 +333,11 @@ export function planningView(c: CompositionInferenceResult): PlanningView {
 }
 
 /** B4 panel block: whether the missing-carbonyl-band check is on for this IR and why not (the windows are listed with their classes). */
+const CARBONYL_RANGE_TEXT = `${Math.min(...CARBONYL_CLASSES.map(c => c.windowCm1[0]))}–${Math.max(...CARBONYL_CLASSES.map(c => c.windowCm1[1]))}`;
 export function carbonylBandView(status: CarbonylBandStatus): CarbonylBandView {
   const windowsText = `各類羰基的窗：${CARBONYL_CLASSES.map(c => `${c.label} ${c.windowCm1[0]}–${c.windowCm1[1]}`).join('、')} cm⁻¹（工程判斷，未查證；窗已與 Coates 的羰基頻率表核對）`;
   return status.state === 'ENABLED'
-    ? {title: '影像 IR 缺羰基帶檢查', enabled: true, text: '影像 IR 缺羰基帶檢查：已啟用（校正可信、描線涵蓋羰基窗）。候選含上列羰基類別、但該類窗內沒有強帶時扣分，不剔除；扣分權重是未校準的工程判斷。', windowsText}
+    ? {title: '影像 IR 缺羰基帶檢查', enabled: true, text: `影像 IR 缺羰基帶檢查：影像 IR 涵蓋並且校正可信（範圍 ${CARBONYL_RANGE_TEXT} cm⁻¹）時，缺帶檢查才會啟用，目前已啟用。是否對某個候選扣分，看該候選的證據欄（扣分不剔除；權重是未校準的工程判斷）。`, windowsText}
     : {title: '影像 IR 缺羰基帶檢查', enabled: false, text: `影像 IR 缺羰基帶檢查：未啟用（原因：${CARBONYL_STATUS_TEXT[status.reason]}）`, windowsText};
 }
 

@@ -177,6 +177,59 @@ describe('B4 applicability', () => {
   });
 });
 
+describe('2C-0: one item per candidate however many carbonyl classes it has', () => {
+  const BOTH = 'CCOC(=O)CNC(C)=O';   // N-acetylglycine ethyl ester: an ester and an amide
+  const noCarbonylBand: [number, number, number][] = [[3050, 15, 15], [2980, 14, 30], [1610, 10, 45], [1270, 18, 85], [1100, 14, 65]];
+  it('(a) ester + amide with no strong band in the union of the windows: exactly one item, its id and text name both classes, weight 0.8 × quality, compatibility 0', () => {
+    expect(candidateCarbonylClasses(BOTH).map(c => c.id)).toEqual(['ESTER', 'AMIDE']);
+    const bundle = bundleOf(imageIr(noCarbonylBand, FIVE));
+    const quality = prepareIR(sourceSpectra(bundle).IR!).irDataQuality!;
+    const on = ledger(bundle, BOTH, true), off = ledger(bundle, BOTH, false);
+    const mine = missingEntries(on);
+    expect(mine).toHaveLength(1);
+    expect(mine[0].evidenceId).toBe('IR:carbonyl-missing:ESTER+AMIDE');
+    expect(mine[0].compatibility).toBe(0);
+    expect(mine[0].weight).toBeCloseTo(0.8 * quality, 12);
+    expect(mine[0].display).toContain('酯、醯胺');
+    expect(mine[0].display).toContain('酯 1710–1750');
+    expect(mine[0].display).toContain('醯胺 1630–1680');
+    expect(mine[0].display).toContain('已扣分，未剔除');
+    expect(missingEntries(off)).toEqual([]);
+    expect(on.entries.filter(e => !e.evidenceId.startsWith('IR:carbonyl-missing:'))).toEqual(off.entries);
+    expect(on.modalityScores.IR!).toBeLessThan(off.modalityScores.IR!);
+    // the deduction has the same weight as a single-class candidate's: two items would have doubled it
+    const single = missingEntries(ledger(bundleOf(imageIr(BANDS_MISSING, FIVE)), TARGET, true));
+    expect(single).toHaveLength(1);
+    expect(single[0].weight).toBeCloseTo(mine[0].weight, 12);
+  });
+  it('(b) a strong band in ANY window of the candidate (amide window or ester window) → no item', () => {
+    for (const centre of [1660, 1730]) {
+      const bands: [number, number, number][] = [[3050, 15, 15], [centre, 12, 88], [1270, 18, 60]];
+      const bundle = bundleOf(imageIr(bands, FIVE));
+      const on = ledger(bundle, BOTH, true), off = ledger(bundle, BOTH, false);
+      expect(missingEntries(on), `band at ${centre}`).toEqual([]);
+      expect(on.totalScore).toBe(off.totalScore);
+    }
+  });
+  it('(c) single class: the ids, texts and scores are those of 2B (ester only)', () => {
+    const bundle = bundleOf(imageIr(BANDS_MISSING, FIVE));
+    const on = ledger(bundle, TARGET, true), off = ledger(bundle, TARGET, false);
+    const mine = missingEntries(on);
+    expect(mine.map(e => e.evidenceId)).toEqual(['IR:carbonyl-missing:ESTER']);
+    expect(mine[0].display).toBe('IR（影像）：候選含酯羰基，但在 1710–1750 cm⁻¹ 沒有強帶（校正可信、描線涵蓋該範圍）；已扣分，未剔除');
+    expect([off.totalScore, off.modalityScores.IR!, on.totalScore, on.modalityScores.IR!].map(v => Number(v.toFixed(3)))).toEqual([80.064, 23.304, 77.702, 18.162]);
+    expect(Number(ledger(bundleOf(imageIr(BANDS_PRESENT, FIVE)), TARGET, true).totalScore.toFixed(3))).toBe(83.924);
+    expect(Number(ledger(bundleOf(imageIr(BANDS_MISSING, TWO)), TARGET, true).totalScore.toFixed(3))).toBe(84.054);
+    expect(Number(ledger(bundle, CONTROL, true).totalScore.toFixed(3))).toBe(70.936);
+  });
+  it('(e) the flag and the sub-switch switch the item off for the two-class candidate too', () => {
+    const bundle = bundleOf(imageIr(noCarbonylBand, FIVE));
+    expect(missingEntries(ledger(bundle, BOTH, false))).toEqual([]);
+    planning.carbonylBand = false;
+    expect(missingEntries(scoreScientificEvidence(BOTH, bundle))).toEqual([]);
+  });
+});
+
 describe('irCalibrationTrusted / irImageRangeCovered', () => {
   const cal = (c: Record<string, unknown>, extra: Record<string, unknown> = {}) => ({imageCalibration: {source: 'USER_CORRECTED', ...c}, ...extra}) as unknown as ExperimentalSpectrumData;
   const knots = (cms: number[], inferred: number[] = []) => [...cms.map(x => ({pixelX: 3500 - x, physicalX: x})), ...inferred.map(x => ({pixelX: 3500 - x, physicalX: x, inferred: true}))];

@@ -83,6 +83,10 @@ describe('missing-carbonyl-band status in the panel', () => {
     const on = carbonylBandView({state: 'ENABLED'});
     expect(on.enabled).toBe(true);
     expect(on.text).toContain('已啟用');
+    // 2C-0: the panel does not claim a per-candidate judgement; it says when the check is on and where to look
+    expect(on.text).toBe('影像 IR 缺羰基帶檢查：影像 IR 涵蓋並且校正可信（範圍 1630–1870 cm⁻¹）時，缺帶檢查才會啟用，目前已啟用。是否對某個候選扣分，看該候選的證據欄（扣分不剔除；權重是未校準的工程判斷）。');
+    expect(on.text).toContain('看該候選的證據欄');
+    expect(on.text).not.toContain('候選含上列羰基類別');
     expect(on.windowsText).toContain('酯 1710–1750');
     for (const reason of ['NOT_IMAGE_IR', 'CALIBRATION_UNTRUSTED', 'RANGE_NOT_COVERED', 'INTENSITY_UNKNOWN'] as const) {
       const v = carbonylBandView({state: 'DISABLED', reason});
