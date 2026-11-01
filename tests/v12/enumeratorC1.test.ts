@@ -3,6 +3,7 @@ import {initializeRDKit} from '../../src/engines/scientificEngines/rdkitAdapter'
 import {enumerateStructures, type FragmentAlternativeSet, type FragmentSpec} from '../../src/engines/enumeration';
 import {parseFormula} from '../../src/engines/enumeration/problem';
 import {bruteForceV12, type BFSet} from './bruteForceV12';
+import {FORBIDDEN_FRAGMENTS} from '../../src/engines/constraints/forbiddenFragments';
 
 // C1: the v1.2 enumerator against the independent brute force (tests/v12/bruteForceV12.ts, imports nothing from src/engines).
 // Every case compares the COMPLETE canonical-SMILES sets. Equivalence groups, adjacency limits, aromatic flags, required substructures and
@@ -24,14 +25,16 @@ const ring = (sites: number[], pool: string | null, id = 'ring'): FragmentSpec =
   bonds: KEKULE.map(([a, b, order]) => ({a, b, order, aromatic: true})),
 });
 
-async function both(formula: string, set: Omit<FragmentAlternativeSet, 'id'>, prune?: boolean) {
-  const req = {formula, alternatives: [{id: 'S', ...set}], symmetryPruning: prune, budget: {maxStates: 2e9, timeMs: 120000}};
+async function both(formula: string, set: Omit<FragmentAlternativeSet, 'id'>, prune?: boolean, useForbidden = true) {
+  const req = {formula, alternatives: [{id: 'S', ...set}], symmetryPruning: prune, budget: {maxStates: 2e9, timeMs: 120000}, ...(useForbidden ? {} : {forbid: {fragments: []}})};
   const r = await enumerateStructures(req);
   const ours = r.status === 'INVALID_REQUEST' ? [] : r.candidates.map(c => c.smiles).sort();
   if (r.status !== 'INVALID_REQUEST') expect(r.status, formula).toBe('COMPLETE');
   const bfSet: BFSet = {
     fragments: set.fragments.map(f => ({atoms: f.atoms, bonds: f.bonds, count: f.count})),
     equivalentGroups: set.equivalentGroups, required: set.required, equivalencePools: set.equivalencePools,
+    // v1.2.1 (B1, B2): the enumerator drops molecules with a forbidden fragment, so the reference applies the same list
+    forbidden: useForbidden ? FORBIDDEN_FRAGMENTS.map(f => f.smarts) : [],
   };
   const reference = [...(await bruteForceV12(counts(formula), bfSet))].sort();
   return {ours, reference, status: r.status};
@@ -175,6 +178,19 @@ describe('C1 everything together', () => {
       equivalentGroups: ['m'], equivalencePools: [{group: 'aro', demands: [2, 2]}], required: [{id: 'arO', smarts: 'c[OX2]'}],
     };
     await same('C9H10O', set);
+  });
+  it('the same case with the forbidden list switched off in both the enumerator and the reference still yields the former single molecule (a para-bridged ring, b = 2)', async () => {
+    const set = {
+      fragments: [ring([0, 3], 'aro'), CH3({group: 'm', noHCarbonNeighbors: true}, 2, 'M'), C0(), O0()],
+      equivalentGroups: ['m'], equivalencePools: [{group: 'aro', demands: [2, 2]}], required: [{id: 'arO', smarts: 'c[OX2]'}],
+    };
+    const a = await both('C9H10O', set, undefined, false);
+    expect(a.ours).toEqual(['CC1(C)Oc2ccc1cc2']);
+    expect(a.reference).toEqual(a.ours);
+    // with the list on, that molecule is exactly what disappears (both sides)
+    const b = await both('C9H10O', set);
+    expect(b.ours).toEqual([]);
+    expect(b.reference).toEqual([]);
   });
 });
 

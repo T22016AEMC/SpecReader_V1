@@ -126,6 +126,16 @@ export const COMPOSITION_CONFIG = {
   /** IR O–H/N–H broad stretch window (cm⁻¹) used for the O-default exchangeable feature. */
   irBroadXHRange: [3200, 3600] as [number, number],
 
+  // ---------------------------------------------------------------- O evidence floor (v1.2.1, A2)
+  /** Windows (cm⁻¹) of the observed bands the O floor reads. ENGINEERING DEFAULTS, NOT CALIBRATED. */
+  oxygenFloor: {
+    carbonylRange: [1650, 1800] as [number, number],
+    coRange: [1000, 1300] as [number, number],
+    /** Anhydride type: a strong band in each of these two windows (the C=O pair) together with a strong C–O. */
+    anhydrideHighRange: [1800, 1870] as [number, number],
+    anhydrideLowRange: [1740, 1790] as [number, number],
+  },
+
   // ---------------------------------------------------------------- 1H + IR composition without mass or 13C (v1.1.6)
   /** Multiples k for H = k·S (+ missing exchangeable H) and C = k·V + q when only 1H (and IR) is available. */
   h1OnlyMaxMultiple: 3,
@@ -222,6 +232,8 @@ export const COMPOSITION_CONFIG = {
     rareElement: 1.0,
     /** Penalty per N atom when nothing suggests nitrogen (mild Occam prior). */
     nitrogenNoEvidence: 0.2,
+    /** v1.2.1 (A2): penalty per O above (O evidence floor + planning.oxygenAllowedAboveFloor); a score term only, never an exclusion. UNCALIBRATED. */
+    oxygenExcess: 0.5,
     /** Penalty per N atom when MS is present but its molecular ion is even (N possible only in pairs) and there is no N-specific evidence (v1.1.6). */
     nitrogenEvenIonOnly: 1.5,
   },

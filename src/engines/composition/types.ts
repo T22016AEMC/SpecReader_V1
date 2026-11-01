@@ -53,6 +53,32 @@ export interface CompositionHypothesis {
  sizeConfirmed:boolean;
  /** k of the symmetric-unit hypothesis: total H ≈ k·S (simplest 1H ratio); null without 1H integrals (v1.1.6). */
  symmetryMultiple:number|null;
+ /** v1.2.1c (only set on the planned 1H-only route): H − k·S, the exchangeable H the formula needs beyond the integrated ones (e in H = k·S + e). */
+ extraExchangeable?:number;
+ /** v1.2.1: where this formula stands in the planned search (only set when useV121Planning planned the search). */
+ searchPlan?:FormulaSearchPlan;
+}
+export type NotSearchedReason='OXYGEN_OUTSIDE_RANGE'|'OXYGEN_VARIANT_LIMIT'|'K_ROUND_ROBIN_FULL'|'H1_INFEASIBLE'|'UNSUPPORTED_ELEMENT'|'BUDGET_NOT_REACHED';
+export interface FormulaSearchPlan {
+ status:'ROUND_1'|'ROUND_2'|'NOT_SEARCHED';
+ /** Position in the k round-robin search order (1-based); null when not searched. */
+ order:number|null;
+ reason?:NotSearchedReason;
+ /** DBE parsimony of a searched formula: its DBE, the DBE the evidence needs and the excess (v1.2.1b; sort key only). */
+ dbe?:{dbe:number;needed:number|null;excess:number};
+ /** Alkene readings still pending after round 1: RAN = round 2 ran; NOT_PICKED = eligible but another formula of its k was better (or more than 3 ks); NOT_ELIGIBLE = round 1 stopped on the step cap with no candidate. */
+ round2?:'RAN'|'NOT_PICKED'|'NOT_ELIGIBLE';
+ /** v1.2.1c grade of a formula that was eligible for round 2: A = round 1 found at least one candidate; B = eligible only because round 1 ended GRAMMAR_EXHAUSTED with none (explored only when its k has no A, under round2ExploreMaxSteps). */
+ round2Grade?:'A'|'B';
+ /** Panel wording of the reason, e.g. 同骨架 O 變體超過保留數. */
+ reasonText?:string;
+}
+/** The lowest O count the IR/1H evidence supports and the bands it comes from (range-matched IR findings are not counted). */
+export interface OxygenEvidenceFloor {
+ floor:number;
+ sources:{text:string;observationIds:string[]}[];
+ /** A strong C=O band (1650–1800 cm-1) was observed: the formula needs one more DBE than its rings and C=C (v1.2.1b, sort key only). */
+ strongCarbonyl:boolean;
 }
 /** Element-presence clue from IR/NMR/MS evidence, reported even when no formula can be enumerated. */
 export interface ElementClue {
@@ -77,4 +103,6 @@ export interface CompositionInferenceResult {
  enumeration:{enumeratedNodes:number;passedHardFilters:number;returned:number;truncatedByNodes:boolean;droppedByKeepLimit:number};
  limitations:string[];
  elapsedMs:number;
+ /** v1.2.1 (present only when useV121Planning was on): the O evidence floor (null without IR/1H O evidence basis) and the S decision. */
+ v121?:{oxygenFloor:OxygenEvidenceFloor|null;sulfurConsidered:boolean};
 }

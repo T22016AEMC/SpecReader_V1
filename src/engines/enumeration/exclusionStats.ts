@@ -1,3 +1,4 @@
+import {FORBIDDEN_SOURCE, forbiddenById} from '../constraints/forbiddenFragments';
 import type {EnumerationRunDiagnostic, IncompleteReason} from './types';
 
 /**
@@ -11,8 +12,12 @@ export interface ExclusionStats {
   alkene: number;
   strain: {label: string; count: number}[];
   plausibility: {label: string; count: number}[];
+  /** v1.2.1 (B1, B2) forbidden fragments: the leaf of the enumerator, the downstream gate and the legacy supplement together. */
+  forbidden: {id: string; label: string; count: number}[];
   total: number;
 }
+/** Shown under the forbidden-fragment lines (v1.2.1 B class): where the rules come from. */
+export const FORBIDDEN_SOURCE_LINE = `禁含片段的出處：${FORBIDDEN_SOURCE}`;
 export const PLAUSIBILITY_LABEL: Record<string, string> = {
   PEROXIDE: '過氧 O–O 鍵', N_O_N: 'N–O–N 連接', N_DI_OH: 'N 上連兩個以上的 OH', N_O_LINK: 'N–O 鍵', CUMULATED_N: '疊氮／重氮的累積 N 雙鍵', GEM_DIOL: '偶二醇',
   ENOL: '非芳香烯醇', KETENE: '烯酮', AMINAL: '非環狀胺縮醛／半縮醛胺', HEMIACETAL_ACYCLIC: '非環狀半縮醛／半縮酮', ORTHOESTER_ACYCLIC: '非環狀原酸酯型',
@@ -23,7 +28,7 @@ export const STRAIN_LABEL: Record<string, string> = {
 const add = (m: Map<string, number>, k: string, n: number) => m.set(k, (m.get(k) ?? 0) + n);
 
 export function exclusionStats(runs: (EnumerationRunDiagnostic | undefined)[], rejected: {violatedConstraints: string[]}[] = []): ExclusionStats {
-  const required = new Map<string, number>(), strain = new Map<string, number>(), plaus = new Map<string, number>();
+  const required = new Map<string, number>(), strain = new Map<string, number>(), plaus = new Map<string, number>(), forbidden = new Map<string, number>();
   let aromatic = 0, equivalence = 0, alkene = 0;
   for (const e of runs) {
     if (!e?.v12) continue;
@@ -31,16 +36,19 @@ export function exclusionStats(runs: (EnumerationRunDiagnostic | undefined)[], r
     if (v) {
       aromatic += v.aromaticFailed; equivalence += v.equivalenceFailed; alkene += v.alkeneFailed;
       for (const [id, n] of Object.entries(v.requiredById ?? {})) add(required, e.v12.required.find(r => r.id === id)?.label ?? id, n);
+      for (const [id, n] of Object.entries(v.forbiddenById ?? {})) add(forbidden, id, n);
     }
+    for (const [id, n] of Object.entries(e.legacySupplement?.droppedByForbiddenById ?? {})) add(forbidden, id, n);
     for (const [rule, n] of Object.entries(e.rejected?.strainByRule ?? {})) add(strain, STRAIN_LABEL[rule] ?? rule, n);
   }
   for (const r of rejected) for (const c of r.violatedConstraints) {
-    const m = /^PLAUSIBILITY\(([A-Z_]+)\)/.exec(c);
-    if (m) add(plaus, PLAUSIBILITY_LABEL[m[1]] ?? m[1], 1);
+    const m = /^PLAUSIBILITY\(([A-Z0-9_]+)\)/.exec(c);
+    if (m && m[1].startsWith('FORBIDDEN_')) add(forbidden, m[1].slice('FORBIDDEN_'.length), 1);
+    else if (m) add(plaus, PLAUSIBILITY_LABEL[m[1]] ?? m[1], 1);
   }
   const list = (m: Map<string, number>) => [...m].map(([label, count]) => ({label, count}));
-  const out: ExclusionStats = {required: list(required), aromatic, equivalence, alkene, strain: list(strain), plausibility: list(plaus), total: 0};
-  out.total = out.required.reduce((s, x) => s + x.count, 0) + aromatic + equivalence + alkene + out.strain.reduce((s, x) => s + x.count, 0) + out.plausibility.reduce((s, x) => s + x.count, 0);
+  const out: ExclusionStats = {required: list(required), aromatic, equivalence, alkene, strain: list(strain), plausibility: list(plaus), forbidden: [...forbidden].map(([id, count]) => ({id, label: forbiddenById(id)?.label ?? id, count})), total: 0};
+  out.total = out.required.reduce((s, x) => s + x.count, 0) + aromatic + equivalence + alkene + out.strain.reduce((s, x) => s + x.count, 0) + out.plausibility.reduce((s, x) => s + x.count, 0) + out.forbidden.reduce((s, x) => s + x.count, 0);
   return out;
 }
 
@@ -53,6 +61,8 @@ export function exclusionLines(s: ExclusionStats): string[] {
   if (s.alkene) lines.push(`烯基（非芳香 C=C）檢查排除了 ${s.alkene} 個`);
   for (const r of s.strain) lines.push(`應變規則『${r.label}』排除了 ${r.count} 個`);
   for (const r of s.plausibility) lines.push(`化學合理性規則『${r.label}』排除了 ${r.count} 個`);
+  for (const r of s.forbidden) lines.push(`禁含片段『${r.label}』排除了 ${r.count} 個`);
+  if (s.forbidden.length) lines.push(FORBIDDEN_SOURCE_LINE);
   return lines;
 }
 

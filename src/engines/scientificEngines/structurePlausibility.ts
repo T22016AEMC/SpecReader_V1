@@ -2,6 +2,9 @@ import {StructureParserAdapter} from '../chemistryEngine';
 import type {ObservedEvidence} from '../reasoning/types';
 import {PLAUSIBILITY_CONFIG as CFG} from './plausibilityConfig';
 import {V12_CONFIG} from '../constraints/v12Config';
+import {FORBIDDEN_FRAGMENTS} from '../constraints/forbiddenFragments';
+import {forbiddenFragmentsActive} from '../composition/planningGate';
+import {matchingSMARTS} from './rdkitAdapter';
 
 /**
  * Chemical-plausibility gate (v1.1.7-hotfix.1). Candidates with unstable linkages are rejected unless specific
@@ -19,10 +22,11 @@ import {V12_CONFIG} from '../constraints/v12Config';
  * - KETENE    C=C=O (allenes are not affected)          → allowed only with a strong IR band near 2150.
  * - HEMIACETAL_ACYCLIC / ORTHOESTER_ACYCLIC (v1.2 only, useV12Constraints): acyclic sp³ C with a free OH and another O (hemiacetal /
  *             hemiketal), or with ≥ 3 O (orthoester). Cyclic hemiacetals and acetals/ketals (two OR, no OH) are not affected.
+ * - FORBIDDEN_<id> (v1.2.1 B class, forbiddenFragmentsActive): a fragment of constraints/forbiddenFragments.ts (short para/meta bridge, cyclic C(OH)(OR)(OR)).
  * - AMINAL    acyclic sp³ C with two N, or one N and one free OH (cyclic, carbonyl, aromatic and imine carbons are
  *             not affected)                                                                    → rejected.
  */
-export type PlausibilityRule='PEROXIDE'|'N_O_N'|'N_DI_OH'|'N_O_LINK'|'CUMULATED_N'|'GEM_DIOL'|'ENOL'|'KETENE'|'AMINAL'|'HEMIACETAL_ACYCLIC'|'ORTHOESTER_ACYCLIC';
+export type PlausibilityRule='PEROXIDE'|'N_O_N'|'N_DI_OH'|'N_O_LINK'|'CUMULATED_N'|'GEM_DIOL'|'ENOL'|'KETENE'|'AMINAL'|'HEMIACETAL_ACYCLIC'|'ORTHOESTER_ACYCLIC'|`FORBIDDEN_${string}`;
 export interface PlausibilityEvidence {userFormula:boolean;nitrogenEvidence:boolean;irNO:boolean;irNOxide:boolean;irCumulatedN:boolean;irKetene:boolean}
 export interface PlausibilityViolation {rule:PlausibilityRule;text:string}
 export const NO_PLAUSIBILITY_EVIDENCE:PlausibilityEvidence={userFormula:false,nitrogenEvidence:false,irNO:false,irNOxide:false,irCumulatedN:false,irKetene:false};
@@ -90,5 +94,9 @@ export function plausibilityViolations(smiles:string,ev:PlausibilityEvidence):Pl
    }
   }
  });
+ if(forbiddenFragmentsActive()){
+  const hits=matchingSMARTS(smiles,FORBIDDEN_FRAGMENTS.map(f=>f.smarts));
+  for(const i of hits??[]){const f=FORBIDDEN_FRAGMENTS[i];add(`FORBIDDEN_${f.id}`,`禁含片段：${f.label}（${f.reason}）`);}
+ }
  return out;
 }

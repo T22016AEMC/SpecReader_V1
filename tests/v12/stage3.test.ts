@@ -15,6 +15,7 @@ import {V12_CONFIG} from '../../src/engines/constraints/v12Config';
 import type {ImageSpectrumCalibration} from '../../src/types/spectrum';
 import {BANDS, refPoint, syntheticSegmentedIRImage} from '../irAxisFixture';
 import {mk} from '../helpers/p1bScenarios';
+import {STEP_ONLY_TIME_MS} from '../helpers/v121Golden';
 
 // Stage 3 (W4 two-way scoring, W5 plausibility, W6 IR intensity, W7 candidate merging). SYNTHETIC peak lists / images only; the tests check
 // program behaviour (score direction, flags, equalities). No ranking of any real compound is asserted and nothing here says what is "accurate".
@@ -299,7 +300,9 @@ describe('W7 candidates from several (k, extra OH) readings', () => {
   it('each reading is its own run, candidates are merged and keep the readings they came from, ranking does not depend on k', async () => {
     flag(true);
     const spectra = {'1H_NMR': mk('1H_NMR', [{x: 9.2, integration: 1, multiplicity: 's'}, {x: 1.3, integration: 9, multiplicity: 's'}] as never, {nmrSolvent: 'DMSO-d6'})};
-    const r = await executeSixStepAnalysis({spectra, extraInput: {molecularFormula: 'C10H10O'}}, {timeMs: 15000, maxStates: 3_000_000});
+    // v1.2.1 B: the 15 s wall-clock budget made this test depend on the machine speed (the single candidate of the inventory path is found after about 0.7 M steps of the second run, which
+    // sits at the edge of 15 s once the leaf also runs the forbidden-fragment queries); the step budget is the same search without the clock.
+    const r = await executeSixStepAnalysis({spectra, extraInput: {molecularFormula: 'C10H10O'}}, {timeMs: STEP_ONLY_TIME_MS, maxStates: 3_000_000});
     const run = r.reasoningTrace!.compositionSearch!.runs[0];
     const v12 = run.enumeration!.v12!;
     expect(v12.path).toBe('INVENTORY');

@@ -1,6 +1,8 @@
 import {canonicalizeMolecule, compileLeafQueries, rdkitStatus, type LeafQueries} from '../scientificEngines/rdkitAdapter';
 import {plausibilityViolations} from '../scientificEngines/structurePlausibility';
 import {ENUMERATION_CONFIG as CFG, type StrainProfile, type StrainProfileId} from './enumerationConfig';
+import {forbiddenFragmentsActive} from '../composition/planningGate';
+import {FORBIDDEN_FRAGMENTS} from '../constraints/forbiddenFragments';
 import {analyseLeaf, emptyLeafCost} from './leafChecks';
 import {buildMolBlock} from './molBlock';
 import {buildProblem, parseFormula, type Problem} from './problem';
@@ -47,16 +49,22 @@ export async function enumerateStructures(req: EnumerationRequest): Promise<Enum
   let stopAll = false;
 
   // Fair share: every runnable set gets an equal part of what is left (time and steps); unused budget carries over.
+  // v1.2.1 (B1, B2): forbidden fragments are checked at the leaf. With a list present every set takes the leaf pipeline (also the sets with no other leaf check).
+  const forbiddenList = req.forbid?.fragments ?? (forbiddenFragmentsActive() ? FORBIDDEN_FRAGMENTS : []);
   const prebuilt = alternatives.map(set => buildProblem(formula, set, {symmetryPruning: req.symmetryPruning}));
   // v1.2: the required-substructure queries and the aromaticity queries are parsed once per alternative set.
   const queriesOf = new Map<number, LeafQueries>();
   const leafCost = emptyLeafCost();
+  // The timings of a set that takes the leaf pipeline only for the forbidden fragments are not reported (leafCost stays what it was for the other sets).
+  const scratchCost = emptyLeafCost();
+  let reportLeafCost = false;
   prebuilt.forEach((b, si) => {
-    if (!b.ok || !b.problem.leafChecks) return;
-    const q = compileLeafQueries(b.problem.required.map(r => r.smarts));
+    if (!b.ok || !(b.problem.leafChecks || forbiddenList.length)) return;
+    const q = compileLeafQueries(b.problem.required.map(r => r.smarts), forbiddenList.map(f => f.smarts));
     if (!q) return;
     if (q.failed.length) { q.delete(); prebuilt[si] = {ok: false, error: {code: 'INVALID_FRAGMENT', message: `必含子結構的 SMARTS 無法解析：${q.failed.join('、')}`, alternativeSetId: alternatives[si].id}}; return; }
     queriesOf.set(si, q);
+    if (b.problem.leafChecks) reportLeafCost = true;
   });
   const runnable = prebuilt.map(b => b.ok);
   for (let si = 0; si < alternatives.length; si++) {
@@ -82,15 +90,16 @@ export async function enumerateStructures(req: EnumerationRequest): Promise<Enum
       let smiles: string;
       const remember = () => { if (rejectedSeen.size < CFG.maxTrackedRejected) rejectedSeen.add(smiles); else rejected.approximate = true; };
       if (queries) {
-        // v1.2 leaf: one parse, then known? → required → aromatic → equivalence (see leafChecks.ts)
-        const verdict = analyseLeaf(problem, newBonds, queries, lookup, leafCost);
+        // v1.2 leaf: one parse, then known? → required → forbidden → aromatic → equivalence (see leafChecks.ts)
+        const verdict = analyseLeaf(problem, newBonds, queries, lookup, problem.leafChecks ? leafCost : scratchCost);
         if (verdict.kind === 'invalid') { rejected.sanitizeFailed++; return; }
         if (verdict.kind === 'known') { rejected.duplicatesMerged++; const sources = found.get(verdict.smiles)!; if (!sources.includes(set.id)) sources.push(set.id); return; }
         if (verdict.kind === 'seenRejected') return;
         smiles = verdict.smiles;
         if (verdict.kind === 'rejected') {
           const v12 = (rejected.v12 ??= {aromaticFailed: 0, requiredFailed: 0, equivalenceFailed: 0, alkeneFailed: 0});
-          if (verdict.stage === 'aromatic') v12.aromaticFailed++; else if (verdict.stage === 'required') v12.requiredFailed++; else if (verdict.stage === 'alkene') v12.alkeneFailed++; else v12.equivalenceFailed++;
+          if (verdict.stage === 'forbidden') { const id = forbiddenList[verdict.forbiddenIndex!].id; const by = (v12.forbiddenById ??= {}); by[id] = (by[id] ?? 0) + 1; }
+          else if (verdict.stage === 'aromatic') v12.aromaticFailed++; else if (verdict.stage === 'required') v12.requiredFailed++; else if (verdict.stage === 'alkene') v12.alkeneFailed++; else v12.equivalenceFailed++;
           if (verdict.stage === 'required' && verdict.requiredId) { const by = (v12.requiredById ??= {}); by[verdict.requiredId] = (by[verdict.requiredId] ?? 0) + 1; }
           if (verdict.remember) remember();
           return;
@@ -143,7 +152,7 @@ export async function enumerateStructures(req: EnumerationRequest): Promise<Enum
     else outcome.complete = true;
   }
   for (const q of queriesOf.values()) q.delete();
-  if (queriesOf.size) result.stats.leafCost = leafCost;
+  if (reportLeafCost) result.stats.leafCost = leafCost;
   result.stats.visited = visited; result.stats.leaves = leaves;
   result.candidates = [...found.entries()].map(([smiles, alternativeSetIds]) => ({smiles, alternativeSetIds})).sort((a, b) => (a.smiles < b.smiles ? -1 : a.smiles > b.smiles ? 1 : 0));
   result.incompleteReasons = [...reasons];

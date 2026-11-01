@@ -10,6 +10,11 @@ export interface V12Evidence {
   irCoversAldehydeRegion: boolean;
   /** N-specific evidence exists (nitrogen gating of v1.1.6). */
   nitrogenAllowed: boolean;
+  /**
+   * v1.2.1 (B3): what kind of IR spectrum the observations came from. Absent / isImage false (peak table or numeric spectrum) = the conjugated-C=O context is null.
+   * calibrationTrusted: irCalibrationTrusted() over the conjugated-C=O window (image IR only).
+   */
+  irImage?: {isImage: boolean; calibrationTrusted: boolean};
 }
 
 /** 1H observations → inventory signals. The solvent is the one the 1H spectrum states ("Unknown" when missing). */
@@ -24,10 +29,15 @@ export function h1SignalsFromObservations(observations: ObservedEvidence[]): {si
 }
 
 /** D5: IR facts for the aldehyde reading. strongCarbonyl is null when the intensities are unknown. */
-export function irAldehydeContext(observations: ObservedEvidence[], coversRegion: boolean): IrAldehydeContext {
+export function irAldehydeContext(observations: ObservedEvidence[], coversRegion: boolean, irImage?: V12Evidence['irImage']): IrAldehydeContext {
   const ir = observations.filter(o => o.modality === 'IR' && !o.optional);
-  if (!ir.length) return {present: false, coversAldehydeRegion: false, strongCarbonyl: null};
+  if (!ir.length) return {present: false, coversAldehydeRegion: false, strongCarbonyl: null, conjugatedCarbonyl: null};
   const known = ir.some(o => o.relativeIntensity !== null && o.relativeIntensity > 0);
-  const c = V12_CONFIG.aldehydeIr;
-  return {present: true, coversAldehydeRegion: coversRegion, strongCarbonyl: known ? strongIrBands(observations, c.rangeCm1, c.strongRelativeIntensity).length > 0 : null};
+  const c = V12_CONFIG.aldehydeIr, j = V12_CONFIG.conjugatedCarbonylIr;
+  // B3: true / false only for an image IR with a trusted calibration and known intensities; peak-table (non-image) IR, untrusted calibration and unknown intensities give null.
+  const judged = Boolean(irImage?.isImage && irImage.calibrationTrusted && known);
+  return {
+    present: true, coversAldehydeRegion: coversRegion, strongCarbonyl: known ? strongIrBands(observations, c.rangeCm1, c.strongRelativeIntensity).length > 0 : null,
+    conjugatedCarbonyl: judged ? strongIrBands(observations, j.rangeCm1, j.strongRelativeIntensity).length > 0 : null,
+  };
 }

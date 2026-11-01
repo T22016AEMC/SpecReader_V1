@@ -13,6 +13,12 @@ export interface ShiftClassDef {
   hPerAtom: number[];
   hybrid: Hybrid;
   exchangeable: boolean;
+  /**
+   * v1.2.1 (B3, no-formula path only): shift windows per H count. The H count h is allowed at a shift inside `base`; inside `extended` only when the IR shows a
+   * conjugated C=O (IrAldehydeContext.conjugatedCarbonyl === true). A class with windows is used instead of `rangePpm` / `hPerAtom` while the windows are active.
+   * 工程判斷，未查證 (engineering judgement, not verified): every window below.
+   */
+  hPerAtomWindows?: {h: number; base: [number, number]; extended?: [number, number]}[];
   /** Heteroatom the carbon is bound to (informs applicability only: the class needs that element in the formula). */
   heteroatom?: 'O' | 'N';
   basis: string;
@@ -57,6 +63,52 @@ export interface StrongEvidenceRuleDef {
 export const V12_CONFIG = {
   /** D1: true from 1.2.0. With false every path is identical to v1.1.8 (tests/v12/legacyGolden.test.ts sets it in code). */
   useV12Constraints: true as boolean,
+  /**
+   * v1.2.1 (A class: which formulas are searched). true: S needs S-specific evidence, the O count follows the IR evidence, the formulas are chosen by k
+   * round-robin and searched in two rounds. false: every path (including the panel text) is identical to v1.2.0 (tests/v12/v121FlagGolden.test.ts).
+   * Only the no-formula h1-only / no-mass route is affected; a user formula and the MS route keep the v1.2.0 search.
+   */
+  useV121Planning: true as boolean,
+  /** ENGINEERING DEFAULTS, NOT CALIBRATED (chosen from the step counts of the five synthetic shapes S1/G1/E1/G3/D1, not from any measured compound). */
+  planning: {
+    /**
+     * v1.2.1 B class sub-switches (tests and diagnostics only, not in the UI). Each one works only while planningActive() is true; false switches off just that rule set.
+     * forbiddenFragments: B1 short para/meta bridge + B2 cyclic C(OH)(OR)(OR). vinylWindows: B3 =CH2 / =CH shift windows (no-formula path). carbonylBand: B4 missing-carbonyl-band deduction.
+     */
+    forbiddenFragments: true as boolean,
+    vinylWindows: true as boolean,
+    carbonylBand: true as boolean,
+    /** O variants kept per (k, C) key: only formulas with O in [floor, floor + 1] qualify, best score first. */
+    maxOxygenVariantsPerKey: 2,
+    /** k ≥ 2: the O window is [floor, k × floor + oxygenAllowedAboveFloor] and this many O variants are kept per (k, C) key (k = 1 keeps the value above). */
+    maxOxygenVariantsPerKeyMultiple: 3,
+    /** O above (evidence floor + this) is scored down per extra O (weights.oxygenExcess) and is not a search candidate. */
+    oxygenAllowedAboveFloor: 1,
+    /** Formulas that get a round-1 run; the k round-robin order decides which ones. */
+    maxRound1Formulas: 12,
+    /**
+     * v1.2.1c name order. 'ONE_PASS': one queue per k (score, DBE excess, C, H, O), k round-robin. 'TWO_PASS': pass 1 takes one representative per (k, C) in k round-robin
+     * order, pass 2 fills the remaining names with the other O / e variants (the names widen over C first). The default stays ONE_PASS: with TWO_PASS and
+     * representativeOxygen 'EITHER' the S1 target formula (k = 2, O = 2) is not a representative and loses its name (stage 1c report).
+     */
+    nameOrder: 'ONE_PASS' as 'ONE_PASS' | 'TWO_PASS',
+    /** TWO_PASS only. 'EITHER': O = floor and O = k × floor are equal candidates for the representative of a (k, C) key (the order key and the smaller O decide); 'K_FLOOR': k × floor first (every copy of the symmetric unit carries the evidence O). */
+    representativeOxygen: 'EITHER' as 'EITHER' | 'K_FLOOR',
+    /** Search steps one formula may use in round 1 (template readings only). */
+    round1MaxStatesPerFormula: 150_000,
+    /** All round-1 runs together may use at most this fraction of the wall-clock budget (the clock stays the last safety valve). */
+    round1TimeFraction: 0.4,
+    /** Round 2 (readings with an alkene CH): the best-scored formula of each k, at most this many formulas. */
+    maxRound2Formulas: 3,
+    /**
+     * v1.2.1c, grade-B formulas of round 2 (round 1 ended GRAMMAR_EXHAUSTED with no candidate; only run when their k has no grade-A formula): at most this many steps each.
+     * 工程判斷，未查證 (engineering judgement, not verified): 500,000 is about 10 times the round-1 steps of the largest formula that finished with candidates in the five shapes.
+     */
+    round2ExploreMaxSteps: 500_000,
+    /** Round-2 choice: composition score + round-1 evidence (weight × 1/(1 + smallest gap between the candidates' topological 1H environments and the observed 1H signals)). */
+    round2EvidenceWeight: 0.5,
+    round2EvidenceCandidates: 200,
+  },
 
   // ---------------------------------------------------------------- inventory (W1), D8
   /** k = H_total / (sum of the simplest integer ratio), tried for 1…maxK. */
@@ -95,7 +147,11 @@ export const V12_CONFIG = {
   // ---------------------------------------------------------------- shift classes (D5)
   shiftClasses: [
     {id: 'ARO_CH', rangePpm: [6.3, 8.5], hPerAtom: [1], hybrid: 'AR', exchangeable: false, basis: '芳香 CH；上限沿用 h1AromaticRange、下限沿用 graphSearchHints'},
-    {id: 'VINYL_CH', rangePpm: [4.5, 7.5], hPerAtom: [1, 2], hybrid: 'SP2', exchangeable: false, basis: '烯基 CH／=CH2（D5：4.5–7.5；與 ARO_CH 重疊的區段兩種解讀都保留）'},
+    {
+      id: 'VINYL_CH', rangePpm: [4.5, 7.5], hPerAtom: [1, 2], hybrid: 'SP2', exchangeable: false, basis: '烯基 CH／=CH2（D5：4.5–7.5；與 ARO_CH 重疊的區段兩種解讀都保留）',
+      // v1.2.1 B3: =CH2 4.5–6.0 (6.0–6.5 with a conjugated C=O), =CH 4.5–7.5 (7.5–7.8 with a conjugated C=O). 工程判斷，未查證
+      hPerAtomWindows: [{h: 2, base: [4.5, 6.0], extended: [6.0, 6.5]}, {h: 1, base: [4.5, 7.5], extended: [7.5, 7.8]}],
+    },
     {id: 'ALDEHYDE', rangePpm: [9.0, 10.5], hPerAtom: [1], hybrid: 'SP2', exchangeable: false, basis: '醛基 H；需要 IR 在 1680–1740 cm-1 有強 C=O（D5）'},
     {id: 'O_CH', rangePpm: [3.2, 5.0], hPerAtom: [1, 2, 3], hybrid: 'SP3', exchangeable: false, heteroatom: 'O', basis: '接 O 的 sp3 碳（OCH3 3.2–4.0、OCH2 3.4–4.5、OCH 3.5–5.0）'},
     {id: 'N_CH', rangePpm: [2.2, 3.8], hPerAtom: [1, 2, 3], hybrid: 'SP3', exchangeable: false, heteroatom: 'N', basis: '接 N 的 sp3 碳'},
@@ -113,6 +169,14 @@ export const V12_CONFIG = {
   },
   /** D5: the ALDEHYDE reading needs a strong C=O band in this window when the IR covers it. */
   aldehydeIr: {rangeCm1: [1680, 1740] as [number, number], strongRelativeIntensity: 0.5},
+  /**
+   * v1.2.1 B4: a candidate with a carbonyl class (engines/scientificEngines/carbonylClasses.ts) whose windows have no strong IR band, on an image IR whose calibration is trusted and
+   * whose trace covers the windows, gets a deduction entry (compatibility 0, weight = weight × irDataQuality; never a rejection).
+   * 工程判斷，未查證 (engineering judgement, not verified, not calibrated): weight, strongRelativeIntensity, minCurvePoints, minUserCalibrationPoints and the 0.5 % residual limit (AXIS_CALIBRATION_CONFIG).
+   */
+  irMissingBand: {weight: 0.8, strongRelativeIntensity: 0.5, minCurvePoints: 50, minUserCalibrationPoints: 3},
+  /** v1.2.1 B3: a conjugated C=O is read from a band with at least this share of the strongest band in this window. 工程判斷，未查證 (window and share). */
+  conjugatedCarbonylIr: {rangeCm1: [1630, 1735] as [number, number], strongRelativeIntensity: 0.5},
 
   // ---------------------------------------------------------------- aromatic ring templates (D4)
   /** Rings (a fused pair counts 2) that the templates may use for the aromatic CH of one alternative. */

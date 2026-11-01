@@ -1,4 +1,5 @@
 import type {PlausibilityEvidence} from '../scientificEngines/structurePlausibility';
+import type {ForbiddenFragment} from '../constraints/forbiddenFragments';
 import type {StrainProfile, StrainProfileId} from './enumerationConfig';
 
 /** Element counts including hydrogen, e.g. {C:3,H:8,O:1}; or a formula string such as "C3H8O". */
@@ -89,6 +90,10 @@ export interface ForbiddenSpec {
   plausibilityLeaf?: boolean;
   /** Optional ring/bond strain rules: a profile id, an explicit profile, or absent/null = off. */
   strain?: StrainProfileId | StrainProfile | null;
+  /**
+   * v1.2.1 (B1, B2): forbidden fragments checked at the leaf. Absent = the default list (FORBIDDEN_FRAGMENTS) while forbiddenFragmentsActive(), else none; [] = none.
+   */
+  fragments?: ForbiddenFragment[];
 }
 export interface EnumerationRequest {
   formula: FormulaInput;
@@ -140,7 +145,15 @@ export type IncompleteReason =
   /** v1.2 (D10): the 1H constraints could not be applied for this formula and the v1.1.7 flexible-atom path was used instead (never COMPLETE). */
   | 'V12_CONSTRAINTS_FALLBACK'
   /** v1.2: readings that contain a vinyl (alkene CH) reading did not finish within the budget; the readings without one did. */
-  | 'VINYL_READINGS_BUDGET';
+  | 'VINYL_READINGS_BUDGET'
+  /** v1.2.1 (planning): round 1 ran only the readings without an alkene CH; the readings with one have not run (yet). */
+  | 'VINYL_READINGS_NOT_RUN'
+  /** v1.2.1 (planning): round 1 stopped at its step cap (the cap is a per-formula limit of the first round, not the analysis budget). */
+  | 'ROUND1_STEP_CAP'
+  /** v1.2.1 (planning): round 1 found no reading that can hold the formula and did not fall back to the flexible-atom or legacy search (visited = 0). */
+  | 'ROUND1_NO_TEMPLATE_READING'
+  /** v1.2.1c (planning): a grade-B formula's round 2 stopped at round2ExploreMaxSteps (an exploration cap, not the analysis budget). */
+  | 'ROUND2_EXPLORE_CAP';
 export interface RejectionStats {
   sanitizeFailed: number;
   duplicatesMerged: number;
@@ -150,7 +163,7 @@ export interface RejectionStats {
   /** True when more rejected structures occurred than `maxTrackedRejected`; the by-rule counts may then count a structure twice. */
   approximate: boolean;
   /** v1.2 leaf checks: structures rejected by the aromatic / required-substructure / equivalence checks (absent when none ran). */
-  v12?: {aromaticFailed: number; requiredFailed: number; equivalenceFailed: number; alkeneFailed: number; /** structures missing each required substructure (first one that failed) */ requiredById?: Record<string, number>};
+  v12?: {aromaticFailed: number; requiredFailed: number; equivalenceFailed: number; alkeneFailed: number; /** structures missing each required substructure (first one that failed) */ requiredById?: Record<string, number>; /** v1.2.1: molecules containing each forbidden fragment (first one found; one count per molecule) */ forbiddenById?: Record<string, number>};
 }
 export interface SetOutcome {
   id: string;
@@ -219,11 +232,34 @@ export interface EnumerationRunDiagnostic {
   /** Every reading was complete but none holds a molecule with the formula: the run was relaxed to formula-only enumeration. */
   relaxedToFormulaOnly?: {candidates: number; complete: boolean};
   /** Candidates the bounded legacy beam search added after a budget-limited enumeration. */
-  legacySupplement?: {candidates: number; added: number; visited: number};
+  legacySupplement?: {candidates: number; added: number; visited: number; /** v1.2.1 (B1, B2): supplement candidates dropped for containing a forbidden fragment (absent when the rule set is off) */ droppedByForbidden?: number; droppedByForbiddenById?: Record<string, number>};
   conversions: AdaptedConversion[];
   notes: string[];
   /** v1.2 constraint layer (absent unless useV12Constraints was on for this formula). */
   v12?: V12RunDiagnostic;
+  /** v1.2.1 two-round search (absent unless useV121Planning planned this formula). */
+  planning?: RunPlanning;
+}
+/** What the two-round search did for one formula. */
+export interface RunPlanning {
+  /** The last round that ran: 1 = readings without an alkene CH only, 2 = the alkene readings ran as well. */
+  round: 1 | 2;
+  /** Round 1 had a usable reading without an alkene CH (false: none, or the alkene exception applied). */
+  templateReading: boolean;
+  /** The signals can only be explained with an alkene-CH class, so round 1 ran the alkene readings under the same step cap. */
+  vinylException: boolean;
+  /** Alkene readings exist and have not run. */
+  vinylPending: boolean;
+  /** Alkene readings have run (round 1 by the exception, or round 2). */
+  vinylRun: boolean;
+  /** Steps of each round (round 2 is 0 when it did not run). */
+  round1Visited: number;
+  round2Visited: number;
+  /** Wall-clock of each round (milliseconds; for the report only, never compared). */
+  round1ElapsedMs: number;
+  round2ElapsedMs: number;
+  /** Round-1 evidence used to choose the round-2 formulas. */
+  round1Candidates: number;
 }
 /** What the v1.2 layer did for one formula (panel data, stage 4). */
 export interface V12RunDiagnostic {
@@ -236,7 +272,7 @@ export interface V12RunDiagnostic {
     status: 'BUILT' | 'NOT_AVAILABLE'; reason: string | null; alternatives: number; truncated: boolean; patternSets: number; patternTruncated: boolean;
     incompleteReasons: string[]; ratioSum: number | null;
     combinations: {k: number; extraExchangeable: number; ratio: number[]}[];
-    signals: {observationId: string; shiftPpm: number; relativeIntegral: number | null; ratio: number | null; multiplicity: string | null; broad: boolean; classes: string[]; singletRuleApplied: boolean; equivalenceRequired: boolean}[];
+    signals: {observationId: string; shiftPpm: number; relativeIntegral: number | null; ratio: number | null; multiplicity: string | null; broad: boolean; classes: string[]; singletRuleApplied: boolean; equivalenceRequired: boolean; /** v1.2.1 B3: a vinyl H count exists only through the extended window (IR conjugated C=O) */ vinylRelaxed?: boolean}[];
     voided: {kind: string; reason: string; count: number}[];
     aromaticLimited: {k: number; extraExchangeable: number; aromaticCh: number; reason: string}[];
     /** The first readings (at most 6), for the panel. */
@@ -277,4 +313,6 @@ export interface CandidateOrigin {
   v12?: {k: number; extraExchangeable: number}[];
   /** v1.2 (D10): the structure came from the flexible-atom path because the 1H constraints could not be applied. */
   v12Fallback?: boolean;
+  /** v1.2.1 (planning): the round of the two-round search that produced it (1: readings without an alkene CH, 2: readings with one). */
+  round?: 1 | 2;
 }

@@ -2,6 +2,8 @@ import type { DataPoint, ExperimentalSpectrumData, SpectralPeak } from '../../ty
 import {asymmetricBaseline} from './whittakerBaseline';
 import {baselineAt,pixelIRX,inferIRDirection,physicalIRInputs,relativeIRSignal,type IRManualSettings} from './irManualBaseline';
 import {IR_PEAK_CONFIG} from './irPeakConfig';
+import {AXIS_CALIBRATION_CONFIG} from './axisCalibrationConfig';
+import {V12_CONFIG} from '../constraints/v12Config';
 
 export type IRIntensityScale = 'ABSORBANCE' | 'TRANSMITTANCE' | 'PERCENT_TRANSMITTANCE' | 'NORMALIZED' | 'UNKNOWN';
 export function resolveIRScale(unit: string, explicit?: IRIntensityScale): IRIntensityScale {
@@ -132,6 +134,47 @@ export function irRangeCovered(s: ExperimentalSpectrumData, min: number, max: nu
   if (raw.some(p=>p.x>=min&&p.x<=max&&toAbsorbance(p.y,scale)===null)) return false;
   return xs.length >= 2 && Math.min(...xs)<=min && Math.max(...xs)>=max;
 }
+/**
+ * v1.2.1 (B4): an IMAGE IR covers [lo, hi] when it has a calibration that did not fail, a traced curve (irPixelCurve, at least irMissingBand.minCurvePoints points)
+ * and the curve, converted with pixelIRX, spans the window. Marks alone (no curve) never cover: "not marked" is not "absent". Peak-table / numeric IR: always false
+ * (their coverage stays with irRangeCovered). Not tied to observationCoverage.
+ */
+export function irImageRangeCovered(s: ExperimentalSpectrumData, lo: number, hi: number): boolean {
+  const isImage = s.digitizedFromImage || s.sourceType === 'IMAGE_EXPERIMENTAL' || s.sourceType === 'IMAGE_DIGITIZED';
+  const c = s.imageCalibration;
+  if (!isImage || !c || s.calibrationFailed) return false;
+  const curve = s.irPixelCurve;
+  if (!curve || curve.length < V12_CONFIG.irMissingBand.minCurvePoints) return false;
+  const xs = curve.map(p => pixelIRX(p.x, c)).filter(Number.isFinite);
+  return xs.length >= V12_CONFIG.irMissingBand.minCurvePoints && Math.min(...xs) <= lo && Math.max(...xs) >= hi;
+}
+
+/**
+ * v1.2.1 (B4, B3): is the image calibration good enough to judge the absence of a band in [lo, hi]? Residuals of the piecewise and two-point modes are 0 by construction
+ * (they say nothing), so the test is structural: a user calibration source that did not fail, and
+ *  - PIECEWISE: at least irMissingBand.minUserCalibrationPoints user points (not inferred) with the window between the lowest and the highest point;
+ *  - THREE_POINT (least squares): maxResidual ≤ linearityResidualFractionOfSpan × the span of the points;
+ *  - TWO_POINT / no mode: never trusted (a line through two points cannot show non-linearity).
+ * 工程判斷，未查證: 3 points and 0.5 % of the span.
+ */
+export function irCalibrationTrusted(s: ExperimentalSpectrumData, lo: number, hi: number): boolean {
+  const c = s.imageCalibration;
+  if (!c || s.calibrationFailed) return false;
+  if (!['USER_CALIBRATED', 'USER_CORRECTED', 'USER_3PT_CALIBRATED'].includes(c.source)) return false;
+  if (c.calibrationMode === 'PIECEWISE') {
+    const user = (c.piecewiseKnots ?? []).filter(k => !k.inferred).map(k => k.physicalX).filter(Number.isFinite);
+    return user.length >= V12_CONFIG.irMissingBand.minUserCalibrationPoints && Math.min(...user) <= lo && Math.max(...user) >= hi;
+  }
+  if (c.calibrationMode === 'THREE_POINT' || c.source === 'USER_3PT_CALIBRATED') {
+    const xs = [c.referencePoint1, c.referencePoint2, c.referencePoint3, ...(c.calibrationPoints ?? [])].filter((p): p is NonNullable<typeof p> => Boolean(p)).map(p => p.physicalX).filter(Number.isFinite);
+    const span = xs.length >= 2 ? Math.max(...xs) - Math.min(...xs) : 0;
+    const residuals = c.residuals === undefined ? [] : Array.isArray(c.residuals) ? c.residuals : [c.residuals.point1, c.residuals.point2, c.residuals.point3];
+    const maxResidual = c.maxResidual ?? (residuals.length ? Math.max(...residuals.map(Math.abs)) : undefined);
+    return span > 0 && maxResidual !== undefined && Number.isFinite(maxResidual) && maxResidual <= AXIS_CALIBRATION_CONFIG.linearityResidualFractionOfSpan * span;
+  }
+  return false;
+}
+
 export function prepareIR(s: ExperimentalSpectrumData): ExperimentalSpectrumData {
   if (s.irProcessingApplied) return s;
   const scale=resolveIRScale(s.yUnit,s.irManualSettings?.intensityScale??s.irIntensityScale);

@@ -44,6 +44,18 @@ export function matchesSMARTS(smiles:string,smarts:string):boolean|null {
   finally {mol.delete();query.delete();}
 }
 
+/** Indices of the SMARTS (of the list) the molecule matches; the molecule is parsed once. null = RDKit is not available or the SMILES does not parse. */
+export function matchingSMARTS(smiles:string,smartsList:string[]):number[]|null {
+  if (!rdkit) return null;
+  const mol=rdkit.get_mol(smiles);
+  if (!mol) return null;
+  const hits:number[]=[];
+  try {
+    smartsList.forEach((smarts,i)=>{const q=rdkit!.get_qmol(smarts);if(!q)return;try {if(mol.get_substruct_match(q)!=='{}')hits.push(i);}finally {q.delete();}});
+    return hits;
+  } finally {mol.delete();}
+}
+
 export interface MolecularDepiction {svg:string;canonicalSmiles:string;formula:string;atomCount:number;bondCount:number;error:string|null}
 /** Draw the actual sanitized molecular graph. No scaffold diagrams or substituent aliases. */
 export function depictMolecule(smiles:string,width=320,height=210,partial=false):MolecularDepiction {
@@ -68,16 +80,19 @@ export interface LeafQueries {
   failed:string[];
   delete():void;
   /** @internal */ required:RDMol[];
+  /** @internal v1.2.1 forbidden-fragment queries, in the order of the SMARTS list given to compileLeafQueries (null = did not parse, listed in forbiddenFailed). */ forbidden:(RDMol|null)[];
+  forbiddenFailed:string[];
   /** @internal */ aromaticAtom:RDMol|null;
   /** @internal */ aromaticBond:RDMol|null;
 }
 /** Parses the required-substructure SMARTS and the two aromaticity queries once. null = RDKit is not available. */
-export function compileLeafQueries(requiredSmarts:string[]):LeafQueries|null {
+export function compileLeafQueries(requiredSmarts:string[],forbiddenSmarts:string[]=[]):LeafQueries|null {
   if (!rdkit) return null;
-  const required:RDMol[]=[],failed:string[]=[];
+  const required:RDMol[]=[],failed:string[]=[],forbiddenFailed:string[]=[];
   for (const smarts of requiredSmarts) {const q=rdkit.get_qmol(smarts);if(q)required.push(q);else failed.push(smarts);}
+  const forbidden=forbiddenSmarts.map(smarts=>{const q=rdkit!.get_qmol(smarts);if(!q)forbiddenFailed.push(smarts);return q;});
   const aromaticAtom=rdkit.get_qmol('[a]'),aromaticBond=rdkit.get_qmol('[a]:[a]');
-  return {failed,required,aromaticAtom,aromaticBond,delete(){for(const q of [...required,aromaticAtom,aromaticBond])q?.delete();}};
+  return {failed,forbiddenFailed,required,forbidden,aromaticAtom,aromaticBond,delete(){for(const q of [...required,...forbidden,aromaticAtom,aromaticBond])q?.delete();}};
 }
 export interface LeafMol {
   valid:boolean;
@@ -85,6 +100,8 @@ export interface LeafMol {
   smiles:string;
   /** Number of distinct (overlap-allowed) matches of required query i, counted up to `limit`. */
   matchCount(queryIndex:number,limit:number):number;
+  /** Index (in the forbidden SMARTS list) of the first forbidden fragment the molecule contains; -1 = none. */
+  forbiddenHit():number;
   /** 1 for every atom that is aromatic after sanitization (query [a]). */
   aromaticAtoms(atomCount:number):Uint8Array;
   /** Aromatic bonds as atom pairs (query [a]:[a]). */
@@ -94,7 +111,7 @@ export interface LeafMol {
 /** Parses a mol block once (sanitized). Atom indices of every result are the atom order of the mol block. Call close() when done. */
 export function openLeafMol(molBlock:string,queries:LeafQueries):LeafMol {
   const mol=rdkit?rdkit.get_mol(molBlock):null;
-  if (!mol||!mol.is_valid()) {mol?.delete();return {valid:false,smiles:'',matchCount:()=>0,aromaticAtoms:n=>new Uint8Array(n),aromaticBonds:()=>[],close(){}};}
+  if (!mol||!mol.is_valid()) {mol?.delete();return {valid:false,smiles:'',matchCount:()=>0,forbiddenHit:()=>-1,aromaticAtoms:n=>new Uint8Array(n),aromaticBonds:()=>[],close(){}};}
   const matches=(q:RDMol)=>{const v=JSON.parse(mol.get_substruct_matches(q)) as unknown;return Array.isArray(v)?v as {atoms:number[]}[]:[];}; // no match is the object {}
   return {
     valid:true,
@@ -104,6 +121,7 @@ export function openLeafMol(molBlock:string,queries:LeafQueries):LeafMol {
       if (limit<=1) return mol.get_substruct_match(q)!=='{}'?1:0;
       return Math.min(limit,matches(q).length);
     },
+    forbiddenHit(){for(let i=0;i<queries.forbidden.length;i++){const q=queries.forbidden[i];if(q&&mol.get_substruct_match(q)!=='{}')return i;}return -1;},
     aromaticAtoms(n){const out=new Uint8Array(n);if(queries.aromaticAtom)for(const m of matches(queries.aromaticAtom))out[m.atoms[0]]=1;return out;},
     aromaticBonds(){return queries.aromaticBond?matches(queries.aromaticBond).map(m=>[m.atoms[0],m.atoms[1]] as [number,number]):[];},
     close(){mol.delete();},

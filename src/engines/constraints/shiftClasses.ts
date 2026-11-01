@@ -20,8 +20,13 @@ export interface IrAldehydeContext {
   coversAldehydeRegion: boolean;
   /** A strong C=O band (relative intensity ≥ aldehydeIr.strongRelativeIntensity of the strongest band) lies in the window; null = intensities unknown. */
   strongCarbonyl: boolean | null;
+  /**
+   * v1.2.1 (B3): the IR shows a conjugated C=O (a band of at least conjugatedCarbonylIr.strongRelativeIntensity of the strongest band at 1630–1735 cm-1).
+   * null = cannot be judged (no IR, peak-table / non-image IR, image IR whose calibration is not trusted or whose intensities are unknown). Only === true relaxes a window.
+   */
+  conjugatedCarbonyl?: boolean | null;
 }
-export const NO_IR: IrAldehydeContext = {present: false, coversAldehydeRegion: false, strongCarbonyl: null};
+export const NO_IR: IrAldehydeContext = {present: false, coversAldehydeRegion: false, strongCarbonyl: null, conjugatedCarbonyl: null};
 
 export interface ClassifyContext {
   solvent: string;
@@ -29,17 +34,34 @@ export interface ClassifyContext {
   formulaElements: Set<string>;
   nitrogenAllowed: boolean;
   ir: IrAldehydeContext;
+  /** v1.2.1 (B3): the shift windows per H count of the classes that have them apply (no-formula path only). */
+  vinylWindows?: boolean;
 }
 export interface ClassMatch {
   classId: ShiftClassId;
   def: ShiftClassDef;
   /** Why the class applies (kept for the diagnostics). */
   reason: string;
+  /** v1.2.1 (B3): H counts per atom allowed at this shift (a class with hPerAtomWindows); absent = def.hPerAtom. */
+  hPerAtom?: number[];
+  /** v1.2.1 (B3): an H count was allowed only by the extended window (conjugated C=O). */
+  relaxed?: boolean;
 }
 export interface ClassifyResult {matches: ClassMatch[]; notes: string[]}
 
 const inRange = (v: number, [lo, hi]: [number, number]) => v >= lo && v <= hi;
 const classDef = (id: ShiftClassId): ShiftClassDef => V12_CONFIG.shiftClasses.find(c => c.id === id)!;
+
+/** B3: the H counts per atom a class with hPerAtomWindows allows at this shift; `relaxed` = at least one is allowed only by the extended window. */
+export function allowedHPerAtom(def: ShiftClassDef, shiftPpm: number, ir: IrAldehydeContext): {h: number[]; relaxed: boolean} {
+  const h: number[] = [];
+  let relaxed = false;
+  for (const w of def.hPerAtomWindows ?? []) {
+    if (inRange(shiftPpm, w.base)) h.push(w.h);
+    else if (w.extended && ir.conjugatedCarbonyl === true && inRange(shiftPpm, w.extended)) { h.push(w.h); relaxed = true; }
+  }
+  return {h: h.sort((a, b) => a - b), relaxed};
+}
 
 /** Chemical-shift window in which a singlet may be an OH/NH in this solvent (D5); other or unknown solvents use the union. */
 export function exchangeableSingletRange(solvent: string): [number, number] {
@@ -66,7 +88,9 @@ export function classifySignal(signal: H1Signal, ctx: ClassifyContext): Classify
   const matches: ClassMatch[] = [];
   const v = signal.shiftPpm;
   for (const def of V12_CONFIG.shiftClasses) {
-    if (def.id === 'EXCHANGEABLE' || !inRange(v, def.rangePpm)) continue;
+    const windows = Boolean(ctx.vinylWindows) && Boolean(def.hPerAtomWindows);
+    const allowed = windows ? allowedHPerAtom(def, v, ctx.ir) : null;
+    if (def.id === 'EXCHANGEABLE' || (allowed ? allowed.h.length === 0 : !inRange(v, def.rangePpm))) continue;
     if (def.heteroatom === 'O' && !ctx.formulaElements.has('O')) { notes.push(`${signal.observationId}：${def.id} 需要 O，分子式沒有`); continue; }
     if (def.heteroatom === 'N' && !(ctx.formulaElements.has('N') && ctx.nitrogenAllowed)) { notes.push(`${signal.observationId}：${def.id} 需要 N（且有 N 證據），不納入`); continue; }
     if (def.id === 'ALDEHYDE' && ctx.ir.present && ctx.ir.coversAldehydeRegion && ctx.ir.strongCarbonyl === false) {
@@ -74,7 +98,9 @@ export function classifySignal(signal: H1Signal, ctx: ClassifyContext): Classify
       continue;
     }
     if (def.id === 'ALDEHYDE' && ctx.ir.present && ctx.ir.coversAldehydeRegion && ctx.ir.strongCarbonyl === null) notes.push(`${signal.observationId}：IR 強度未知，保留 ALDEHYDE 解讀`);
-    matches.push({classId: def.id, def, reason: `位移 ${v} ppm 在 ${def.id} 範圍 ${def.rangePpm.join('–')}`});
+    matches.push(allowed
+      ? {classId: def.id, def, reason: `位移 ${v} ppm 在 ${def.id} 的視窗內（每原子 H 數 ${allowed.h.join('、')}${allowed.relaxed ? '；放寬窗依 IR 共軛 C=O' : ''}）`, hPerAtom: allowed.h, ...(allowed.relaxed ? {relaxed: true} : {})}
+      : {classId: def.id, def, reason: `位移 ${v} ppm 在 ${def.id} 範圍 ${def.rangePpm.join('–')}`});
   }
   if (hasExchangeableElement) {
     const ex = V12_CONFIG.exchangeable;

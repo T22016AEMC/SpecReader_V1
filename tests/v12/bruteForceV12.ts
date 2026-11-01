@@ -15,6 +15,8 @@ export interface BFSet {
   fragments: BFFragment[];
   equivalentGroups?: string[];
   required?: {smarts: string; minMatches?: number}[];
+  /** v1.2.1: forbidden fragments (SMARTS); a molecule that contains one is not an output. The caller passes the list (this file imports nothing from src/engines). */
+  forbidden?: string[];
   equivalencePools?: {group: string; demands: number[]}[];
 }
 
@@ -97,6 +99,7 @@ export async function bruteForceV12(formula: Record<string, number>, set: BFSet)
     return new Set(Array.from({length: n}, (_, i) => find(i))).size === 1;
   };
   const queries = (set.required ?? []).map(r => ({q: R.get_qmol(r.smarts), min: r.minMatches ?? 1}));
+  const forbiddenQueries = (set.forbidden ?? []).map(s => R.get_qmol(s));
   const qAtom = R.get_qmol('[a]'), qBond = R.get_qmol('[a]:[a]');
   const eqAtoms = (set.equivalentGroups ?? []).map(g => group.flatMap((x, i) => (x === g ? [i] : [])));
   const pools = (set.equivalencePools ?? []).map(p => ({atoms: group.flatMap((x, i) => (x === p.group ? [i] : [])), demands: p.demands.filter(d => d >= 2)}));
@@ -125,6 +128,7 @@ export async function bruteForceV12(formula: Record<string, number>, set: BFSet)
       const smiles: string = mol.get_smiles();
       if (out.has(smiles)) return;
       for (const r of queries) if (matchesOf(mol, r.q).length < r.min) return;
+      for (const q of forbiddenQueries) if (matchesOf(mol, q).length > 0) return;
       const aromaticAtom = new Set<number>(matchesOf(mol, qAtom).map(m => m.atoms[0]));
       for (let i = 0; i < n; i++) if (arom[i] && !aromaticAtom.has(i)) return;
       const aromaticBond = new Set<number>();
@@ -177,6 +181,7 @@ export async function bruteForceV12(formula: Record<string, number>, set: BFSet)
   };
   go(0);
   for (const r of queries) r.q.delete();
+  for (const q of forbiddenQueries) q.delete();
   qAtom.delete(); qBond.delete();
   return out;
 }
