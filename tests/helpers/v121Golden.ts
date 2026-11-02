@@ -28,7 +28,7 @@ export const FIXTURE_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.u
 export const loadFixture = (id: string): V121Fixture => JSON.parse(fs.readFileSync(path.join(FIXTURE_DIR, `${id}.json`), 'utf8'));
 
 /** Peak-table spectra of a fixture: 1H peaks get y, IR is %Transmittance with the covered range marked by end points and CONFIRMED_COMPLETE. */
-export function fixtureSpectra(f: V121Fixture, options: {declareSolvent?: boolean} = {}): Spectra {
+export function fixtureSpectra(f: V121Fixture, options: {declareSolvent?: boolean; denseBaseline?: boolean} = {}): Spectra {
   // v1.2.1c: the solvent and the field of the fixture reach the pipeline through `nmrSolvent` / `spectrometerFrequencyMHz`. Before 1c the helper wrote `solvent` / `frequencyMHz`, which
   // nothing reads, so every shape ran with solvent "Unknown". `declareSolvent: false` keeps that old input for the v1.2.0 golden (captured with it; the flag-false guarantee is "same input, same output").
   const declare = options.declareSolvent ?? true;
@@ -36,7 +36,22 @@ export function fixtureSpectra(f: V121Fixture, options: {declareSolvent?: boolea
   const irPeaks = f.ir.peaks.map(p => ({x: p.x, y: p.y, ...(p.isBroad ? {isBroad: true, shape: 'broad'} : {})}));
   const ir = {...spectrum('IR', irPeaks.map((p, i) => ({id: `IR-${i}`, manualPeak: true, ...p})) as unknown as SpectralPeak[], '%Transmittance'), irYAxisSemantics: 'TRANSMITTANCE_PERCENT', observationCoverage: 'CONFIRMED_COMPLETE'} as unknown as ExperimentalSpectrumData;
   ir.points = [{x: f.ir.coverageCm1[0], y: 99}, {x: f.ir.coverageCm1[1], y: 99}, ...irPeaks.map(p => ({x: p.x, y: p.y}))];
-  return {'1H_NMR': h1, IR: ir} as Spectra;
+  // v1.2.3: `denseBaseline` (default off, so every existing golden is untouched) adds a baseline point (y 99) every 25 cm-1 away from the marked peaks. With only the peaks and the two end points the
+  // relative intensity of a band comes from interpolation between neighbours and is not physical (a weak band can become the strongest); with a dense baseline it follows 99 - y.
+  // A peak marked `isBroad` gets a Lorentzian shoulder (half width 120 cm-1, points every 25 cm-1 up to 250 cm-1 away) so that the processed band really is broad; a lone point would be read as a narrow spike.
+  if (options.denseBaseline) {
+    const near = (x: number) => irPeaks.some(p => Math.abs(p.x - x) < 12);
+    const shoulder = (x: number) => irPeaks.some(p => p.isBroad && Math.abs(p.x - x) <= 250);
+    const base: {x: number; y: number}[] = [];
+    for (let x = f.ir.coverageCm1[1]; x <= f.ir.coverageCm1[0]; x += 25) if (!near(x) && !shoulder(x)) base.push({x, y: 99});
+    for (const p of irPeaks) if (p.isBroad) for (let d = -250; d <= 250; d += 25) {
+      const x = p.x + d;
+      if (d === 0 || x < f.ir.coverageCm1[1] || x > f.ir.coverageCm1[0] || near(x)) continue;
+      base.push({x, y: 99 - (99 - p.y) / (1 + (d / 120) ** 2)});
+    }
+    ir.points = [...base, ...irPeaks.map(p => ({x: p.x, y: p.y}))].sort((a, b) => b.x - a.x);
+  }
+    return {'1H_NMR': h1, IR: ir} as Spectra;
 }
 
 /** A full pipeline snapshot, without any wall-clock field. */
@@ -77,9 +92,12 @@ export const SHAPE_IDS = ['S1', 'G1', 'E1', 'G3', 'D1'] as const;
 
 /** Scenarios of the golden. `userFormulaWithS` is the existing synthetic ethyl shape with a user-typed formula that contains S. */
 export async function v121GoldenScenarios() {
-  const cfg = ENUMERATION_CONFIG as {legacySupplementWhenIncomplete: boolean};
-  const old = cfg.legacySupplementWhenIncomplete;
+  const cfg = ENUMERATION_CONFIG as {legacySupplementWhenIncomplete: boolean; legacySupplement: {timeMsPerRun: number; maxStatesPerRun: number}};
+  const old = cfg.legacySupplementWhenIncomplete, oldLegacyMs = cfg.legacySupplement.timeMsPerRun;
   cfg.legacySupplementWhenIncomplete = false;
+  // v1.2.3 (stop 1): the legacy beam search keeps a hard-coded 500 ms wall clock whose step count is pooled into the formulas after it, so the golden used to depend on CPU speed.
+  // In the test setting that search is limited by its step count only (production value unchanged; restored in finally).
+  cfg.legacySupplement.timeMsPerRun = STEP_ONLY_TIME_MS;
   try {
     const legacyOpts = {timeMs: STEP_ONLY_TIME_MS, maxStates: 4_000_000};
     const out: Record<string, unknown> = {
@@ -93,7 +111,7 @@ export async function v121GoldenScenarios() {
     const s1 = loadFixture('S1');
     out['S1_withFormula'] = await pipelineSnapshotV121(fixtureSpectra(s1, {declareSolvent: false}), {molecularFormula: s1.formula}, SHAPE_BUDGET);
     return out;
-  } finally { cfg.legacySupplementWhenIncomplete = old; }
+  } finally { cfg.legacySupplementWhenIncomplete = old; cfg.legacySupplement.timeMsPerRun = oldLegacyMs; }
 }
 
 /**

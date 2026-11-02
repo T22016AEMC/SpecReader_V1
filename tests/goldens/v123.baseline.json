@@ -1,0 +1,4475 @@
+{
+ "note": "v1.2.3 stop 1: results of the CURRENT code (a60ddc0 + test-helper changes only), before any v1.2.3 engine change. Synthetic samples (tests/fixtures/v123, v121/S2, v121/G3), no formula typed in, step budget 8 000 000 / timeMs 3 600 000 (SHAPE_BUDGET). sparse = the existing fixtureSpectra convention; dense = denseBaseline (physical intensities, Lorentzian shoulders on broad bands). Recorded with scripts/scratch/v123-measure.mts; compared by tests/v12/v123Baseline.test.ts.",
+ "samples": [
+  {
+   "id": "P1",
+   "mode": "sparse",
+   "formula": "C7H8O",
+   "hypotheses": 200,
+   "targetHypothesisRank": 38,
+   "targetSearched": true,
+   "targetNotSearchedReason": null,
+   "steps": 8000000,
+   "candidateSet": 21,
+   "targetInCandidates": true,
+   "targetRank": 1,
+   "ranked": 13,
+   "top5": [
+    {
+     "smiles": "Cc1ccc(O)cc1",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": true
+    },
+    {
+     "smiles": "Cc1ccc(C(O)(C(=O)O)c2ccc(C)cc2)cc1",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "Cc1ccc(C2(O)OC2(O)c2ccc(C)cc2)cc1",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CC(C)(c1ccc(O)cc1)c1ccc(O)cc1",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CC(=C(C)c1ccc(O)cc1)c1ccc(O)cc1",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    }
+   ],
+   "nInTop5": 0,
+   "implausibleNInTop5": 0,
+   "nitrogen": {
+    "mode": "NONE",
+    "reasons": []
+   },
+   "runs": [
+    {
+     "formula": "C7H8O",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 8511,
+     "candidates": 1,
+     "reasons": [],
+     "round": 2
+    },
+    {
+     "formula": "C15H16O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 18711,
+     "candidates": 2,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C21H22O",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 1282,
+     "candidates": 0,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C7H8O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 176,
+     "candidates": 2,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C15H16O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 67842,
+     "candidates": 1,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C21H22O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 3202,
+     "candidates": 0,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C8H8O",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 158,
+     "candidates": 0,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C16H16O2",
+     "termination": "STATE_BUDGET",
+     "visited": 3846501,
+     "candidates": 8,
+     "reasons": [
+      "ROUND1_STEP_CAP",
+      "STATE_BUDGET"
+     ],
+     "round": 2
+    },
+    {
+     "formula": "C21H22O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 11150,
+     "candidates": 0,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C8H8O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 502,
+     "candidates": 2,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C16H16O3",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 4,
+     "reasons": [
+      "ROUND1_STEP_CAP",
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C22H22O",
+     "termination": "STATE_BUDGET",
+     "visited": 3891965,
+     "candidates": 1,
+     "reasons": [
+      "ROUND1_STEP_CAP",
+      "STATE_BUDGET"
+     ],
+     "round": 2
+    }
+   ]
+  },
+  {
+   "id": "P1",
+   "mode": "dense",
+   "formula": "C7H8O",
+   "hypotheses": 170,
+   "targetHypothesisRank": 38,
+   "targetSearched": true,
+   "targetNotSearchedReason": null,
+   "steps": 8000000,
+   "candidateSet": 21,
+   "targetInCandidates": true,
+   "targetRank": 1,
+   "ranked": 13,
+   "top5": [
+    {
+     "smiles": "Cc1ccc(O)cc1",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": true
+    },
+    {
+     "smiles": "Cc1ccc(C2(O)OC2(O)c2ccc(C)cc2)cc1",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "Cc1ccc(C(O)(C(=O)O)c2ccc(C)cc2)cc1",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "Cc1ccc(C(O)(c2ccc(C)cc2)c2ccc(C)cc2)cc1",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CC(C)(c1ccc(O)cc1)c1ccc(O)cc1",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    }
+   ],
+   "nInTop5": 0,
+   "implausibleNInTop5": 0,
+   "nitrogen": {
+    "mode": "NONE",
+    "reasons": []
+   },
+   "runs": [
+    {
+     "formula": "C7H8O",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 8511,
+     "candidates": 1,
+     "reasons": [],
+     "round": 2
+    },
+    {
+     "formula": "C15H16O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 18711,
+     "candidates": 2,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C21H22O",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 1282,
+     "candidates": 0,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C7H8O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 176,
+     "candidates": 2,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C15H16O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 67842,
+     "candidates": 1,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C21H22O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 3202,
+     "candidates": 0,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C8H8O",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 158,
+     "candidates": 0,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C16H16O2",
+     "termination": "STATE_BUDGET",
+     "visited": 3846501,
+     "candidates": 8,
+     "reasons": [
+      "ROUND1_STEP_CAP",
+      "STATE_BUDGET"
+     ],
+     "round": 2
+    },
+    {
+     "formula": "C21H22O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 11150,
+     "candidates": 0,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C8H8O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 502,
+     "candidates": 2,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C16H16O3",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 4,
+     "reasons": [
+      "ROUND1_STEP_CAP",
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C22H22O",
+     "termination": "STATE_BUDGET",
+     "visited": 3891965,
+     "candidates": 1,
+     "reasons": [
+      "ROUND1_STEP_CAP",
+      "STATE_BUDGET"
+     ],
+     "round": 2
+    }
+   ]
+  },
+  {
+   "id": "P2",
+   "mode": "sparse",
+   "formula": "C7H8O",
+   "hypotheses": 200,
+   "targetHypothesisRank": 1,
+   "targetSearched": true,
+   "targetNotSearchedReason": null,
+   "steps": 8000000,
+   "candidateSet": 17,
+   "targetInCandidates": true,
+   "targetRank": 1,
+   "ranked": 13,
+   "top5": [
+    {
+     "smiles": "Cc1ccc(O)cc1",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": true
+    },
+    {
+     "smiles": "Cc1ccc(C2(c3ccc(C)cc3)CO2)cc1",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CC(C)(c1ccc(O)cc1)c1ccc(O)cc1",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CC(=O)c1ccc(O)cc1",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "Cc1ccc(OCOc2ccc(C)cc2)cc1",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    }
+   ],
+   "nInTop5": 0,
+   "implausibleNInTop5": 0,
+   "nitrogen": {
+    "mode": "NONE",
+    "reasons": []
+   },
+   "runs": [
+    {
+     "formula": "C7H8O",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 16177,
+     "candidates": 1,
+     "reasons": [],
+     "round": 2
+    },
+    {
+     "formula": "C15H16O",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 5602,
+     "candidates": 0,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C22H24O",
+     "termination": "STATE_BUDGET",
+     "visited": 504544,
+     "candidates": 0,
+     "reasons": [
+      "ROUND2_EXPLORE_CAP"
+     ],
+     "round": 2
+    },
+    {
+     "formula": "C7H8O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 176,
+     "candidates": 2,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C15H16O2",
+     "termination": "STATE_BUDGET",
+     "visited": 7065674,
+     "candidates": 4,
+     "reasons": [
+      "VINYL_READINGS_BUDGET"
+     ],
+     "round": 2
+    },
+    {
+     "formula": "C22H24O2",
+     "termination": "STATE_BUDGET",
+     "visited": 13562,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP",
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C8H8O",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 254,
+     "candidates": 1,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C15H16O3",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 1,
+     "reasons": [
+      "ROUND1_STEP_CAP",
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C22H24O3",
+     "termination": "STATE_BUDGET",
+     "visited": 24876,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP",
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C8H8O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 1288,
+     "candidates": 5,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C16H16O",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 67847,
+     "candidates": 3,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C23H24O",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP",
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    }
+   ]
+  },
+  {
+   "id": "P2",
+   "mode": "dense",
+   "formula": "C7H8O",
+   "hypotheses": 180,
+   "targetHypothesisRank": 1,
+   "targetSearched": true,
+   "targetNotSearchedReason": null,
+   "steps": 8000000,
+   "candidateSet": 17,
+   "targetInCandidates": true,
+   "targetRank": 1,
+   "ranked": 13,
+   "top5": [
+    {
+     "smiles": "Cc1ccc(O)cc1",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": true
+    },
+    {
+     "smiles": "Cc1ccc(C2(c3ccc(C)cc3)CO2)cc1",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CC(C)(c1ccc(O)cc1)c1ccc(O)cc1",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "Cc1ccc(OCOc2ccc(C)cc2)cc1",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "COc1ccc(O)cc1",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    }
+   ],
+   "nInTop5": 0,
+   "implausibleNInTop5": 0,
+   "nitrogen": {
+    "mode": "NONE",
+    "reasons": []
+   },
+   "runs": [
+    {
+     "formula": "C7H8O",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 16177,
+     "candidates": 1,
+     "reasons": [],
+     "round": 2
+    },
+    {
+     "formula": "C15H16O",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 5602,
+     "candidates": 0,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C22H24O",
+     "termination": "STATE_BUDGET",
+     "visited": 504544,
+     "candidates": 0,
+     "reasons": [
+      "ROUND2_EXPLORE_CAP"
+     ],
+     "round": 2
+    },
+    {
+     "formula": "C7H8O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 176,
+     "candidates": 2,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C15H16O2",
+     "termination": "STATE_BUDGET",
+     "visited": 7065674,
+     "candidates": 4,
+     "reasons": [
+      "VINYL_READINGS_BUDGET"
+     ],
+     "round": 2
+    },
+    {
+     "formula": "C22H24O2",
+     "termination": "STATE_BUDGET",
+     "visited": 13562,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP",
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C8H8O",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 254,
+     "candidates": 1,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C15H16O3",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 1,
+     "reasons": [
+      "ROUND1_STEP_CAP",
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C22H24O3",
+     "termination": "STATE_BUDGET",
+     "visited": 24876,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP",
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C8H8O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 1288,
+     "candidates": 5,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C16H16O",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 67847,
+     "candidates": 3,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C23H24O",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP",
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    }
+   ]
+  },
+  {
+   "id": "P3",
+   "mode": "sparse",
+   "formula": "C7H8O",
+   "hypotheses": 200,
+   "targetHypothesisRank": 44,
+   "targetSearched": false,
+   "targetNotSearchedReason": "同 O 數只保留分數最高的一個（H、N 的變體不算 O 變體）；有額外可交換 H 的變體另外保留分數最高的一個",
+   "steps": 6857380,
+   "candidateSet": 19,
+   "targetInCandidates": false,
+   "targetRank": null,
+   "ranked": 16,
+   "top5": [
+    {
+     "smiles": "CN=C(O)c1ccc(O)cc1",
+     "n": true,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "Cc1ccc(NONc2ccc(C)cc2)cc1",
+     "n": true,
+     "implausibleN": [
+      "N-O-N"
+     ],
+     "isTarget": false
+    },
+    {
+     "smiles": "CN(C)N(c1ccc(O)cc1)c1ccc(O)cc1",
+     "n": true,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CN(c1ccc(O)cc1)N(C)c1ccc(O)cc1",
+     "n": true,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CC(C)(c1ccc(O)cc1)c1ccc(O)cc1",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    }
+   ],
+   "nInTop5": 4,
+   "implausibleNInTop5": 1,
+   "nitrogen": {
+    "mode": "EVIDENCE",
+    "reasons": [
+     "IR 1633／1518 cm⁻¹（醯胺 I／II）與 3340 cm⁻¹ 窄 N–H 伸縮同時存在，與醯胺相容"
+    ]
+   },
+   "runs": [
+    {
+     "formula": "C6H9N3O",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 267,
+     "candidates": 0,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C14H16N2O",
+     "termination": "STATE_BUDGET",
+     "visited": 6499042,
+     "candidates": 2,
+     "reasons": [
+      "VINYL_READINGS_BUDGET"
+     ],
+     "round": 2
+    },
+    {
+     "formula": "C6H9N3O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 1665,
+     "candidates": 0,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C14H16N2O2",
+     "termination": "STATE_BUDGET",
+     "visited": 72619,
+     "candidates": 4,
+     "reasons": [
+      "ROUND1_STEP_CAP",
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C7H9NO2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 61958,
+     "candidates": 2,
+     "reasons": [],
+     "round": 2
+    },
+    {
+     "formula": "C14H16N2O3",
+     "termination": "STATE_BUDGET",
+     "visited": 132962,
+     "candidates": 3,
+     "reasons": [
+      "ROUND1_STEP_CAP",
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C8H9NO2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 2314,
+     "candidates": 5,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C15H16O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 18711,
+     "candidates": 2,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C15H16O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 67842,
+     "candidates": 1,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    }
+   ]
+  },
+  {
+   "id": "P3",
+   "mode": "dense",
+   "formula": "C7H8O",
+   "hypotheses": 200,
+   "targetHypothesisRank": 44,
+   "targetSearched": false,
+   "targetNotSearchedReason": "同 O 數只保留分數最高的一個（H、N 的變體不算 O 變體）；有額外可交換 H 的變體另外保留分數最高的一個",
+   "steps": 6857380,
+   "candidateSet": 19,
+   "targetInCandidates": false,
+   "targetRank": null,
+   "ranked": 16,
+   "top5": [
+    {
+     "smiles": "CN=C(O)c1ccc(O)cc1",
+     "n": true,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "Cc1ccc(NONc2ccc(C)cc2)cc1",
+     "n": true,
+     "implausibleN": [
+      "N-O-N"
+     ],
+     "isTarget": false
+    },
+    {
+     "smiles": "Cc1ccc(N=C(O)O)cc1",
+     "n": true,
+     "implausibleN": [
+      "N=C(O)O"
+     ],
+     "isTarget": false
+    },
+    {
+     "smiles": "CN(C)N(c1ccc(O)cc1)c1ccc(O)cc1",
+     "n": true,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CN(c1ccc(O)cc1)N(C)c1ccc(O)cc1",
+     "n": true,
+     "implausibleN": [],
+     "isTarget": false
+    }
+   ],
+   "nInTop5": 5,
+   "implausibleNInTop5": 2,
+   "nitrogen": {
+    "mode": "EVIDENCE",
+    "reasons": [
+     "IR 1633／1518 cm⁻¹（醯胺 I／II）與 3340 cm⁻¹ 窄 N–H 伸縮同時存在，與醯胺相容"
+    ]
+   },
+   "runs": [
+    {
+     "formula": "C6H9N3O",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 267,
+     "candidates": 0,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C14H16N2O",
+     "termination": "STATE_BUDGET",
+     "visited": 6499042,
+     "candidates": 2,
+     "reasons": [
+      "VINYL_READINGS_BUDGET"
+     ],
+     "round": 2
+    },
+    {
+     "formula": "C6H9N3O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 1665,
+     "candidates": 0,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C14H16N2O2",
+     "termination": "STATE_BUDGET",
+     "visited": 72619,
+     "candidates": 4,
+     "reasons": [
+      "ROUND1_STEP_CAP",
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C7H9NO2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 61958,
+     "candidates": 2,
+     "reasons": [],
+     "round": 2
+    },
+    {
+     "formula": "C14H16N2O3",
+     "termination": "STATE_BUDGET",
+     "visited": 132962,
+     "candidates": 3,
+     "reasons": [
+      "ROUND1_STEP_CAP",
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C8H9NO2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 2314,
+     "candidates": 5,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C15H16O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 18711,
+     "candidates": 2,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C15H16O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 67842,
+     "candidates": 1,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    }
+   ]
+  },
+  {
+   "id": "P4",
+   "mode": "sparse",
+   "formula": "C7H8O",
+   "hypotheses": 200,
+   "targetHypothesisRank": 44,
+   "targetSearched": false,
+   "targetNotSearchedReason": "同 O 數只保留分數最高的一個（H、N 的變體不算 O 變體）；有額外可交換 H 的變體另外保留分數最高的一個",
+   "steps": 6857380,
+   "candidateSet": 19,
+   "targetInCandidates": false,
+   "targetRank": null,
+   "ranked": 16,
+   "top5": [
+    {
+     "smiles": "Cc1ccc(N(c2ccc(C)cc2)N(O)O)cc1",
+     "n": true,
+     "implausibleN": [
+      "N(O)O"
+     ],
+     "isTarget": false
+    },
+    {
+     "smiles": "Cc1ccc(N(O)O)cc1",
+     "n": true,
+     "implausibleN": [
+      "N(O)O"
+     ],
+     "isTarget": false
+    },
+    {
+     "smiles": "Cc1ccc(N(O)ON(O)c2ccc(C)cc2)cc1",
+     "n": true,
+     "implausibleN": [
+      "N(O)O",
+      "N-O-N"
+     ],
+     "isTarget": false
+    },
+    {
+     "smiles": "Cc1ccc(N(ON(O)O)c2ccc(C)cc2)cc1",
+     "n": true,
+     "implausibleN": [
+      "N(O)O",
+      "N-O-N"
+     ],
+     "isTarget": false
+    },
+    {
+     "smiles": "CN=C(O)c1ccc(O)cc1",
+     "n": true,
+     "implausibleN": [],
+     "isTarget": false
+    }
+   ],
+   "nInTop5": 5,
+   "implausibleNInTop5": 4,
+   "nitrogen": {
+    "mode": "EVIDENCE",
+    "reasons": [
+     "IR 1518／1357 cm⁻¹ 兩條強帶（強度比 1.00），與硝基不對稱／對稱伸縮相容"
+    ]
+   },
+   "runs": [
+    {
+     "formula": "C6H9N3O",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 267,
+     "candidates": 0,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C14H16N2O",
+     "termination": "STATE_BUDGET",
+     "visited": 6499042,
+     "candidates": 2,
+     "reasons": [
+      "VINYL_READINGS_BUDGET"
+     ],
+     "round": 2
+    },
+    {
+     "formula": "C6H9N3O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 1665,
+     "candidates": 0,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C14H16N2O2",
+     "termination": "STATE_BUDGET",
+     "visited": 72619,
+     "candidates": 4,
+     "reasons": [
+      "ROUND1_STEP_CAP",
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C7H9NO2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 61958,
+     "candidates": 2,
+     "reasons": [],
+     "round": 2
+    },
+    {
+     "formula": "C14H16N2O3",
+     "termination": "STATE_BUDGET",
+     "visited": 132962,
+     "candidates": 3,
+     "reasons": [
+      "ROUND1_STEP_CAP",
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C8H9NO2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 2314,
+     "candidates": 5,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C15H16O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 18711,
+     "candidates": 2,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C15H16O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 67842,
+     "candidates": 1,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    }
+   ]
+  },
+  {
+   "id": "P4",
+   "mode": "dense",
+   "formula": "C7H8O",
+   "hypotheses": 200,
+   "targetHypothesisRank": 44,
+   "targetSearched": false,
+   "targetNotSearchedReason": "同 O 數只保留分數最高的一個（H、N 的變體不算 O 變體）；有額外可交換 H 的變體另外保留分數最高的一個",
+   "steps": 6857380,
+   "candidateSet": 19,
+   "targetInCandidates": false,
+   "targetRank": null,
+   "ranked": 16,
+   "top5": [
+    {
+     "smiles": "Cc1ccc(N(c2ccc(C)cc2)N(O)O)cc1",
+     "n": true,
+     "implausibleN": [
+      "N(O)O"
+     ],
+     "isTarget": false
+    },
+    {
+     "smiles": "Cc1ccc(N(O)O)cc1",
+     "n": true,
+     "implausibleN": [
+      "N(O)O"
+     ],
+     "isTarget": false
+    },
+    {
+     "smiles": "Cc1ccc(N(O)ON(O)c2ccc(C)cc2)cc1",
+     "n": true,
+     "implausibleN": [
+      "N(O)O",
+      "N-O-N"
+     ],
+     "isTarget": false
+    },
+    {
+     "smiles": "Cc1ccc(N(ON(O)O)c2ccc(C)cc2)cc1",
+     "n": true,
+     "implausibleN": [
+      "N(O)O",
+      "N-O-N"
+     ],
+     "isTarget": false
+    },
+    {
+     "smiles": "CN=C(O)c1ccc(O)cc1",
+     "n": true,
+     "implausibleN": [],
+     "isTarget": false
+    }
+   ],
+   "nInTop5": 5,
+   "implausibleNInTop5": 4,
+   "nitrogen": {
+    "mode": "EVIDENCE",
+    "reasons": [
+     "IR 1518／1357 cm⁻¹ 兩條強帶（強度比 1.00），與硝基不對稱／對稱伸縮相容"
+    ]
+   },
+   "runs": [
+    {
+     "formula": "C6H9N3O",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 267,
+     "candidates": 0,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C14H16N2O",
+     "termination": "STATE_BUDGET",
+     "visited": 6499042,
+     "candidates": 2,
+     "reasons": [
+      "VINYL_READINGS_BUDGET"
+     ],
+     "round": 2
+    },
+    {
+     "formula": "C6H9N3O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 1665,
+     "candidates": 0,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C14H16N2O2",
+     "termination": "STATE_BUDGET",
+     "visited": 72619,
+     "candidates": 4,
+     "reasons": [
+      "ROUND1_STEP_CAP",
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C7H9NO2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 61958,
+     "candidates": 2,
+     "reasons": [],
+     "round": 2
+    },
+    {
+     "formula": "C14H16N2O3",
+     "termination": "STATE_BUDGET",
+     "visited": 132962,
+     "candidates": 3,
+     "reasons": [
+      "ROUND1_STEP_CAP",
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C8H9NO2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 2314,
+     "candidates": 5,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C15H16O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 18711,
+     "candidates": 2,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C15H16O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 67842,
+     "candidates": 1,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    }
+   ]
+  },
+  {
+   "id": "B1",
+   "mode": "sparse",
+   "formula": "C15H16O2",
+   "hypotheses": 200,
+   "targetHypothesisRank": 130,
+   "targetSearched": true,
+   "targetNotSearchedReason": null,
+   "steps": 8000000,
+   "candidateSet": 21,
+   "targetInCandidates": true,
+   "targetRank": 1,
+   "ranked": 13,
+   "top5": [
+    {
+     "smiles": "CC(C)(c1ccc(O)cc1)c1ccc(O)cc1",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": true
+    },
+    {
+     "smiles": "CC(=C(C)c1ccc(O)cc1)c1ccc(O)cc1",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CC(C)=C(c1ccc(O)cc1)c1ccc(O)cc1",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "Cc1ccc(O)cc1",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CC1(O)c2ccc(cc2)-c2ccc(cc2)C1(C)O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    }
+   ],
+   "nInTop5": 0,
+   "implausibleNInTop5": 0,
+   "nitrogen": {
+    "mode": "NONE",
+    "reasons": []
+   },
+   "runs": [
+    {
+     "formula": "C7H8O",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 8511,
+     "candidates": 1,
+     "reasons": [],
+     "round": 2
+    },
+    {
+     "formula": "C15H16O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 18711,
+     "candidates": 2,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C21H22O",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 1282,
+     "candidates": 0,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C7H8O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 176,
+     "candidates": 2,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C15H16O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 67842,
+     "candidates": 1,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C21H22O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 3202,
+     "candidates": 0,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C8H8O",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 158,
+     "candidates": 0,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C16H16O2",
+     "termination": "STATE_BUDGET",
+     "visited": 3846501,
+     "candidates": 8,
+     "reasons": [
+      "ROUND1_STEP_CAP",
+      "STATE_BUDGET"
+     ],
+     "round": 2
+    },
+    {
+     "formula": "C21H22O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 11150,
+     "candidates": 0,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C8H8O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 502,
+     "candidates": 2,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C16H16O3",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 4,
+     "reasons": [
+      "ROUND1_STEP_CAP",
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C22H22O",
+     "termination": "STATE_BUDGET",
+     "visited": 3891965,
+     "candidates": 1,
+     "reasons": [
+      "ROUND1_STEP_CAP",
+      "STATE_BUDGET"
+     ],
+     "round": 2
+    }
+   ]
+  },
+  {
+   "id": "B1",
+   "mode": "dense",
+   "formula": "C15H16O2",
+   "hypotheses": 170,
+   "targetHypothesisRank": 130,
+   "targetSearched": true,
+   "targetNotSearchedReason": null,
+   "steps": 8000000,
+   "candidateSet": 21,
+   "targetInCandidates": true,
+   "targetRank": 1,
+   "ranked": 13,
+   "top5": [
+    {
+     "smiles": "CC(C)(c1ccc(O)cc1)c1ccc(O)cc1",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": true
+    },
+    {
+     "smiles": "CC(=C(C)c1ccc(O)cc1)c1ccc(O)cc1",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CC(C)=C(c1ccc(O)cc1)c1ccc(O)cc1",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "Cc1ccc(O)cc1",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CC1(O)c2ccc(cc2)-c2ccc(cc2)C1(C)O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    }
+   ],
+   "nInTop5": 0,
+   "implausibleNInTop5": 0,
+   "nitrogen": {
+    "mode": "NONE",
+    "reasons": []
+   },
+   "runs": [
+    {
+     "formula": "C7H8O",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 8511,
+     "candidates": 1,
+     "reasons": [],
+     "round": 2
+    },
+    {
+     "formula": "C15H16O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 18711,
+     "candidates": 2,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C21H22O",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 1282,
+     "candidates": 0,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C7H8O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 176,
+     "candidates": 2,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C15H16O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 67842,
+     "candidates": 1,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C21H22O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 3202,
+     "candidates": 0,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C8H8O",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 158,
+     "candidates": 0,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C16H16O2",
+     "termination": "STATE_BUDGET",
+     "visited": 3846501,
+     "candidates": 8,
+     "reasons": [
+      "ROUND1_STEP_CAP",
+      "STATE_BUDGET"
+     ],
+     "round": 2
+    },
+    {
+     "formula": "C21H22O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 11150,
+     "candidates": 0,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C8H8O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 502,
+     "candidates": 2,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C16H16O3",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 4,
+     "reasons": [
+      "ROUND1_STEP_CAP",
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C22H22O",
+     "termination": "STATE_BUDGET",
+     "visited": 3891965,
+     "candidates": 1,
+     "reasons": [
+      "ROUND1_STEP_CAP",
+      "STATE_BUDGET"
+     ],
+     "round": 2
+    }
+   ]
+  },
+  {
+   "id": "S2",
+   "mode": "sparse",
+   "formula": "C15H16O2",
+   "hypotheses": 200,
+   "targetHypothesisRank": 130,
+   "targetSearched": true,
+   "targetNotSearchedReason": null,
+   "steps": 8000000,
+   "candidateSet": 21,
+   "targetInCandidates": true,
+   "targetRank": 1,
+   "ranked": 13,
+   "top5": [
+    {
+     "smiles": "CC(C)(c1ccc(O)cc1)c1ccc(O)cc1",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": true
+    },
+    {
+     "smiles": "CC(=C(C)c1ccc(O)cc1)c1ccc(O)cc1",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CC(C)=C(c1ccc(O)cc1)c1ccc(O)cc1",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "Cc1ccc(O)cc1",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CC1(O)c2ccc(cc2)-c2ccc(cc2)C1(C)O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    }
+   ],
+   "nInTop5": 0,
+   "implausibleNInTop5": 0,
+   "nitrogen": {
+    "mode": "NONE",
+    "reasons": []
+   },
+   "runs": [
+    {
+     "formula": "C7H8O",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 8511,
+     "candidates": 1,
+     "reasons": [],
+     "round": 2
+    },
+    {
+     "formula": "C15H16O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 18711,
+     "candidates": 2,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C21H22O",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 1282,
+     "candidates": 0,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C7H8O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 176,
+     "candidates": 2,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C15H16O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 67842,
+     "candidates": 1,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C21H22O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 3202,
+     "candidates": 0,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C8H8O",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 158,
+     "candidates": 0,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C16H16O2",
+     "termination": "STATE_BUDGET",
+     "visited": 3846501,
+     "candidates": 8,
+     "reasons": [
+      "ROUND1_STEP_CAP",
+      "STATE_BUDGET"
+     ],
+     "round": 2
+    },
+    {
+     "formula": "C21H22O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 11150,
+     "candidates": 0,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C8H8O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 502,
+     "candidates": 2,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C16H16O3",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 4,
+     "reasons": [
+      "ROUND1_STEP_CAP",
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C22H22O",
+     "termination": "STATE_BUDGET",
+     "visited": 3891965,
+     "candidates": 1,
+     "reasons": [
+      "ROUND1_STEP_CAP",
+      "STATE_BUDGET"
+     ],
+     "round": 2
+    }
+   ]
+  },
+  {
+   "id": "S2",
+   "mode": "dense",
+   "formula": "C15H16O2",
+   "hypotheses": 170,
+   "targetHypothesisRank": 130,
+   "targetSearched": true,
+   "targetNotSearchedReason": null,
+   "steps": 8000000,
+   "candidateSet": 21,
+   "targetInCandidates": true,
+   "targetRank": 1,
+   "ranked": 13,
+   "top5": [
+    {
+     "smiles": "CC(C)(c1ccc(O)cc1)c1ccc(O)cc1",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": true
+    },
+    {
+     "smiles": "CC(=C(C)c1ccc(O)cc1)c1ccc(O)cc1",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CC(C)=C(c1ccc(O)cc1)c1ccc(O)cc1",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "Cc1ccc(O)cc1",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CC1(O)c2ccc(cc2)-c2ccc(cc2)C1(C)O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    }
+   ],
+   "nInTop5": 0,
+   "implausibleNInTop5": 0,
+   "nitrogen": {
+    "mode": "NONE",
+    "reasons": []
+   },
+   "runs": [
+    {
+     "formula": "C7H8O",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 8511,
+     "candidates": 1,
+     "reasons": [],
+     "round": 2
+    },
+    {
+     "formula": "C15H16O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 18711,
+     "candidates": 2,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C21H22O",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 1282,
+     "candidates": 0,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C7H8O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 176,
+     "candidates": 2,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C15H16O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 67842,
+     "candidates": 1,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C21H22O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 3202,
+     "candidates": 0,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C8H8O",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 158,
+     "candidates": 0,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C16H16O2",
+     "termination": "STATE_BUDGET",
+     "visited": 3846501,
+     "candidates": 8,
+     "reasons": [
+      "ROUND1_STEP_CAP",
+      "STATE_BUDGET"
+     ],
+     "round": 2
+    },
+    {
+     "formula": "C21H22O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 11150,
+     "candidates": 0,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C8H8O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 502,
+     "candidates": 2,
+     "reasons": [
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C16H16O3",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 4,
+     "reasons": [
+      "ROUND1_STEP_CAP",
+      "VINYL_READINGS_NOT_RUN"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C22H22O",
+     "termination": "STATE_BUDGET",
+     "visited": 3891965,
+     "candidates": 1,
+     "reasons": [
+      "ROUND1_STEP_CAP",
+      "STATE_BUDGET"
+     ],
+     "round": 2
+    }
+   ]
+  },
+  {
+   "id": "M1",
+   "mode": "sparse",
+   "formula": "C6H12O3",
+   "hypotheses": 200,
+   "targetHypothesisRank": 8,
+   "targetSearched": true,
+   "targetNotSearchedReason": null,
+   "steps": 1360447,
+   "candidateSet": 36,
+   "targetInCandidates": false,
+   "targetRank": null,
+   "ranked": 31,
+   "top5": [
+    {
+     "smiles": "CCC(OC)C(C)=O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CCOC(C)C(C)=O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "COC(C)CC(C)=O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "COCC(C)C(C)=O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CCOC(C)(C=O)OC",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    }
+   ],
+   "nInTop5": 0,
+   "implausibleNInTop5": 0,
+   "nitrogen": {
+    "mode": "NONE",
+    "reasons": []
+   },
+   "runs": [
+    {
+     "formula": "C5H12O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 349,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C11H24O2",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C17H36O2",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C5H12O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 10105,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C11H24O3",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C17H36O3",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C6H12O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 10813,
+     "candidates": 18,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C11H24O4",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C17H36O6",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C6H12O3",
+     "termination": "STATE_BUDGET",
+     "visited": 139180,
+     "candidates": 16,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C12H24O2",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 1,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C18H36O2",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 1,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    }
+   ]
+  },
+  {
+   "id": "M1",
+   "mode": "dense",
+   "formula": "C6H12O3",
+   "hypotheses": 200,
+   "targetHypothesisRank": 8,
+   "targetSearched": true,
+   "targetNotSearchedReason": null,
+   "steps": 1360447,
+   "candidateSet": 36,
+   "targetInCandidates": false,
+   "targetRank": null,
+   "ranked": 31,
+   "top5": [
+    {
+     "smiles": "CCC(OC)C(C)=O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "COC(C)CC(C)=O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "COCC(C)C(C)=O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CCOC(C)C(C)=O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CCOC(OC)C(C)=O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    }
+   ],
+   "nInTop5": 0,
+   "implausibleNInTop5": 0,
+   "nitrogen": {
+    "mode": "NONE",
+    "reasons": []
+   },
+   "runs": [
+    {
+     "formula": "C5H12O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 349,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C11H24O2",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C17H36O2",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C5H12O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 10105,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C11H24O3",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C17H36O3",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C6H12O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 10813,
+     "candidates": 18,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C11H24O4",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C17H36O6",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C6H12O3",
+     "termination": "STATE_BUDGET",
+     "visited": 139180,
+     "candidates": 16,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C12H24O2",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 1,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C18H36O2",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 1,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    }
+   ]
+  },
+  {
+   "id": "M1b",
+   "mode": "sparse",
+   "formula": "C6H12O3",
+   "hypotheses": 200,
+   "targetHypothesisRank": 8,
+   "targetSearched": true,
+   "targetNotSearchedReason": null,
+   "steps": 549096,
+   "candidateSet": 27,
+   "targetInCandidates": false,
+   "targetRank": null,
+   "ranked": 27,
+   "top5": [
+    {
+     "smiles": "COC=C(C)CC(C)=O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CC=C(CC(C)=O)OC",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "COCC=C(C)C(C)=O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CCC(=COC)C(C)=O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CC=C(COC)C(C)=O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    }
+   ],
+   "nInTop5": 0,
+   "implausibleNInTop5": 0,
+   "nitrogen": {
+    "mode": "NONE",
+    "reasons": []
+   },
+   "runs": [
+    {
+     "formula": "C5H12O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 635,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C11H24O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 3928,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C17H36O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 5170,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C6H12O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 2976,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C11H24O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 5354,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C17H36O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 6596,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C6H12O3",
+     "termination": "STATE_BUDGET",
+     "visited": 104635,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C11H24O4",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 7134,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C17H36O6",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 12668,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C7H12O2",
+     "termination": "STATE_BUDGET",
+     "visited": 100000,
+     "candidates": 27,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C12H24O2",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C18H36O2",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    }
+   ]
+  },
+  {
+   "id": "M1b",
+   "mode": "dense",
+   "formula": "C6H12O3",
+   "hypotheses": 200,
+   "targetHypothesisRank": 8,
+   "targetSearched": true,
+   "targetNotSearchedReason": null,
+   "steps": 549096,
+   "candidateSet": 27,
+   "targetInCandidates": false,
+   "targetRank": null,
+   "ranked": 27,
+   "top5": [
+    {
+     "smiles": "COC=C(C)CC(C)=O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "COCC=C(C)C(C)=O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CC=C(CC(C)=O)OC",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CCC(=COC)C(C)=O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CC=C(COC)C(C)=O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    }
+   ],
+   "nInTop5": 0,
+   "implausibleNInTop5": 0,
+   "nitrogen": {
+    "mode": "NONE",
+    "reasons": []
+   },
+   "runs": [
+    {
+     "formula": "C5H12O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 635,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C11H24O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 3928,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C17H36O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 5170,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C6H12O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 2976,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C11H24O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 5354,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C17H36O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 6596,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C6H12O3",
+     "termination": "STATE_BUDGET",
+     "visited": 104635,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C11H24O4",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 7134,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C17H36O6",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 12668,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C7H12O2",
+     "termination": "STATE_BUDGET",
+     "visited": 100000,
+     "candidates": 27,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C12H24O2",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C18H36O2",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    }
+   ]
+  },
+  {
+   "id": "M4",
+   "mode": "sparse",
+   "formula": "C8H14O2",
+   "hypotheses": 200,
+   "targetHypothesisRank": 11,
+   "targetSearched": false,
+   "targetNotSearchedReason": "k 輪流名額已滿（第一輪最多搜尋 12 個分子式）",
+   "steps": 637946,
+   "candidateSet": 0,
+   "targetInCandidates": false,
+   "targetRank": null,
+   "ranked": 0,
+   "top5": [],
+   "nInTop5": 0,
+   "implausibleNInTop5": 0,
+   "nitrogen": {
+    "mode": "NONE",
+    "reasons": []
+   },
+   "runs": [
+    {
+     "formula": "C6H14O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 108,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C13H28O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 7494,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C20H42O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 30770,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C6H14O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 1889,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C13H28O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 9776,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C20H42O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 37844,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C7H14O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 21061,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C13H28O4",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 12540,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C20H42O6",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 66464,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C7H14O3",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C14H28O2",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C21H42O2",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    }
+   ]
+  },
+  {
+   "id": "M4",
+   "mode": "dense",
+   "formula": "C8H14O2",
+   "hypotheses": 200,
+   "targetHypothesisRank": 11,
+   "targetSearched": false,
+   "targetNotSearchedReason": "k 輪流名額已滿（第一輪最多搜尋 12 個分子式）",
+   "steps": 637946,
+   "candidateSet": 0,
+   "targetInCandidates": false,
+   "targetRank": null,
+   "ranked": 0,
+   "top5": [],
+   "nInTop5": 0,
+   "implausibleNInTop5": 0,
+   "nitrogen": {
+    "mode": "NONE",
+    "reasons": []
+   },
+   "runs": [
+    {
+     "formula": "C6H14O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 108,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C13H28O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 7494,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C20H42O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 30770,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C6H14O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 1889,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C13H28O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 9776,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C20H42O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 37844,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C7H14O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 21061,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C13H28O4",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 12540,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C20H42O6",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 66464,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C7H14O3",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C14H28O2",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C21H42O2",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    }
+   ]
+  },
+  {
+   "id": "M5",
+   "mode": "sparse",
+   "formula": "C7H12O2",
+   "hypotheses": 200,
+   "targetHypothesisRank": 11,
+   "targetSearched": true,
+   "targetNotSearchedReason": null,
+   "steps": 563025,
+   "candidateSet": 14,
+   "targetInCandidates": false,
+   "targetRank": null,
+   "ranked": 14,
+   "top5": [
+    {
+     "smiles": "CC(=O)COC=C(C)C",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "COC=C(C)CC(C)=O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CCOC=C(C)C(C)=O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CCC(=COC)C(C)=O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CCOC(C)=CC(C)=O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    }
+   ],
+   "nInTop5": 0,
+   "implausibleNInTop5": 0,
+   "nitrogen": {
+    "mode": "NONE",
+    "reasons": []
+   },
+   "runs": [
+    {
+     "formula": "C5H12O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 816,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C11H24O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 3928,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C17H36O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 5170,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C6H12O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 3888,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C11H24O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 5354,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C17H36O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 6596,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C6H12O3",
+     "termination": "STATE_BUDGET",
+     "visited": 114071,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C11H24O4",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 7134,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C17H36O6",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 12668,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C7H12O2",
+     "termination": "STATE_BUDGET",
+     "visited": 103400,
+     "candidates": 14,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C12H24O2",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C18H36O2",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    }
+   ]
+  },
+  {
+   "id": "M5",
+   "mode": "dense",
+   "formula": "C7H12O2",
+   "hypotheses": 200,
+   "targetHypothesisRank": 11,
+   "targetSearched": true,
+   "targetNotSearchedReason": null,
+   "steps": 563025,
+   "candidateSet": 14,
+   "targetInCandidates": false,
+   "targetRank": null,
+   "ranked": 14,
+   "top5": [
+    {
+     "smiles": "CC(=O)COC=C(C)C",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "COC=C(C)CC(C)=O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CCOC=C(C)C(C)=O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CCC(=COC)C(C)=O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CCOC(C)=CC(C)=O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    }
+   ],
+   "nInTop5": 0,
+   "implausibleNInTop5": 0,
+   "nitrogen": {
+    "mode": "NONE",
+    "reasons": []
+   },
+   "runs": [
+    {
+     "formula": "C5H12O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 816,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C11H24O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 3928,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C17H36O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 5170,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C6H12O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 3888,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C11H24O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 5354,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C17H36O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 6596,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C6H12O3",
+     "termination": "STATE_BUDGET",
+     "visited": 114071,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C11H24O4",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 7134,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C17H36O6",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 12668,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C7H12O2",
+     "termination": "STATE_BUDGET",
+     "visited": 103400,
+     "candidates": 14,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C12H24O2",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C18H36O2",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    }
+   ]
+  },
+  {
+   "id": "M5b",
+   "mode": "sparse",
+   "formula": "C7H12O2",
+   "hypotheses": 200,
+   "targetHypothesisRank": 11,
+   "targetSearched": true,
+   "targetNotSearchedReason": null,
+   "steps": 563025,
+   "candidateSet": 14,
+   "targetInCandidates": false,
+   "targetRank": null,
+   "ranked": 14,
+   "top5": [
+    {
+     "smiles": "CC(=O)COC=C(C)C",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "COC=C(C)CC(C)=O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CCOC=C(C)C(C)=O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CCC(=COC)C(C)=O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CCOC(C)=CC(C)=O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    }
+   ],
+   "nInTop5": 0,
+   "implausibleNInTop5": 0,
+   "nitrogen": {
+    "mode": "NONE",
+    "reasons": []
+   },
+   "runs": [
+    {
+     "formula": "C5H12O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 816,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C11H24O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 3928,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C17H36O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 5170,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C6H12O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 3888,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C11H24O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 5354,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C17H36O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 6596,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C6H12O3",
+     "termination": "STATE_BUDGET",
+     "visited": 114071,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C11H24O4",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 7134,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C17H36O6",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 12668,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C7H12O2",
+     "termination": "STATE_BUDGET",
+     "visited": 103400,
+     "candidates": 14,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C12H24O2",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C18H36O2",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    }
+   ]
+  },
+  {
+   "id": "M5b",
+   "mode": "dense",
+   "formula": "C7H12O2",
+   "hypotheses": 200,
+   "targetHypothesisRank": 11,
+   "targetSearched": true,
+   "targetNotSearchedReason": null,
+   "steps": 563025,
+   "candidateSet": 14,
+   "targetInCandidates": false,
+   "targetRank": null,
+   "ranked": 14,
+   "top5": [
+    {
+     "smiles": "CC(=O)COC=C(C)C",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "COC=C(C)CC(C)=O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CCOC=C(C)C(C)=O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CCC(=COC)C(C)=O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CCOC(C)=CC(C)=O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    }
+   ],
+   "nInTop5": 0,
+   "implausibleNInTop5": 0,
+   "nitrogen": {
+    "mode": "NONE",
+    "reasons": []
+   },
+   "runs": [
+    {
+     "formula": "C5H12O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 816,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C11H24O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 3928,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C17H36O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 5170,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C6H12O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 3888,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C11H24O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 5354,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C17H36O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 6596,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C6H12O3",
+     "termination": "STATE_BUDGET",
+     "visited": 114071,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C11H24O4",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 7134,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C17H36O6",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 12668,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C7H12O2",
+     "termination": "STATE_BUDGET",
+     "visited": 103400,
+     "candidates": 14,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C12H24O2",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C18H36O2",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    }
+   ]
+  },
+  {
+   "id": "M6",
+   "mode": "sparse",
+   "formula": "C5H10",
+   "hypotheses": 200,
+   "targetHypothesisRank": 4,
+   "targetSearched": false,
+   "targetNotSearchedReason": "O 少於 IR 證據的 O 下限 1",
+   "steps": 361515,
+   "candidateSet": 9,
+   "targetInCandidates": false,
+   "targetRank": null,
+   "ranked": 9,
+   "top5": [
+    {
+     "smiles": "CC=C(C)OC(C)=O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "COC=C(C)C(C)=O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CC=C(C)C(C)=O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CC(=O)OC=C(C)C",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "COC(C)=CC(C)=O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    }
+   ],
+   "nInTop5": 0,
+   "implausibleNInTop5": 0,
+   "nitrogen": {
+    "mode": "NONE",
+    "reasons": []
+   },
+   "runs": [
+    {
+     "formula": "C5H10O",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 197,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C9H20O",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 2879,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C14H30O",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 1982,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C5H10O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 566,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C9H20O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 4022,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C14H30O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 2573,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C6H10O",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 8227,
+     "candidates": 2,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C9H20O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 5470,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C14H30O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 3286,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C6H10O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 32313,
+     "candidates": 7,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C10H20O",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C15H30O",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    }
+   ]
+  },
+  {
+   "id": "M6",
+   "mode": "dense",
+   "formula": "C5H10",
+   "hypotheses": 200,
+   "targetHypothesisRank": 3,
+   "targetSearched": true,
+   "targetNotSearchedReason": null,
+   "steps": 587459,
+   "candidateSet": 14,
+   "targetInCandidates": true,
+   "targetRank": 10,
+   "ranked": 14,
+   "top5": [
+    {
+     "smiles": "CC=C(C)C(C)=O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CC=C(C)OC",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CC1=CC(C)(C)O1",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "COC1(C)C=C1C",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CC1=COC1(C)C",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    }
+   ],
+   "nInTop5": 0,
+   "implausibleNInTop5": 0,
+   "nitrogen": {
+    "mode": "NONE",
+    "reasons": []
+   },
+   "runs": [
+    {
+     "formula": "C5H10",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 68,
+     "candidates": 1,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C9H20",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 1965,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C14H30",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 1501,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C5H10O",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 197,
+     "candidates": 2,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C9H20O",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 2879,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C14H30O",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 1982,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C6H10",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 2237,
+     "candidates": 1,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C10H20",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 2,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C15H30",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 118403,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C6H10O",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 8227,
+     "candidates": 8,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C10H20O",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C15H30O",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    }
+   ]
+  },
+  {
+   "id": "M7",
+   "mode": "sparse",
+   "formula": "C5H10O",
+   "hypotheses": 200,
+   "targetHypothesisRank": 72,
+   "targetSearched": false,
+   "targetNotSearchedReason": "O 少於 IR 證據的 O 下限 2",
+   "steps": 393723,
+   "candidateSet": 22,
+   "targetInCandidates": false,
+   "targetRank": null,
+   "ranked": 13,
+   "top5": [
+    {
+     "smiles": "C=CC(C)(O)C(C)=O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "C=CC(=O)C(C)(C)O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CC(=O)C(C)=CCO",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CC=C(CO)C(C)=O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CC(C)=CC(=O)CO",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    }
+   ],
+   "nInTop5": 0,
+   "implausibleNInTop5": 0,
+   "nitrogen": {
+    "mode": "NONE",
+    "reasons": []
+   },
+   "runs": [
+    {
+     "formula": "C4H10O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 106,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C8H18O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 946,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C13H28O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 3963,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C5H10O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 1787,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C8H18O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 1303,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C13H28O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 5145,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C5H10O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 6423,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C8H18O4",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 1750,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C13H28O6",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 10285,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C6H10O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 62015,
+     "candidates": 22,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C9H18O2",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C14H28O2",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    }
+   ]
+  },
+  {
+   "id": "M7",
+   "mode": "dense",
+   "formula": "C5H10O",
+   "hypotheses": 200,
+   "targetHypothesisRank": 53,
+   "targetSearched": true,
+   "targetNotSearchedReason": null,
+   "steps": 546557,
+   "candidateSet": 182,
+   "targetInCandidates": true,
+   "targetRank": 7,
+   "ranked": 74,
+   "top5": [
+    {
+     "smiles": "C=CC(C)(O)C(C)=O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CC1=CCOC1(C)O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "C=CC(=O)C(C)(C)O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CC1(C)OC1=CCO",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CC(C)(O)C1=CCO1",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    }
+   ],
+   "nInTop5": 0,
+   "implausibleNInTop5": 0,
+   "nitrogen": {
+    "mode": "NONE",
+    "reasons": []
+   },
+   "runs": [
+    {
+     "formula": "C5H10O",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 504,
+     "candidates": 6,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C9H20O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 2878,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C13H28O",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 3001,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C5H10O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 1787,
+     "candidates": 22,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C9H20O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 3986,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C13H28O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 3963,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C6H10O",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 13278,
+     "candidates": 20,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C10H20O2",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 1,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C13H28O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 5145,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C6H10O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 62015,
+     "candidates": 133,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C10H20O3",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C14H28O",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    }
+   ]
+  },
+  {
+   "id": "G3",
+   "mode": "sparse",
+   "formula": "C5H8O2",
+   "hypotheses": 200,
+   "targetHypothesisRank": 7,
+   "targetSearched": true,
+   "targetNotSearchedReason": null,
+   "steps": 320628,
+   "candidateSet": 9,
+   "targetInCandidates": true,
+   "targetRank": 4,
+   "ranked": 6,
+   "top5": [
+    {
+     "smiles": "COC=COC(C)=O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "COC=CC(=O)OC",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "COC=CC(C)=O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CC=CC(=O)OC",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": true
+    },
+    {
+     "smiles": "CC=COC(=O)OC",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    }
+   ],
+   "nInTop5": 0,
+   "implausibleNInTop5": 0,
+   "nitrogen": {
+    "mode": "NONE",
+    "reasons": []
+   },
+   "runs": [
+    {
+     "formula": "C4H8O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 104,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C7H16O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 109,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C12H24O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 16884,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C4H8O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 966,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C7H16O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 180,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C12H24O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 27715,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C5H8O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 742,
+     "candidates": 3,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C7H16O4",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 281,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C12H24O6",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 104630,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C5H8O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 13528,
+     "candidates": 6,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C8H16O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 5489,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C13H24O2",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    }
+   ]
+  },
+  {
+   "id": "G3",
+   "mode": "dense",
+   "formula": "C5H8O2",
+   "hypotheses": 200,
+   "targetHypothesisRank": 7,
+   "targetSearched": true,
+   "targetNotSearchedReason": null,
+   "steps": 320628,
+   "candidateSet": 9,
+   "targetInCandidates": true,
+   "targetRank": 3,
+   "ranked": 6,
+   "top5": [
+    {
+     "smiles": "COC=COC(C)=O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "COC=CC(=O)OC",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CC=CC(=O)OC",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": true
+    },
+    {
+     "smiles": "CC=COC(=O)OC",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "COC=CC(C)=O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    }
+   ],
+   "nInTop5": 0,
+   "implausibleNInTop5": 0,
+   "nitrogen": {
+    "mode": "NONE",
+    "reasons": []
+   },
+   "runs": [
+    {
+     "formula": "C4H8O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 104,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C7H16O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 109,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C12H24O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 16884,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C4H8O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 966,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C7H16O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 180,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C12H24O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 27715,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C5H8O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 742,
+     "candidates": 3,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C7H16O4",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 281,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C12H24O6",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 104630,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C5H8O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 13528,
+     "candidates": 6,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C8H16O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 5489,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C13H24O2",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    }
+   ]
+  }
+ ]
+}

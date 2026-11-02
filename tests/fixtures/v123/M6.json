@@ -1,0 +1,3 @@
+{"id":"M6","description":"2-methyl-2-butene: (CH3)2C=CH-CH3, alkene CH 5.17 (q, 1H) in a formula with NO oxygen (the new ester-O-CH class can never apply); CDCl3","targetSmiles":"CC=C(C)C","formula":"C5H10",
+"h1":{"solvent":"CDCl3","frequencyMHz":400,"peaks":[{"x":5.17,"integration":1,"multiplicity":"q","j":[6.6]},{"x":1.66,"integration":3,"multiplicity":"s"},{"x":1.60,"integration":3,"multiplicity":"s"},{"x":1.58,"integration":3,"multiplicity":"d","j":[6.6]}]},
+"ir":{"yAxis":"transmittance percent","coverageCm1":[4000,450],"calibrated":true,"note":"C=C 1670 weak; no O bands","peaks":[{"x":2970,"y":40},{"x":2920,"y":45},{"x":1670,"y":75},{"x":1450,"y":55},{"x":1375,"y":55},{"x":840,"y":50}]}}
