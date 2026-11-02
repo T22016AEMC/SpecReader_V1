@@ -6,7 +6,7 @@ import {V12_CONFIG} from '../constraints/v12Config';
 import {buildProblem, parseFormula} from '../enumeration/problem';
 import {Searcher} from '../enumeration/search';
 import {COMPOSITION_CONFIG} from './compositionConfig';
-import {vinylWindowsActive} from './planningGate';
+import {v123NameSlotsActive,vinylWindowsActive} from './planningGate';
 import {hiddenExchangeableEvidence} from './functionalGroupBounds';
 import type {CompositionHypothesis, NotSearchedReason, OxygenEvidenceFloor} from './types';
 
@@ -157,6 +157,12 @@ export function planFormulaSearch(hypotheses: CompositionHypothesis[], oxygenFlo
       if (eOf(rep) > 0) continue;
       const withE = group.find(h => oOf(h) === oOf(rep) && eOf(h) > 0);
       if (withE) keep.add(withE);
+    }
+    // v1.2.3 (A1): a kept O count also keeps its best N-free formula (when the best formula of that O count has N), so a formula with N cannot swallow the N-free one of the same (k, C, O).
+    if (v123NameSlotsActive()) for (const rep of [...keep]) {
+      if ((rep.counts.N ?? 0) === 0) continue;
+      const noN = group.find(h => oOf(h) === oOf(rep) && (h.counts.N ?? 0) === 0 && eOf(h) === eOf(rep)) ?? group.find(h => oOf(h) === oOf(rep) && (h.counts.N ?? 0) === 0);
+      if (noN) keep.add(noN);
     }
     kept.push(...keep);
     for (const h of group) {

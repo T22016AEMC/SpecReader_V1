@@ -8,6 +8,8 @@ import type {FunctionalGroupConstraint, IRFunctionalGroupFinding} from '../types
  *   1. IR is its only source: every row of that name is IR-sourced, and no ¹H/¹³C/MS row carries the same name;
  *   2. at most one isolated peak: every IR finding of the group has `observedPeaks.length ≤ maxPeaks`;
  *   3. no companion band was observed: every IR finding has fewer than `minCompanions` observed companion bands (0 when the knowledge entry defines none).
+ * v1.2.3 (A8): a broad O–H / N–H band (observed peak in `broadXhRangeCm1`, shape broad) is never hidden although it is isolated and has no companion band: a broad X–H envelope is the whole
+ * evidence of a phenol / alcohol / amine, so "insufficient" is the wrong word for it (display only).
  * Rows whose constraint status is in `neverHide` are never hidden (they restrict the candidates; the user must see them).
  * A row without a matching IR finding is never hidden (missing data → show).
  */
@@ -15,8 +17,10 @@ export interface IrWeakRule {
   maxPeaks: number;
   minCompanions: number;
   neverHide: readonly FunctionalGroupConstraint['status'][];
+  /** v1.2.3: a finding whose peak lies in this window (cm⁻¹) and whose shape is broad is never hidden. */
+  broadXhRangeCm1: readonly [number, number];
 }
-export const IR_WEAK_RULE: IrWeakRule = {maxPeaks: 1, minCompanions: 1, neverHide: ['REQUIRED', 'FORBIDDEN', 'EXCLUDED', 'CONFLICTING']};
+export const IR_WEAK_RULE: IrWeakRule = {maxPeaks: 1, minCompanions: 1, neverHide: ['REQUIRED', 'FORBIDDEN', 'EXCLUDED', 'CONFLICTING'], broadXhRangeCm1: [3200, 3600]};
 
 export type FunctionalGroupRow = Pick<FunctionalGroupConstraint, 'label' | 'groupName' | 'groupFamily' | 'status' | 'sourceModality' | 'sourceModalities' | 'observedSignal'>;
 export type IrFindingRow = Pick<IRFunctionalGroupFinding, 'id' | 'functionalGroup' | 'observedPeak' | 'observedPeaks' | 'companionPeaksObserved' | 'matchLevel' | 'status'> & Partial<Pick<IRFunctionalGroupFinding, 'observedWidthAndShape'>>;
@@ -26,7 +30,7 @@ export interface FilteredGroup {
   name: string;
   hidden: boolean;
   /** Why the group is shown or hidden, in one phrase. */
-  reason: 'WEAK_IR_ONLY' | 'NEVER_HIDE_STATUS' | 'NOT_IR_ONLY' | 'MORE_THAN_ONE_PEAK' | 'COMPANION_OBSERVED' | 'NO_FINDING';
+  reason: 'WEAK_IR_ONLY' | 'NEVER_HIDE_STATUS' | 'BROAD_XH' | 'NOT_IR_ONLY' | 'MORE_THAN_ONE_PEAK' | 'COMPANION_OBSERVED' | 'NO_FINDING';
   rows: FunctionalGroupRow[];
   /** Indexes into the input `groups` array, in input order. */
   rowIndexes: number[];
@@ -46,6 +50,8 @@ export interface IrEvidenceFilterResult {
 const nameOf = (g: FunctionalGroupRow): string => g.label || g.groupName || g.groupFamily;
 const isIrOnly = (g: FunctionalGroupRow): boolean => g.sourceModality === 'IR' && (g.sourceModalities ?? ['IR']).every(m => m === 'IR');
 const peakCount = (f: IrFindingRow): number => f.observedPeaks?.length ?? 1;
+/** The finding's shape is the first segment of observedWidthAndShape ("broad；區間 …；寬度 540"); the later segments also contain the word 寬度, so only the first one is read. */
+const isBroadXh = (f: IrFindingRow, range: readonly [number, number]): boolean => f.observedPeak >= range[0] && f.observedPeak <= range[1] && /^(broad|寬峰)/i.test((f.observedWidthAndShape ?? '').split('；')[0].trim());
 
 /** The IR finding a row came from: same name and the finding's peak is the one the row's observed signal starts with ("3350 cm⁻¹ (broad…"). */
 export function matchFinding(row: FunctionalGroupRow, findings: readonly IrFindingRow[]): IrFindingRow | null {
@@ -75,6 +81,7 @@ export function filterIrEvidence(groups: readonly FunctionalGroupRow[], findings
     if (entry.rows.some(r => rule.neverHide.includes(r.status))) { entry.reason = 'NEVER_HIDE_STATUS'; continue; }
     if (!entry.rows.every(isIrOnly)) { entry.reason = 'NOT_IR_ONLY'; continue; }
     if (matched.some(f => f === null)) { entry.reason = 'NO_FINDING'; continue; }
+    if (entry.findings.some(f => isBroadXh(f, rule.broadXhRangeCm1))) { entry.reason = 'BROAD_XH'; continue; }
     if (entry.findings.some(f => peakCount(f) > rule.maxPeaks)) { entry.reason = 'MORE_THAN_ONE_PEAK'; continue; }
     if (entry.findings.some(f => f.companionPeaksObserved.length >= rule.minCompanions)) { entry.reason = 'COMPANION_OBSERVED'; continue; }
     entry.hidden = true;

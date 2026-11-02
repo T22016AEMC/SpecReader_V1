@@ -40,15 +40,15 @@ beforeAll(async () => {
 describe('圖譜官能基 tab on S1 (what the page prints)', () => {
   const render = (props?: Partial<FunctionalGroupTabProps>) => renderToStaticMarkup(React.createElement(FunctionalGroupTab, {...fgProps, ...props}));
 
-  it('12 groups shown, 7 hidden behind one notice, 19 in total; the hidden ones are all in the markup', () => {
+  it('13 groups shown, 6 hidden behind one notice, 19 in total; the hidden ones are all in the markup (v1.2.3 A8: the broad 氫鍵 O–H group moved from hidden to shown; was 12 and 7)', () => {
     const html = render();
     const filter = filterIrEvidence(fgProps.groups as FunctionalGroupRow[], fgProps.irFindings as unknown as IrFindingRow[]);
-    expect([filter.shownCount, filter.hiddenCount, filter.total]).toEqual([12, 7, 19]);
+    expect([filter.shownCount, filter.hiddenCount, filter.total]).toEqual([13, 6, 19]);
     const hiddenBlock = html.slice(html.indexOf('data-testid="fg-hidden-groups"'));
     const shownBlock = html.slice(html.indexOf('data-testid="fg-group-list"'), html.indexOf('data-testid="fg-hidden-groups"'));
-    expect(count(shownBlock, 'data-testid="fg-group"')).toBe(12);
-    expect(count(hiddenBlock.slice(0, hiddenBlock.indexOf('data-testid="fg-local-structures"')), 'data-testid="fg-group"')).toBe(7);
-    expect(text(html)).toContain('另有 7 項 IR 證據不足的官能基，已隱藏（點開查看）');
+    expect(count(shownBlock, 'data-testid="fg-group"')).toBe(13);
+    expect(count(hiddenBlock.slice(0, hiddenBlock.indexOf('data-testid="fg-local-structures"')), 'data-testid="fg-group"')).toBe(6);
+    expect(text(html)).toContain('另有 6 項 IR 證據不足的官能基，已隱藏（點開查看）');
     for (const g of filter.hidden) expect(hiddenBlock).toContain(`data-group="${g.name.replace(/&/g, '&amp;')}"`);
     for (const g of filter.shown) expect(shownBlock).toContain(`data-group="${g.name.replace(/&/g, '&amp;')}"`);
   });

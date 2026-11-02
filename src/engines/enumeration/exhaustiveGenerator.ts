@@ -12,7 +12,7 @@ const pipelineStrain = (v12: boolean) => (v12 ? V12_CONFIG.pipelineStrainProfile
 import {h1SignalsFromObservations, irAldehydeContext} from '../constraints/v12Evidence';
 import {matchesSMARTS, matchingSMARTS} from '../scientificEngines/rdkitAdapter';
 import {forbiddenFragmentsActive, vinylWindowsActive} from '../composition/planningGate';
-import {FORBIDDEN_FRAGMENTS} from '../constraints/forbiddenFragments';
+import {activeForbiddenFragments, v123LeafFragments} from '../constraints/forbiddenFragments';
 import {parseFormula} from './problem';
 import {adaptLocalStructures} from './adapter';
 import {ENUMERATION_CONFIG as CFG} from './enumerationConfig';
@@ -83,7 +83,7 @@ export function createExhaustiveGenerator(legacy: StructureGenerator): Structure
         // By default the existing downstream gate is the only plausibility filter (it rejects and records); with
         // pipelineEarlyPlausibilityPrune the monotone rules (no O–O without a user formula, no N–O without N–O evidence) prune inside the
         // search and the other rules still stay with the downstream gate. The evidence also ranks such candidates last when the cap applies.
-        forbid: {...(request.plausibility && CFG.pipelineEarlyPlausibilityPrune ? {plausibility: request.plausibility, plausibilityLeaf: false} : {}), strain: pipelineStrain(Boolean(ext?.v12))},
+        forbid: {...v123LeafFragments(), ...(request.plausibility && CFG.pipelineEarlyPlausibilityPrune ? {plausibility: request.plausibility, plausibilityLeaf: false} : {}), strain: pipelineStrain(Boolean(ext?.v12))},
         budget: {
           timeMs: eb.timeMs, maxStates: eb.maxStates, maxCandidates: eb.maxCandidates ?? CFG.analysis.maxCandidatesPerFormula, shouldCancel: request.budget.shouldCancel,
           onProgress: request.budget.onProgress ? p => request.budget.onProgress!({visited: p.visited, candidateCount: p.candidates, elapsedMs: p.elapsedMs, frontier: 0}) : undefined,
@@ -116,7 +116,7 @@ export function createExhaustiveGenerator(legacy: StructureGenerator): Structure
       let relaxed: EnumerationResult | null = null;
       if (!smiles.length && finished && realReasons.length === 0) {
         if (heavy > CFG.adapter.maxHeavyAtomsWithoutFragments) return fallback(`所有片段讀法都沒有符合分子式的分子，而且重原子數 ${heavy} 太大，無法放寬成純分子式窮舉`, adapted.notes, result);
-        relaxed = await enumerateStructures({formula: parsed.counts, forbid: {strain: pipelineStrain(Boolean(ext?.v12)), ...(request.plausibility && CFG.pipelineEarlyPlausibilityPrune ? {plausibility: request.plausibility, plausibilityLeaf: false} : {})}, budget: {timeMs: eb.timeMs, maxStates: eb.maxStates, maxCandidates: eb.maxCandidates ?? CFG.analysis.maxCandidatesPerFormula, shouldCancel: request.budget.shouldCancel}});
+        relaxed = await enumerateStructures({formula: parsed.counts, forbid: {...v123LeafFragments(), strain: pipelineStrain(Boolean(ext?.v12)), ...(request.plausibility && CFG.pipelineEarlyPlausibilityPrune ? {plausibility: request.plausibility, plausibilityLeaf: false} : {})}, budget: {timeMs: eb.timeMs, maxStates: eb.maxStates, maxCandidates: eb.maxCandidates ?? CFG.analysis.maxCandidatesPerFormula, shouldCancel: request.budget.shouldCancel}});
         for (const c of relaxed.candidates) { smiles.push(c.smiles); origins[c.smiles] = {source: 'ENUMERATOR', relaxed: true, ...(ext?.v12?.path === 'FALLBACK' ? {v12Fallback: true} : {})}; }
         run.relaxedToFormulaOnly = {candidates: relaxed.candidates.length, complete: relaxed.status === 'COMPLETE'};
         run.notes = [...run.notes, `所有片段讀法都沒有符合分子式的分子（片段與分子式矛盾）：放寬成只依分子式窮舉，得到 ${relaxed.candidates.length} 個候選（${relaxed.status === 'COMPLETE' ? 'COMPLETE' : 'INCOMPLETE'}）`];
@@ -138,14 +138,14 @@ export function createExhaustiveGenerator(legacy: StructureGenerator): Structure
         const seen = new Set(smiles);
         let added = 0, droppedByRequired = 0;
         // v1.2.1 (B1, B2): the same forbidden-fragment list as the leaf and the downstream gate (checked only for candidates that pass the required check).
-        const forbiddenOn = forbiddenFragmentsActive();
+        const forbiddenList = activeForbiddenFragments(), forbiddenOn = forbiddenList.length > 0;
         const droppedForbidden: Record<string, number> = {};
         let droppedByForbidden = 0;
         const passesForbidden = (s: string) => {
           if (!forbiddenOn) return true;
-          const hit = matchingSMARTS(s, FORBIDDEN_FRAGMENTS.map(f => f.smarts));
+          const hit = matchingSMARTS(s, forbiddenList.map(f => f.smarts));
           if (!hit?.length) return true;
-          droppedByForbidden++; const id = FORBIDDEN_FRAGMENTS[hit[0]].id; droppedForbidden[id] = (droppedForbidden[id] ?? 0) + 1;
+          droppedByForbidden++; const id = forbiddenList[hit[0]].id; droppedForbidden[id] = (droppedForbidden[id] ?? 0) + 1;
           return false;
         };
         // v1.2: strong-evidence substructures hold on every path, so the legacy candidates are filtered by them too.
@@ -153,7 +153,7 @@ export function createExhaustiveGenerator(legacy: StructureGenerator): Structure
         for (const s of supplement.smiles) if (!seen.has(s) && !passesRequired(s)) droppedByRequired++;
         for (const s of supplement.smiles) if (!seen.has(s) && passesRequired(s) && passesForbidden(s)) { seen.add(s); smiles.push(s); origins[s] = {source: 'LEGACY_SUPPLEMENT', relaxed: false, ...(fellBack ? {v12Fallback: true} : {})}; added++; if (ext?.v12) supplementV12.add(s); }
         run.notes = [...run.notes, forceSupplement ? `1H 約束的清單路徑與退回路徑都沒有候選：另以舊 beam 搜尋補充一次，${supplement.smiles.length} 個候選中 ${added} 個為新（這些候選不受 1H 約束）` : `窮舉未完成（${run.incompleteReasons.join('、')}）：另以舊 beam 搜尋補充，${supplement.smiles.length} 個候選中 ${added} 個為新（舊搜尋 ${supplement.visited} 步）`];
-        run.legacySupplement = {candidates: supplement.smiles.length, added, visited: supplement.visited, ...(forbiddenOn ? {droppedByForbidden, droppedByForbiddenById: droppedForbidden} : {})};
+        run.legacySupplement = {candidates: supplement.smiles.length, added, visited: supplement.visited, ...(forbiddenFragmentsActive() || droppedByForbidden > 0 ? {droppedByForbidden, droppedByForbiddenById: droppedForbidden} : {})};
         if (droppedByForbidden) run.notes = [...run.notes, `舊 beam 補充的候選中 ${droppedByForbidden} 個含禁含片段，已排除`];
         if (droppedByRequired) run.notes = [...run.notes, `舊 beam 補充的候選中 ${droppedByRequired} 個不含強證據要求的子結構，已排除`];
         run.candidates = smiles.length;
@@ -251,7 +251,7 @@ async function generateWithInventory(request: StructureGenerationRequest, exhaus
   const ordered = [...sets.filter(x => !vinylSet(x.id)), ...sets.filter(x => vinylSet(x.id))];
   const result = await enumerateStructures({
     formula: parsed.counts, alternatives: ordered,
-    forbid: {...(request.plausibility && CFG.pipelineEarlyPlausibilityPrune ? {plausibility: request.plausibility, plausibilityLeaf: false} : {}), strain: pipelineStrain(true)},
+    forbid: {...v123LeafFragments(), ...(request.plausibility && CFG.pipelineEarlyPlausibilityPrune ? {plausibility: request.plausibility, plausibilityLeaf: false} : {}), strain: pipelineStrain(true)},
     symmetryPruning: V12_CONFIG.symmetryPruning,
     budget: {
       timeMs: eb.timeMs, maxStates: eb.maxStates, maxCandidates: eb.maxCandidates ?? CFG.analysis.maxCandidatesPerFormula, shouldCancel: request.budget.shouldCancel,
@@ -377,7 +377,7 @@ async function generatePlanned(request: StructureGenerationRequest, c: PlannedCo
   if (!runSets.length) return noReading();
   const result = await enumerateStructures({
     formula: parsed.counts, alternatives: runSets,
-    forbid: {...(request.plausibility && CFG.pipelineEarlyPlausibilityPrune ? {plausibility: request.plausibility, plausibilityLeaf: false} : {}), strain: pipelineStrain(true)},
+    forbid: {...v123LeafFragments(), ...(request.plausibility && CFG.pipelineEarlyPlausibilityPrune ? {plausibility: request.plausibility, plausibilityLeaf: false} : {}), strain: pipelineStrain(true)},
     symmetryPruning: V12_CONFIG.symmetryPruning,
     budget: {
       timeMs: eb.timeMs, maxStates: cap, maxCandidates: eb.maxCandidates ?? CFG.analysis.maxCandidatesPerFormula, shouldCancel: request.budget.shouldCancel,
@@ -401,7 +401,7 @@ async function generatePlanned(request: StructureGenerationRequest, c: PlannedCo
   const otherErrors = result.sets.filter(x => x.error && !FORMULA_INCOMPATIBLE.includes(x.error.code));
   const raw = result.incompleteReasons.filter(r => r !== 'INVALID_ALTERNATIVE_SET');
   // The cap is a round-1 limit, not the analysis budget; in round 2 every budget stop belongs to the alkene readings.
-  const mapped = raw.map((r): IncompleteReason => (round === 1 && capBinding && r === 'STATE_BUDGET' ? 'ROUND1_STEP_CAP' : round === 2 && capBinding && r === 'STATE_BUDGET' ? 'ROUND2_EXPLORE_CAP' : round === 2 && BUDGET_REASONS.includes(r) ? 'VINYL_READINGS_BUDGET' : r));
+  const mapped = raw.map((r): IncompleteReason => (round === 1 && capBinding && r === 'STATE_BUDGET' ? 'ROUND1_STEP_CAP' : round === 2 && capBinding && r === 'STATE_BUDGET' ? (request.planning!.capKind === 'SHARE' ? 'ROUND2_STEP_CAP' : 'ROUND2_EXPLORE_CAP') : round === 2 && BUDGET_REASONS.includes(r) ? 'VINYL_READINGS_BUDGET' : r));
   const extraReasons: IncompleteReason[] = [...inv.incompleteReasons, ...(patternTruncated && !inv.incompleteReasons.includes('INVENTORY_ALTERNATIVES_TRUNCATED') ? ['INVENTORY_ALTERNATIVES_TRUNCATED' as const] : [])];
   const incompleteReasons = [...new Set<IncompleteReason>([...mapped, ...(otherErrors.length ? ['INVALID_ALTERNATIVE_SET' as const] : []), ...(pending ? ['VINYL_READINGS_NOT_RUN' as const] : []), ...extraReasons])];
   const complete = incompleteReasons.length === 0;

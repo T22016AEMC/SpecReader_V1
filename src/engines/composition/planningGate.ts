@@ -12,3 +12,12 @@ export const planningActive = (): boolean => V12_CONFIG.useV121Planning && V12_C
 export const forbiddenFragmentsActive = (): boolean => planningActive() && V12_CONFIG.planning.forbiddenFragments;
 export const vinylWindowsActive = (): boolean => planningActive() && V12_CONFIG.planning.vinylWindows;
 export const carbonylBandActive = (): boolean => planningActive() && V12_CONFIG.planning.carbonylBand;
+
+/** v1.2.3 (A class): each rule set runs only while the gate above is open, the total flag is on and its own sub-switch is on. */
+export const v123Active = (): boolean => planningActive() && V12_CONFIG.useV123;
+export const v123NitrogenEvidenceActive = (): boolean => v123Active() && V12_CONFIG.v123.nitrogenEvidence;
+export const v123NameSlotsActive = (): boolean => v123Active() && V12_CONFIG.v123.nameSlots;
+export const v123NitrogenExcessActive = (): boolean => v123Active() && V12_CONFIG.v123.nitrogenExcess;
+export const v123ForbiddenNActive = (): boolean => v123Active() && V12_CONFIG.v123.forbiddenN;
+export const v123Round2CapActive = (): boolean => v123Active() && V12_CONFIG.v123.round2Cap;
+export const v123AmideRingReadingActive = (): boolean => v123Active() && V12_CONFIG.v123.amideRingReading;

@@ -2,6 +2,8 @@ import type {ExperimentalSpectrumData,IRFunctionalGroupFinding,SpectralPeak} fro
 import {graphChemicalFeatures} from './graphChemicalFeatures';
 import {matchesSMARTS} from './rdkitAdapter';
 import {irRangeCovered} from './irSignalProcessing';
+import {COMPOSITION_CONFIG} from '../composition/compositionConfig';
+import {v123AmideRingReadingActive} from '../composition/planningGate';
 const SOURCE='https://www2.chemistry.msu.edu/faculty/reusch/VirtTxtJml/Spectrpy/InfraRed/infrared.htm';
 type Range=[number,number];
 export interface IRBandKnowledge {
@@ -74,6 +76,12 @@ export function irBandMatch(k:IRBandKnowledge,p:SpectralPeak,peaks:SpectralPeak[
  if(p.observedRange){const overlap=Math.max(0,Math.min(p.observedRange[1],k.range[1])-Math.max(p.observedRange[0],k.range[0]));if(!overlap&&distance>0)score*=.6;}
  if(p.intensityKnown!==false)score*=k.intensity==='weak'?.75+.25*(1-Math.min(1,p.y/100)):.7+.3*Math.min(1,Math.max(0,p.y)/100);
  if(k.companions.length){let matched=0,coveredMissing=0;for(const range of k.companions){if(peaks.some(q=>q.id!==p.id&&inRange(q.x,range)))matched++;else if(coverage?.(...range))coveredMissing++;}score*=.65+.35*matched/k.companions.length;score*=1-.1*coveredMissing/k.companions.length;}
+ // v1.2.3 (A3, display layer): an "amide I" reading at or below 1640 cm-1 with another band in the ring windows (1575–1625 or 1490–1525) is an aromatic C=C pair, not amide I (1618 / 1601 of a p-cresol).
+ // Only peaks near the window are touched (within 2 × uncertainty of its lower edge), so the compatibility of a far-away band does not change at all.
+ if(k.id==='amide-co'&&p.x<=COMPOSITION_CONFIG.nitrogenLookAlike.amideIRingMaxCm1&&p.x>=k.range[0]-2*k.uncertainty&&v123AmideRingReadingActive()){
+  const LA=COMPOSITION_CONFIG.nitrogenLookAlike;
+  if(peaks.some(q=>q.id!==p.id&&(inRange(q.x,LA.ringPartnerRange)||inRange(q.x,LA.ringSecondaryRange))))score*=.3;
+ }
  return Math.max(0,Math.min(1,score));
 }
 export function irCandidateBands(smiles:string):IRBandKnowledge[]{

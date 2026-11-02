@@ -69,6 +69,26 @@ export const V12_CONFIG = {
    * Only the no-formula h1-only / no-mass route is affected; a user formula and the MS route keep the v1.2.0 search.
    */
   useV121Planning: true as boolean,
+  /**
+   * v1.2.3 (A class: p-cresol, nitrogen misreadings). true: nitrogen evidence needs its own evidence (a broad O–H band is not an N–H band, a weak or ring band is not amide I, a nitro pair that a ring
+   * band explains needs 1H support), a formula keeps its best N-free variant, N beyond the evidence is scored down, nine forbidden fragments (three of them no IR band can unlock) and a round-2 step cap.
+   * false: every path is identical to v1.2.2 (tests/v12/v123FlagGolden.test.ts). Works only while planningActive() is true. The sub-switches switch off one rule set each (tests and diagnostics only).
+   */
+  useV123: true as boolean,
+  v123: {
+    /** A2–A4: nitrogen evidence (shared N–H band, amide I strength and ring look-alike, nitro that a ring band explains). */
+    nitrogenEvidence: true as boolean,
+    /** A1: the best N-free formula of a kept (k, C, O) is kept as well. */
+    nameSlots: true as boolean,
+    /** A5: score per N beyond what the nitrogen evidence needs. */
+    nitrogenExcess: true as boolean,
+    /** A6: nine forbidden fragments (N(O)O, N–O–N, N(O)N(O) cannot be unlocked by an IR band). */
+    forbiddenN: true as boolean,
+    /** A7: a formula of round 2 may use at most (remaining pool / maxRound2Formulas) steps. */
+    round2Cap: true as boolean,
+    /** A3 (display layer): an amide I reading below 1640 cm-1 that a ring band pair explains is scored down. */
+    amideRingReading: true as boolean,
+  },
   /** ENGINEERING DEFAULTS, NOT CALIBRATED (chosen from the step counts of the five synthetic shapes S1/G1/E1/G3/D1, not from any measured compound). */
   planning: {
     /**

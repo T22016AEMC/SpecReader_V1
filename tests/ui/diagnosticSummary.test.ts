@@ -82,7 +82,7 @@ describe('buildDiagnosticSummary on S1', () => {
     expect(text).toContain('氮證據來源：無 N 專屬證據（模糊的 O／N 訊號預設歸 O');
   });
   it('states how many IR groups were hidden (display filter only)', () => {
-    expect(buildDiagnosticSummary(input)).toContain('顯示 12 項；因 IR 證據不足而隱藏 7 項');
+    expect(buildDiagnosticSummary(input)).toContain('顯示 13 項；因 IR 證據不足而隱藏 6 項');
   });
   it('matches the stored snapshot (S1, step budget)', () => {
     expect(buildDiagnosticSummary(input)).toMatchSnapshot();

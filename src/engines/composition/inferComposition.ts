@@ -4,7 +4,7 @@ import {sourceSpectra} from '../scientificEngines/evidenceLedger';
 import {COMPOSITION_CONFIG as CFG} from './compositionConfig';
 import {scoreComposition,type ScoringContext} from './compositionScoring';
 import {enumerateFormulas,type EnumerationSpec} from './formulaEnumerator';
-import {planningActive} from './planningGate';
+import {planningActive,v123NitrogenExcessActive} from './planningGate';
 import {V12_CONFIG} from '../constraints/v12Config';
 import {combineBounds,functionalGroupFeatures,oxygenEvidenceFloor} from './functionalGroupBounds';
 import {commonRangeViolations,dbeOf,formatHill,monoisotopicMass,parseCounts} from './goldenRules';
@@ -71,7 +71,7 @@ export function inferComposition(input:CompositionInput):CompositionInferenceRes
  const result:CompositionInferenceResult={status:'INFERRED',hypotheses:[],ionHypotheses:ms?.ions??[],elementsConsidered:[],elementsExcluded:[],elementClues,nitrogenEvidence:nitrogen,
   bounds:{carbon:null,hydrogenMultiples:nmr.h1?.sum?Array.from({length:CFG.h1MaxMultiple},(_,i)=>(i+1)*nmr.h1!.sum!):null,heteroMinimums:hard.mins,dbeMin:hard.dbeMin,hardBoundsRelaxed:false},
   enumeration:{enumeratedNodes:0,passedHardFilters:0,returned:0,truncatedByNodes:false,droppedByKeepLimit:0},limitations,elapsedMs:0};
- const ctx:ScoringContext={nmr,features,elementEvidence,isotopes:ms?.isotopes??{},hardBoundsRelaxed:false,nitrogenMode:nitrogen.mode};
+ const ctx:ScoringContext={nmr,features,elementEvidence,isotopes:ms?.isotopes??{},hardBoundsRelaxed:false,nitrogenMode:nitrogen.mode,...(v123NitrogenExcessActive()&&nitrogen.mode==='EVIDENCE'&&nitrogen.requiredN!==undefined?{nitrogenRequired:nitrogen.requiredN}:{})};
  // Symmetric-unit multiple k: the multiple of the simplest 1H ratio that best explains the formula's H count (v1.1.6).
  const S=nmr.h1?.sum??null;
  const bestMultiple=(h:number):number|null=>{

@@ -236,6 +236,29 @@ export const COMPOSITION_CONFIG = {
     oxygenExcess: 0.5,
     /** Penalty per N atom when MS is present but its molecular ion is even (N possible only in pairs) and there is no N-specific evidence (v1.1.6). */
     nitrogenEvenIonOnly: 1.5,
+    /** v1.2.3 (A5): penalty per N beyond what the nitrogen evidence needs (one N per kind of evidence: amine, nitrile, nitro, amide, MS odd mass), like oxygenExcess. UNCALIBRATED. */
+    nitrogenExcess: 0.5,
+  },
+  /**
+   * v1.2.3 (A2–A4): look-alike rules of the nitrogen evidence. ENGINEERING JUDGEMENT, NOT VERIFIED, NOT CALIBRATED (no literature page checked).
+   */
+  nitrogenLookAlike: {
+    /** A2: an IR band within this many cm⁻¹ of a broad band in irBroadXHRange is the same band (a broad O–H / N–H envelope), not a narrow N–H of its own. */
+    sameBandCm1: 100,
+    /** A3: with aromatic evidence an amide I band must lie above this (cm⁻¹); at or below it (1600 / 1580 / 1500 ring pair, 1618 …) the band is read as an aromatic ring band. */
+    amideIRingMaxCm1: 1640,
+    /** Aromatic evidence: at least this many 1H signals in the range, or at least c13MinSignals 13C signals in the 13C range (ppm). */
+    aromaticH1Range: [6.3, 8.5] as [number, number],
+    aromaticH1MinSignals: 2,
+    aromaticC13Range: [110, 160] as [number, number],
+    aromaticC13MinSignals: 4,
+    /** A4: a nitro asymmetric candidate in this window that a ring band explains (another band in ringPartnerRange, or aromatic evidence) counts only with 1H support… */
+    nitroRingAsymRange: [1500, 1520] as [number, number],
+    ringPartnerRange: [1575, 1625] as [number, number],
+    /** A3 (display layer): the other ring-band window (ring stretch ~1500) that, together with ringPartnerRange, makes a band at or below amideIRingMaxCm1 a ring band rather than amide I. */
+    ringSecondaryRange: [1490, 1525] as [number, number],
+    /** …an aromatic 1H at or above this shift (ppm; H ortho to an aromatic NO2 is deshielded). */
+    nitroAromaticH1MinPpm: 7.9,
   },
 } as const;
 export type CompositionConfig = typeof COMPOSITION_CONFIG;
