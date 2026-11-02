@@ -1,0 +1,3 @@
+{"id":"AMD1","description":"acetanilide (amide I 1665, II 1550, sharp N-H 3300). Synthetic.","targetSmiles":"CC(=O)Nc1ccccc1","formula":"C8H9NO",
+"h1":{"solvent":"CDCl3","frequencyMHz":400,"peaks":[{"x":7.5,"integration":2,"multiplicity":"d","j":[7.8]},{"x":7.3,"integration":2,"multiplicity":"t","j":[7.8]},{"x":7.1,"integration":1,"multiplicity":"t","j":[7.4]},{"x":7.6,"integration":1,"multiplicity":"s","isBroad":true},{"x":2.17,"integration":3,"multiplicity":"s"}]},
+"ir":{"yAxis":"transmittance percent","coverageCm1":[4000,450],"calibrated":true,"peaks":[{"x":3300,"y":40},{"x":3140,"y":70},{"x":1665,"y":10},{"x":1600,"y":50},{"x":1550,"y":15},{"x":1500,"y":40},{"x":1440,"y":50},{"x":1370,"y":55},{"x":1320,"y":40},{"x":755,"y":30},{"x":690,"y":35}]}}

@@ -17,6 +17,8 @@ import {
   StructuralMotifConstraint,
 } from "../types/spectrum";
 import { IRAnalysisEngine } from "./irEngine";
+import {prepareIR} from "./scientificEngines/irSignalProcessing";
+import {v130IntensityDisplayActive} from "./composition/planningGate";
 import { MSAnalysisEngine } from "./msEngine";
 import { NMRAnalysisEngine } from "./nmrEngine";
 import {
@@ -544,12 +546,16 @@ export class ChemicalFeatureEngine {
     if (spectra.IR) {
       activeModalities.push("IR");
       const irRes = IRAnalysisEngine.analyzeExperimentalIR(spectra.IR);
+      // v1.3.0 (G1): the old default 85 made every IR finding look strong. With the flag on the finding carries the real relative intensity (0–100, share of the strongest band, NOT a transmittance) of its
+      // peak, or no intensity at all when it is unknown; spectralEvidenceExtractor then prints "強度未知". Flag off: the default 85 as in v1.2.3.
+      const irProcessed = v130IntensityDisplayActive() ? prepareIR(spectra.IR) : null;
+      const irRelative = irProcessed ? (x: number): number[] => { const p = irProcessed.peaks.find(q => Math.abs(q.x - x) < 2); return p && p.intensityKnown !== false && Number.isFinite(p.y) ? [Number(p.y.toFixed(1))] : []; } : null;
       irFindings = irRes.findings.map((f) => ({
         ...f,
         groupName: f.groupName || f.functionalGroup,
         groupFamily: f.groupFamily || f.family,
         observedPeaks: f.observedPeaks || (f.observedPeak > 0 ? [f.observedPeak] : []),
-        observedIntensities: f.observedIntensities || [85],
+        observedIntensities: f.observedIntensities || (irRelative ? (f.observedPeaks || (f.observedPeak > 0 ? [f.observedPeak] : [])).flatMap(irRelative) : [85]),
         bandShape: f.bandShape || f.observedWidthAndShape || "Sharp",
         vibrationMode: f.vibrationMode || f.assignment,
         status:
