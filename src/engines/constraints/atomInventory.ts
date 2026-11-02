@@ -23,6 +23,8 @@ export interface InventoryGroup {
   aromatic: boolean;
   /** The atoms must be alkene CH (exactly one non-aromatic C=C): a vinyl reading that no sp3 class shares. */
   alkene: boolean;
+  /** v1.2.3 (stop 3): the atoms are an unconstrained CH whose only non-alkene reading is an ester / acetal O–CH with an unknown IR gate: the reading waits for round 2 (counts as "vinyl" for the rounds). Absent = false. */
+  deferred?: boolean;
   /** Singlet rule: the carbon neighbours of these atoms carry no hydrogen. */
   singletNoHNeighbors: boolean;
   /** The atoms of this signal must be topologically equivalent (D2: not for m / unresolved / broad signals). */
@@ -104,6 +106,10 @@ export interface AtomInventoryInput {
   nitrogenAllowed?: boolean;
   /** v1.2.1 (B3): the =CH2 / =CH shift windows apply (the no-formula path only; a user formula keeps the v1.2.0 range). */
   vinylWindows?: boolean;
+  /** v1.2.3 (stop 3): the ester / acetal O–CH classes (V12_CONFIG.esterMethine) apply. */
+  esterMethine?: boolean;
+  /** The planning feasibility check: deferred ester / acetal readings are left out (see ClassifyContext.esterPlainOnly). */
+  esterPlainOnly?: boolean;
 }
 
 // ------------------------------------------------------------------------------------------------ ring patterns
@@ -195,6 +201,10 @@ interface Option {
   hybrid: Hybrid;
   exchangeable: boolean;
   alkene: boolean;
+  deferred?: boolean;
+  /** v1.2.3: some match was an ordinary (not alkene, not deferred) class / some match was a deferred ester / acetal class. */
+  plainClass?: boolean;
+  deferredClass?: boolean;
   rank: number;
 }
 
@@ -235,11 +245,11 @@ export function buildAtomInventory(input: AtomInventoryInput): AtomInventoryResu
   const bump = (kind: VoidKind, reason: string) => { const key = `${kind}|${reason}`; const old = voided.get(key); if (old) old.count++; else voided.set(key, {kind, reason, count: 1}); };
   const result: AtomInventoryResult = {...base, status: 'BUILT', kCombinations, ratioSum: S, signals: []};
   const classNotes: string[] = [];
-  const classified = signals.map(s => { const c = classifySignal(s, {solvent: input.solvent, formulaElements, nitrogenAllowed, ir, vinylWindows: input.vinylWindows}); classNotes.push(...c.notes); return c; });
+  const classified = signals.map(s => { const c = classifySignal(s, {solvent: input.solvent, formulaElements, nitrogenAllowed, ir, vinylWindows: input.vinylWindows, ...(input.esterMethine ? {esterMethine: true, oxygenCount: input.formula.O ?? 0, ...(input.esterPlainOnly ? {esterPlainOnly: true} : {})} : {})}); classNotes.push(...c.notes); return c; });
   const singletClean = signals.map((s, i) => s.multiplicity === 's' && !s.broad && signals.every((o, j) => j === i || Math.abs(o.shiftPpm - s.shiftPpm) > cfg.singletOverlapPpm));
   signals.forEach((s, i) => result.signals.push({
     observationId: s.observationId, shiftPpm: s.shiftPpm, relativeIntegral: s.relativeIntegral, ratio: ratio[i], multiplicity: s.multiplicity, broad: s.broad,
-    classes: [...new Set(classified[i].matches.map(m => m.classId))], singletRuleApplied: singletClean[i], equivalenceRequired: !isRelaxed(s),
+    classes: [...new Set(classified[i].matches.filter(m => !m.deferred).map(m => m.classId))], singletRuleApplied: singletClean[i], equivalenceRequired: !isRelaxed(s),
     ...(classified[i].matches.some(m => m.relaxed) ? {vinylRelaxed: true} : {}),
   }));
   if (!kCombinations.length) {
@@ -252,7 +262,7 @@ export function buildAtomInventory(input: AtomInventoryInput): AtomInventoryResu
   const templates = cfg.ringTemplates.filter(t => !t.requiresN || (nitrogenAllowed && (input.formula.N ?? 0) >= 1));
   const heavyTotal = Object.entries(input.formula).reduce((s, [e, n]) => s + (e === 'H' ? 0 : n), 0);
   const ringCache = new Map<number, RingInstance[][]>();
-  const classOrder = (id: ShiftClassId) => cfg.shiftClasses.findIndex(c => c.id === id);
+  const classOrder = (id: ShiftClassId) => { const i = cfg.shiftClasses.findIndex(c => c.id === id); return i < 0 ? cfg.shiftClasses.length + cfg.esterMethine.classes.findIndex(c => c.id === id) : i; };
   const hPref = (m: number) => { const i = cfg.hPerAtomPreference.indexOf(m); return i < 0 ? cfg.hPerAtomPreference.length : i; };
 
   const exchangeElements = (): ('O' | 'N')[] => {
@@ -283,15 +293,20 @@ export function buildAtomInventory(input: AtomInventoryInput): AtomInventoryResu
           if (n % h !== 0) continue;
           const key = `${element}|${h}|${def.exchangeable ? 'x' : 'c'}`;
           const o = merged.get(key);
-          if (o) { if (!o.classIds.includes(def.id)) o.classIds.push(def.id); }
-          else merged.set(key, {classIds: [def.id], element, hPerAtom: h, atomCount: n / h, aromatic: false, hybrid: def.hybrid, exchangeable: def.exchangeable, alkene: false, rank: 0});
+          const flagPlain = def.id !== 'VINYL_CH' && !m.deferred, flagDeferred = Boolean(m.deferred);
+          if (o) { if (!o.classIds.includes(def.id)) o.classIds.push(def.id); if (flagPlain) o.plainClass = true; if (flagDeferred) o.deferredClass = true; }
+          else merged.set(key, {classIds: [def.id], element, hPerAtom: h, atomCount: n / h, aromatic: false, hybrid: def.hybrid, exchangeable: def.exchangeable, alkene: false, rank: 0, ...(flagPlain ? {plainClass: true} : {}), ...(flagDeferred ? {deferredClass: true} : {})});
         }
       }
       // A broad (or user-marked exchangeable) signal is read as OH/NH first; otherwise the class order of the table decides.
       const exchFirst = signals[i].broad || Boolean(signals[i].exchangeable);
       const order = (id: ShiftClassId) => (id === 'EXCHANGEABLE' && exchFirst ? -1 : classOrder(id));
       // A vinyl reading is only constrained when no other class gives the same atoms (an unconstrained reading contains every alkene one).
-      for (const o of merged.values()) o.alkene = cfg.vinylRequiresAlkene && !o.aromatic && !o.exchangeable && o.classIds.every(c => c === 'VINYL_CH');
+      for (const o of merged.values()) {
+        // v1.2.3: a deferred ester / acetal class does not make the alkene reading unconstrained-and-first; the option is unconstrained (it contains every alkene reading) but runs in round 2.
+        o.alkene = cfg.vinylRequiresAlkene && !o.aromatic && !o.exchangeable && o.classIds.every(c => c === 'VINYL_CH');
+        if (o.deferredClass && !o.plainClass && !o.aromatic && !o.exchangeable) o.deferred = true;
+      }
       const list = [...merged.values()].sort((a, b) => {
         const ca = Math.min(...a.classIds.map(order)), cb = Math.min(...b.classIds.map(order));
         return ca - cb || hPref(a.hPerAtom) - hPref(b.hPerAtom) || (a.element < b.element ? -1 : a.element > b.element ? 1 : 0);
@@ -367,7 +382,7 @@ export function buildAtomInventory(input: AtomInventoryInput): AtomInventoryResu
         // Rings need an attachment site unless they are all there is: checked by the enumerator (CLOSED/connectivity), not here.
         const groups: InventoryGroup[] = combo.map((o, i) => ({
           groupId: `g${i + 1}`, observationId: signals[i].observationId, shiftClass: o.classIds[0], shiftClasses: [...o.classIds], hTotal: k * rr[i], atomCount: o.atomCount, hPerAtom: o.hPerAtom,
-          element: o.element, hybrid: o.hybrid, exchangeable: o.exchangeable, aromatic: o.aromatic, alkene: o.alkene,
+          element: o.element, hybrid: o.hybrid, exchangeable: o.exchangeable, aromatic: o.aromatic, alkene: o.alkene, ...(o.deferred ? {deferred: true} : {}),
           singletNoHNeighbors: singletClean[i] && !o.exchangeable && !o.aromatic, equivalent: !isRelaxed(signals[i]),
         }));
         const rings: AromaticRingPlan = {
@@ -382,7 +397,7 @@ export function buildAtomInventory(input: AtomInventoryInput): AtomInventoryResu
         const hSum = groups.reduce((s, g) => s + g.hTotal, 0) + e;
         if (hSum !== H) { runVoid('HYDROGEN_MISMATCH', `清單 H 總和 ${hSum} 不等於分子式 H ${H}`); continue; }
         if (groups.some(g => g.alkene)) applied.push({id: 'ALKENE_CH', detail: `${groups.filter(g => g.alkene).map(g => g.groupId).join('、')}：烯基 CH 必須恰有一個非芳香 C=C 雙鍵`, observationIds: groups.filter(g => g.alkene).map(g => g.observationId)});
-        out.push({id: '', k, extraExchangeable: e, extraElement, groups, rings, zeroHAtoms: zero, hasVinyl: groups.some(g => g.alkene), applied, notes: [...classNotes]});
+        out.push({id: '', k, extraExchangeable: e, extraElement, groups, rings, zeroHAtoms: zero, hasVinyl: groups.some(g => g.alkene || g.deferred), applied, notes: [...classNotes]});
       }
       return out;
     };

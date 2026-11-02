@@ -44,13 +44,13 @@ describe('A class acceptance, flag on', () => {
       expect(m.targetRank!, `${id} ${mode}`).toBeLessThanOrEqual(base(id, mode).targetRank!);
     }
   }, 300000);
-  it('A7: with the misread nitrogen no single formula takes most of the steps (flag on ≤ 50 %; flag off the N2 formula took 95 %)', async () => {
+  it('A7 (stop 3: the round-2 share cap now limits only N formulas without N evidence): with the misread nitrogen gone no N formula is searched, and the largest formula is far below the 95 % of the unfixed run (flag off)', async () => {
     for (const id of ['P3', 'P4']) {
       const on = await run(id, 'sparse', true), off = await run(id, 'sparse', false);
       const share = (m: SampleMeasure) => Math.max(...m.runs.map(r => r.visited)) / m.steps;
-      expect(share(on), id).toBeLessThanOrEqual(0.5);
+      expect(share(on), id).toBeLessThanOrEqual(0.6);
       expect(share(off), id).toBeGreaterThan(0.9);
-      expect(on.runs.some(r => r.reasons.includes('ROUND2_STEP_CAP'))).toBe(true);
+      expect(on.runs.some(r => /N(?![a-z])/.test(r.formula ?? ''))).toBe(false);
     }
   }, 300000);
 });

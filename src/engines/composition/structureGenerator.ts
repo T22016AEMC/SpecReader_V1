@@ -7,7 +7,7 @@ import {ENUMERATION_CONFIG as ENUM} from '../enumeration/enumerationConfig';
 import {createExhaustiveGenerator} from '../enumeration/exhaustiveGenerator';
 import {capScored,deferredSamples,topologyClasses} from '../enumeration/prefilter';
 import {planFormulaSearch} from './searchPlanning';
-import {planningActive,v123Round2CapActive} from './planningGate';
+import {planningActive,v123Round1CapK1Active,v123Round2CapActive} from './planningGate';
 import {V12_CONFIG} from '../constraints/v12Config';
 import type {EnumerationDiagnostics,EnumerationRunDiagnostic,IncompleteReason,RejectionStats} from '../enumeration/types';
 import type {PlausibilityEvidence} from '../scientificEngines/structurePlausibility';
@@ -161,7 +161,9 @@ export async function generateForCompositions(args:{userFormula:string|null;comp
   for(let i=0;i<entries.length&&!cancelled;i++){
    const e=entries[i],left=entries.length-i;
    const poolLeft=Math.max(0,eBudget.maxStates-usedStates),timeLeft=Math.max(0,P.round1TimeFraction*eBudget.timeMs-round1Ms)/left;
-   e.search=await call(e,1,poolLeft,timeLeft,P.round1MaxStatesPerFormula);
+   // v1.2.3 (stop 3, B2): a k = 1 formula may use v123.round1MaxStatesK1 (= 500 000) steps in round 1 (the PMA type needs about 340 000 steps; the cap is 150 000).
+   const cap1=v123Round1CapK1Active()&&(e.h.symmetryMultiple??1)<=1&&P.round1MaxStatesPerFormula>=V12_CONFIG.v123.round1K1AppliesFrom?Math.max(P.round1MaxStatesPerFormula,V12_CONFIG.v123.round1MaxStatesK1):P.round1MaxStatesPerFormula;
+   e.search=await call(e,1,poolLeft,timeLeft,cap1);
    usedStates+=e.search.visited;round1Ms+=e.search.elapsedMs??0;
    if(e.search.termination==='CANCELLED')cancelled=true;
   }
@@ -190,12 +192,13 @@ export async function generateForCompositions(args:{userFormula:string|null;comp
    const byK=[...best.entries()].sort((a,b)=>a[0]-b[0]).map(x=>x[1]).slice(0,P.maxRound2Formulas);
    const picked=[...byK.filter(e=>gradeOf(e)==='B'),...byK.filter(e=>gradeOf(e)==='A')];
    // v1.2.3 (A7): a grade-A formula of round 2 may use at most (pool at the start of round 2) / maxRound2Formulas steps, so one formula (a misread N formula, say) cannot take the whole remaining pool.
-   const round2Share=v123Round2CapActive()?Math.floor(Math.max(0,eBudget.maxStates-usedStates)/P.maxRound2Formulas):undefined;
+   const round2Pool=eBudget.maxStates-usedStates;
    for(let j=0;j<picked.length&&!cancelled;j++){
     const e=picked[j],left=picked.length-j;
     const poolLeft=Math.max(0,eBudget.maxStates-usedStates)/left,timeLeft=Math.max(0,eBudget.timeMs-(performance.now()-started))/left;
     const isB=gradeOf(e)==='B';
-    const s2=await call(e,2,Math.floor(poolLeft),timeLeft,isB?P.round2ExploreMaxSteps:round2Share,!isB&&round2Share!==undefined);
+    const round2Share=v123Round2CapActive()&&!isB?round2ShareCap(e.h.counts,args.composition?.nitrogenEvidence?.mode,round2Pool,P.maxRound2Formulas):undefined;
+    const s2=await call(e,2,Math.floor(poolLeft),timeLeft,isB?P.round2ExploreMaxSteps:round2Share,round2Share!==undefined);
     usedStates+=s2.visited;e.round2=true;e.round2State='RAN';
     e.search=e.search!.enumeration?.runs[0]?mergeRounds(e.search!,s2):e.search;
     if(s2.termination==='CANCELLED')cancelled=true;
@@ -295,6 +298,13 @@ function addRejected(a:RejectionStats|null,b:RejectionStats|null):RejectionStats
  * Joins round 1 and round 2 of one formula into one result: the candidates of both rounds, the readings of both, and a run that is complete only when
  * every reading of the formula has finished (VINYL_READINGS_NOT_RUN of round 1 is replaced by what round 2 reports).
  */
+/**
+ * v1.2.3 (A7, narrowed in stop 3): the round-2 step share of a grade-A formula = (pool at the start of round 2) / maxRound2Formulas, but ONLY for a formula that contains N while the nitrogen evidence
+ * is not 'EVIDENCE' (no N-specific evidence). Formulas without N and formulas with N-specific evidence are not limited by it. undefined = no share cap.
+ */
+export function round2ShareCap(counts:{N?:number},nitrogenMode:'EVIDENCE'|'EVEN_ION_ONLY'|'NONE'|undefined,poolAtRound2Start:number,maxRound2Formulas:number):number|undefined {
+ return (counts.N??0)>0&&nitrogenMode!=='EVIDENCE'?Math.floor(Math.max(0,poolAtRound2Start)/maxRound2Formulas):undefined;
+}
 export function mergeRounds(a:DeNovoSearchResult,b:DeNovoSearchResult):DeNovoSearchResult {
  const ra=a.enumeration!.runs[0],rb=b.enumeration!.runs[0];
  const smiles=[...new Set([...a.smiles,...b.smiles])];

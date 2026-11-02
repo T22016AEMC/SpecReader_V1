@@ -1,5 +1,5 @@
 {
- "note": "v1.2.3 stop 1: results of the CURRENT code (a60ddc0 + test-helper changes only), before any v1.2.3 engine change. Synthetic samples (tests/fixtures/v123, v121/S2, v121/G3), no formula typed in, step budget 8 000 000 / timeMs 3 600 000 (SHAPE_BUDGET). sparse = the existing fixtureSpectra convention; dense = denseBaseline (physical intensities, Lorentzian shoulders on broad bands). Recorded with scripts/scratch/v123-measure.mts; compared by tests/v12/v123Baseline.test.ts.",
+ "note": "v1.2.3 stop 1: results of the CURRENT code (a60ddc0 + test-helper changes only), before any v1.2.3 engine change. Synthetic samples (tests/fixtures/v123, v121/S2, v121/G3), no formula typed in, step budget 8 000 000 / timeMs 3 600 000 (SHAPE_BUDGET). sparse = the existing fixtureSpectra convention; dense = denseBaseline (physical intensities, Lorentzian shoulders on broad bands). Recorded with scripts/scratch/v123-measure.mts; compared by tests/v12/v123Baseline.test.ts. (stop 3: Q1-Q3 added, flag off.)",
  "samples": [
   {
    "id": "P1",
@@ -2010,6 +2010,998 @@
       "STATE_BUDGET"
      ],
      "round": 2
+    }
+   ]
+  },
+  {
+   "id": "Q1",
+   "mode": "sparse",
+   "formula": "C5H10O2",
+   "hypotheses": 200,
+   "targetHypothesisRank": 7,
+   "targetSearched": true,
+   "targetNotSearchedReason": null,
+   "steps": 1110236,
+   "candidateSet": 12,
+   "targetInCandidates": true,
+   "targetRank": 1,
+   "ranked": 8,
+   "top5": [
+    {
+     "smiles": "CC(=O)OC(C)C",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": true
+    },
+    {
+     "smiles": "COC(OC)C(C)=O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "COC(C)(C=O)OC",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "COC(C)(C)C=O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "COC(=O)OC(C)C",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    }
+   ],
+   "nInTop5": 0,
+   "implausibleNInTop5": 0,
+   "nitrogen": {
+    "mode": "NONE",
+    "reasons": []
+   },
+   "runs": [
+    {
+     "formula": "C4H10O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 103,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C9H20O2",
+     "termination": "STATE_BUDGET",
+     "visited": 74949,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C14H30O2",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C4H10O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 2061,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C9H20O3",
+     "termination": "STATE_BUDGET",
+     "visited": 114873,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C14H30O3",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C5H10O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 3102,
+     "candidates": 4,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C9H20O4",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C14H30O6",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C5H10O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 31823,
+     "candidates": 8,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C10H20O2",
+     "termination": "STATE_BUDGET",
+     "visited": 133325,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C15H30O2",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    }
+   ]
+  },
+  {
+   "id": "Q1",
+   "mode": "dense",
+   "formula": "C5H10O2",
+   "hypotheses": 200,
+   "targetHypothesisRank": 7,
+   "targetSearched": true,
+   "targetNotSearchedReason": null,
+   "steps": 1110236,
+   "candidateSet": 12,
+   "targetInCandidates": true,
+   "targetRank": 1,
+   "ranked": 8,
+   "top5": [
+    {
+     "smiles": "CC(=O)OC(C)C",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": true
+    },
+    {
+     "smiles": "COC(OC)C(C)=O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "COC(=O)OC(C)C",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "COC(C)(C=O)OC",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "COC(C)(C)C=O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    }
+   ],
+   "nInTop5": 0,
+   "implausibleNInTop5": 0,
+   "nitrogen": {
+    "mode": "NONE",
+    "reasons": []
+   },
+   "runs": [
+    {
+     "formula": "C4H10O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 103,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C9H20O2",
+     "termination": "STATE_BUDGET",
+     "visited": 74949,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C14H30O2",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C4H10O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 2061,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C9H20O3",
+     "termination": "STATE_BUDGET",
+     "visited": 114873,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C14H30O3",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C5H10O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 3102,
+     "candidates": 4,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C9H20O4",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C14H30O6",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C5H10O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 31823,
+     "candidates": 8,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C10H20O2",
+     "termination": "STATE_BUDGET",
+     "visited": 133325,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C15H30O2",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    }
+   ]
+  },
+  {
+   "id": "Q2",
+   "mode": "sparse",
+   "formula": "C5H10O3",
+   "hypotheses": 200,
+   "targetHypothesisRank": 74,
+   "targetSearched": true,
+   "targetNotSearchedReason": null,
+   "steps": 1235957,
+   "candidateSet": 20,
+   "targetInCandidates": true,
+   "targetRank": 1,
+   "ranked": 9,
+   "top5": [
+    {
+     "smiles": "CCOC(=O)C(C)O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": true
+    },
+    {
+     "smiles": "CCOC(C)C(=O)O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CCC(=O)C(C)O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CCC(OC)C(=O)O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CCC(C)OC(=O)O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    }
+   ],
+   "nInTop5": 0,
+   "implausibleNInTop5": 0,
+   "nitrogen": {
+    "mode": "NONE",
+    "reasons": []
+   },
+   "runs": [
+    {
+     "formula": "C4H10O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 231,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C8H18O2",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C13H28O2",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C4H10O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 1230,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C8H18O3",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C13H28O3",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C5H10O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 5184,
+     "candidates": 4,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C8H18O4",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C13H28O6",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C5H10O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 29312,
+     "candidates": 16,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C9H18O2",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C14H28O2",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    }
+   ]
+  },
+  {
+   "id": "Q2",
+   "mode": "dense",
+   "formula": "C5H10O3",
+   "hypotheses": 200,
+   "targetHypothesisRank": 74,
+   "targetSearched": true,
+   "targetNotSearchedReason": null,
+   "steps": 1235957,
+   "candidateSet": 20,
+   "targetInCandidates": true,
+   "targetRank": 1,
+   "ranked": 9,
+   "top5": [
+    {
+     "smiles": "CCOC(=O)C(C)O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": true
+    },
+    {
+     "smiles": "CCOC(C)C(=O)O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CCC(=O)C(C)O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CCC(C)OC(=O)O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CCC(OC)C(=O)O",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    }
+   ],
+   "nInTop5": 0,
+   "implausibleNInTop5": 0,
+   "nitrogen": {
+    "mode": "NONE",
+    "reasons": []
+   },
+   "runs": [
+    {
+     "formula": "C4H10O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 231,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C8H18O2",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C13H28O2",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C4H10O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 1230,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C8H18O3",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C13H28O3",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C5H10O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 5184,
+     "candidates": 4,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C8H18O4",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C13H28O6",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C5H10O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 29312,
+     "candidates": 16,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C9H18O2",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C14H28O2",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    }
+   ]
+  },
+  {
+   "id": "Q3",
+   "mode": "sparse",
+   "formula": "C8H16O2",
+   "hypotheses": 200,
+   "targetHypothesisRank": 74,
+   "targetSearched": true,
+   "targetNotSearchedReason": null,
+   "steps": 1193928,
+   "candidateSet": 199,
+   "targetInCandidates": true,
+   "targetRank": 3,
+   "ranked": 106,
+   "top5": [
+    {
+     "smiles": "CC(C)=COCCCCO",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CC(C)=CCOCCCO",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CC(C)=CCCOCCO",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": true
+    },
+    {
+     "smiles": "COCCC(C)=CCCO",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "COCCC=C(C)CCO",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    }
+   ],
+   "nInTop5": 0,
+   "implausibleNInTop5": 0,
+   "nitrogen": {
+    "mode": "NONE",
+    "reasons": []
+   },
+   "runs": [
+    {
+     "formula": "C7H16O",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 155,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C15H32O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 16529,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C22H46O",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C7H16O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 269,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C15H32O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 20391,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C22H46O2",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C8H16O",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 106584,
+     "candidates": 37,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C16H32O2",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C22H46O3",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C8H16O2",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 162,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C16H32O3",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C23H46O",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    }
+   ]
+  },
+  {
+   "id": "Q3",
+   "mode": "dense",
+   "formula": "C8H16O2",
+   "hypotheses": 200,
+   "targetHypothesisRank": 74,
+   "targetSearched": true,
+   "targetNotSearchedReason": null,
+   "steps": 1193928,
+   "candidateSet": 199,
+   "targetInCandidates": true,
+   "targetRank": 3,
+   "ranked": 106,
+   "top5": [
+    {
+     "smiles": "CC(C)=COCCCCO",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CC(C)=CCOCCCO",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "CC(C)=CCCOCCO",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": true
+    },
+    {
+     "smiles": "COCCC(C)=CCCO",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    },
+    {
+     "smiles": "COCCC=C(C)CCO",
+     "n": false,
+     "implausibleN": [],
+     "isTarget": false
+    }
+   ],
+   "nInTop5": 0,
+   "implausibleNInTop5": 0,
+   "nitrogen": {
+    "mode": "NONE",
+    "reasons": []
+   },
+   "runs": [
+    {
+     "formula": "C7H16O",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 155,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C15H32O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 16529,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C22H46O",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C7H16O2",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 269,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C15H32O3",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 20391,
+     "candidates": 0,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C22H46O2",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C8H16O",
+     "termination": "GRAMMAR_EXHAUSTED",
+     "visited": 106584,
+     "candidates": 37,
+     "reasons": [],
+     "round": 1
+    },
+    {
+     "formula": "C16H32O2",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C22H46O3",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C8H16O2",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 162,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C16H32O3",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
+    },
+    {
+     "formula": "C23H46O",
+     "termination": "STATE_BUDGET",
+     "visited": 150000,
+     "candidates": 0,
+     "reasons": [
+      "ROUND1_STEP_CAP"
+     ],
+     "round": 1
     }
    ]
   },

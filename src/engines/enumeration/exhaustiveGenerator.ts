@@ -11,7 +11,7 @@ import {readingKinds} from '../constraints/readingKinds';
 const pipelineStrain = (v12: boolean) => (v12 ? V12_CONFIG.pipelineStrainProfile : CFG.pipelineStrainProfile);
 import {h1SignalsFromObservations, irAldehydeContext} from '../constraints/v12Evidence';
 import {matchesSMARTS, matchingSMARTS} from '../scientificEngines/rdkitAdapter';
-import {forbiddenFragmentsActive, vinylWindowsActive} from '../composition/planningGate';
+import {forbiddenFragmentsActive, v123EsterMethineActive, vinylWindowsActive} from '../composition/planningGate';
 import {activeForbiddenFragments, v123LeafFragments} from '../constraints/forbiddenFragments';
 import {parseFormula} from './problem';
 import {adaptLocalStructures} from './adapter';
@@ -219,7 +219,7 @@ async function generateWithInventory(request: StructureGenerationRequest, exhaus
   const requiredSpecs: RequiredSubstructureSpec[] = required.map(r => ({id: r.id, smarts: r.smarts, minMatches: V12_CONFIG.requiredMinMatches}));
   const requiredDiag = required.map(r => ({id: r.id, smarts: r.smarts, label: r.label, evidenceObservationIds: r.evidenceObservationIds}));
   const h1 = h1SignalsFromObservations(ev.observations);
-  const inv = buildAtomInventory({signals: h1.signals, formula: parsed.counts, solvent: h1.solvent, coverageComplete: h1.coverageComplete, ir: irAldehydeContext(ev.observations, ev.irCoversAldehydeRegion, ev.irImage), nitrogenAllowed: ev.nitrogenAllowed, vinylWindows: vinylWindowsActive() && Boolean(request.planning)});
+  const inv = buildAtomInventory({signals: h1.signals, formula: parsed.counts, solvent: h1.solvent, coverageComplete: h1.coverageComplete, ir: irAldehydeContext(ev.observations, ev.irCoversAldehydeRegion, ev.irImage), nitrogenAllowed: ev.nitrogenAllowed, vinylWindows: vinylWindowsActive() && Boolean(request.planning), ...(v123EsterMethineActive() ? {esterMethine: true} : {})});
   const diag = (path: V12RunDiagnostic['path'], reason: string | null, patternSets = 0, patternTruncated = false, runs: V12RunDiagnostic['runs'] = [], leafCost: V12RunDiagnostic['leafCost'] = null): V12RunDiagnostic =>
     ({path, badge: path === 'FALLBACK' ? V12_CONFIG.fallbackBadge : null, reason, inventory: fmtInv(inv, patternSets, patternTruncated), constraints: fmtConstraints(inv, Object.entries(parsed.counts).reduce((s, [e, n]) => s + (e === 'H' ? 0 : n), 0)), required: requiredDiag, runs, leafCost});
   const flexSpecs = V12_CONFIG.requiredInFlexPath ? requiredSpecs : [];

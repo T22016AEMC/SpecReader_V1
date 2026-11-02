@@ -142,7 +142,7 @@ export const REASON_LABEL: Record<IncompleteReason, string> = {
   VINYL_READINGS_NOT_RUN: '含烯基（C=C–H）的讀法尚未執行（第一輪只跑不含烯基的讀法；第二輪只給各 k 最高分的分子式）',
   ROUND1_STEP_CAP: '第一輪達到每個分子式的步數上限（這個上限只屬於第一輪，不是整體預算）',
   ROUND1_NO_TEMPLATE_READING: '第一輪沒有可容納此分子式的模板讀法（沒有退回彈性原子讀法或舊搜尋）',
-  ROUND2_STEP_CAP: '第二輪（含烯基）每個分子式只能用第二輪步數池的一部分（池 ÷ 第二輪分子式上限）：這個分子式用完它的份額，沒有搜完（這個上限不是整體預算）',
+  ROUND2_STEP_CAP: '第二輪（含烯基）：含 N 但沒有 N 專屬證據的分子式只能用第二輪步數池的一部分（池 ÷ 第二輪分子式上限）；這個分子式用完它的份額，沒有搜完（這個上限不是整體預算）',
   ROUND2_EXPLORE_CAP: '第二輪（含烯基）是探索性的：這個 k 沒有第一輪已有候選的分子式，所以只給固定的步數上限（這個上限不是整體預算）',
 };
 const NITROGEN_LABEL: Record<string, string> = {EVIDENCE: '有 N 專屬證據', EVEN_ION_ONLY: '只有偶電子離子（不足）', NONE: '沒有 N 專屬證據'};

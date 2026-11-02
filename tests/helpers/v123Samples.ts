@@ -14,7 +14,7 @@ export const loadV123 = (id: string): V121Fixture => id.startsWith('v121/') ? lo
 
 /** A class (p-cresol / BPA: nitrogen evidence, quota, implausible N structures) and B class (PMA / alkene controls: stop 3). */
 export const V123_A_SAMPLES = ['P1', 'P2', 'P3', 'P4', 'B1', 'v121/S2'] as const;
-export const V123_B_SAMPLES = ['M1', 'M1b', 'M4', 'M5', 'M5b', 'M6', 'M7', 'v121/G3'] as const;
+export const V123_B_SAMPLES = ['Q1', 'Q2', 'Q3', 'M1', 'M1b', 'M4', 'M5', 'M5b', 'M6', 'M7', 'v121/G3'] as const;
 export const V123_ALL_SAMPLES = [...V123_A_SAMPLES, ...V123_B_SAMPLES] as const;
 
 /** The nitrogen structures the planner called implausible (N(O)O, N–O–N, N(O)N(O), N=C(O)O). Used only to COUNT them in a top list; the engine's own rules live in src. */

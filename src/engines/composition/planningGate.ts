@@ -21,3 +21,5 @@ export const v123NitrogenExcessActive = (): boolean => v123Active() && V12_CONFI
 export const v123ForbiddenNActive = (): boolean => v123Active() && V12_CONFIG.v123.forbiddenN;
 export const v123Round2CapActive = (): boolean => v123Active() && V12_CONFIG.v123.round2Cap;
 export const v123AmideRingReadingActive = (): boolean => v123Active() && V12_CONFIG.v123.amideRingReading;
+export const v123EsterMethineActive = (): boolean => v123Active() && V12_CONFIG.v123.esterMethine;
+export const v123Round1CapK1Active = (): boolean => v123Active() && V12_CONFIG.v123.round1CapK1;

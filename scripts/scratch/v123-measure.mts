@@ -11,6 +11,7 @@ const [, , outFile, listArg, modeArg = 'both'] = process.argv;
 const ids: string[] = !listArg ? [...V123_A_SAMPLES] : listArg === 'all' ? [...V123_ALL_SAMPLES] : listArg.split(',');
 const modes = (modeArg === 'both' ? ['sparse', 'dense'] : [modeArg]) as ('sparse' | 'dense')[];
 if (process.env.V123 === 'off' && 'useV123' in V12_CONFIG) (V12_CONFIG as unknown as {useV123: boolean}).useV123 = false;
+if (process.env.V123_SUB) for (const kv of process.env.V123_SUB.split(',')) { const [k, v] = kv.split('='); (V12_CONFIG.v123 as Record<string, unknown>)[k] = v === 'true' ? true : v === 'false' ? false : Number(v); }
 await initializeRDKit();
 const results: SampleMeasure[] = [];
 for (const id of ids) for (const mode of modes) {

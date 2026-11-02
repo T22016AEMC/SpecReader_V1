@@ -6,7 +6,7 @@ import {V12_CONFIG} from '../constraints/v12Config';
 import {buildProblem, parseFormula} from '../enumeration/problem';
 import {Searcher} from '../enumeration/search';
 import {COMPOSITION_CONFIG} from './compositionConfig';
-import {v123NameSlotsActive,vinylWindowsActive} from './planningGate';
+import {v123EsterMethineActive,v123NameSlotsActive,vinylWindowsActive} from './planningGate';
 import {hiddenExchangeableEvidence} from './functionalGroupBounds';
 import type {CompositionHypothesis, NotSearchedReason, OxygenEvidenceFloor} from './types';
 
@@ -53,7 +53,7 @@ export function h1Feasibility(formula: string, evidence: V12Evidence): Feasibili
   const parsed = parseFormula(formula);
   if (!parsed.ok) return done(false, `分子式無法解析：${parsed.error.message}`, false, false);
   const h1 = h1SignalsFromObservations(evidence.observations);
-  const inv = buildAtomInventory({signals: h1.signals, formula: parsed.counts, solvent: h1.solvent, coverageComplete: h1.coverageComplete, ir: irAldehydeContext(evidence.observations, evidence.irCoversAldehydeRegion, evidence.irImage), nitrogenAllowed: evidence.nitrogenAllowed, vinylWindows: vinylWindowsActive()});
+  const inv = buildAtomInventory({signals: h1.signals, formula: parsed.counts, solvent: h1.solvent, coverageComplete: h1.coverageComplete, ir: irAldehydeContext(evidence.observations, evidence.irCoversAldehydeRegion, evidence.irImage), nitrogenAllowed: evidence.nitrogenAllowed, vinylWindows: vinylWindowsActive(), ...(v123EsterMethineActive() ? {esterMethine: true, esterPlainOnly: true} : {})});
   // Without integrals nothing can be judged; the formula stays in.
   if (inv.status === 'NOT_AVAILABLE') return done(true, null, true, false);
   if (!inv.alternatives.length) return done(false, inv.reason ?? '所有替代解讀都作廢或無法表達', false, false);

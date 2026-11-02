@@ -3,7 +3,9 @@
  * ALL VALUES ARE ENGINEERING DEFAULTS, NOT CALIBRATED. None of them was fitted to any measured spectrum or compound.
  * The shift-class ranges are generic textbook-style windows that were NOT checked against book page numbers.
  */
-export type ShiftClassId = 'ARO_CH' | 'VINYL_CH' | 'ALDEHYDE' | 'O_CH' | 'N_CH' | 'ALPHA_CH' | 'ALKYL_CH' | 'EXCHANGEABLE';
+export type ShiftClassId = 'ARO_CH' | 'VINYL_CH' | 'ALDEHYDE' | 'O_CH' | 'N_CH' | 'ALPHA_CH' | 'ALKYL_CH' | 'EXCHANGEABLE'
+  /** v1.2.3 (stop 3), not in the shiftClasses table: see V12_CONFIG.esterMethine. */
+  | 'ESTER_O_CH' | 'ACETAL_O_CH';
 export type Hybrid = 'AR' | 'SP2' | 'SP3' | null;
 
 export interface ShiftClassDef {
@@ -84,10 +86,39 @@ export const V12_CONFIG = {
     nitrogenExcess: true as boolean,
     /** A6: nine forbidden fragments (N(O)O, N–O–N, N(O)N(O) cannot be unlocked by an IR band). */
     forbiddenN: true as boolean,
-    /** A7: a formula of round 2 may use at most (remaining pool / maxRound2Formulas) steps. */
+    /** A7: a formula of round 2 that contains N while the nitrogen evidence is not EVIDENCE may use at most (pool at the start of round 2 / maxRound2Formulas) steps (stop 3: other formulas are not limited). */
     round2Cap: true as boolean,
+    /** B1 (stop 3): the ¹H classes ESTER_O_CH and ACETAL_O_CH (V12_CONFIG.esterMethine). */
+    esterMethine: true as boolean,
+    /** B2 (stop 3): k = 1 formulas get more steps in round 1 (round1MaxStatesK1 = 500 000) instead of planning.round1MaxStatesPerFormula (the PMA type needs about 340 000 steps; measured in stop 3: still not found at 150 000 after the ester class). */
+    round1CapK1: true as boolean,
+    round1MaxStatesK1: 500_000,
+    /** The raise applies only while planning.round1MaxStatesPerFormula is at least this (a real analysis setting); a test or caller that sets a tiny round-1 cap keeps it for k = 1 as well. */
+    round1K1AppliesFrom: 100_000,
     /** A3 (display layer): an amide I reading below 1640 cm-1 that a ring band pair explains is scored down. */
     amideRingReading: true as boolean,
+  },
+  /**
+   * v1.2.3 (stop 3, B1): two extra ¹H classes for a methine (or, for the acetal class, a CH2) on an oxygen that sits above the O_CH window (3.2–5.0). They only decide the hydrogens per atom
+   * (carbon, non-exchangeable) and, through the merged key, that the atom is a free sp3 CH rather than a constrained alkene CH; they require no hybridisation. AMINAL / HEMIACETAL / the forbidden
+   * fragments still apply downstream. NOT in V12_CONFIG.shiftClasses (tests/v12/v121bVinyl.test.ts pins that table).
+   * SOURCE: one literature data point checked, isopropyl formate CH 5.14 ppm (Doc Brown, docbrown.info/page06/spectra2/isopropyl-methanoate-nmr1h.htm); every window below is
+   * 工程判斷，未查證 (engineering judgement, not verified; no page of a shift table was checked). The 1.4.0 shift prediction replaces these windows.
+   * Gate by the IR (ir.esterCarbonyl): STRONG (a band ≥ strongRelativeIntensity of the strongest in carbonylRangeCm1) → the class is an ordinary plain reading;
+   * UNKNOWN (no IR, window not covered, intensities unknown: no contradiction, no evidence) → the class is available but waits for round 2 together with the alkene readings (never ahead of them);
+   * ABSENT (the IR covers the window and has no strong band) → the class is off. Needs O ≥ minOxygen in the formula. A class with alwaysDeferred (the acetal class: no carbonyl link) is always in the UNKNOWN state, so it is
+   * never ahead of the alkene readings (a real alkene CH at 5.35 next to an ester stays an alkene reading first).
+   */
+  esterMethine: {
+    carbonylRangeCm1: [1700, 1780] as [number, number],
+    strongRelativeIntensity: 0.5,
+    /** A marked IR band (any intensity) in this window is a C=C-type band: the ester reading is then no longer an ordinary reading ahead of the alkene readings (a strong C=O with a 1675 band is the prenyl acetate type, not the PMA type). 工程判斷，未查證 */
+    alkeneBandRangeCm1: [1620, 1690] as [number, number],
+    minOxygen: 2,
+    classes: [
+      {id: 'ESTER_O_CH' as const, alwaysDeferred: false, windows: [{h: 1, rangePpm: [4.7, 5.3] as [number, number]}], basis: 'RC(=O)O–CH（酯基氧上的次甲基）；資料點：甲酸異丙酯 CH 5.14 ppm；窗為工程判斷'},
+      {id: 'ACETAL_O_CH' as const, alwaysDeferred: true, windows: [{h: 1, rangePpm: [4.5, 5.5] as [number, number]}, {h: 2, rangePpm: [4.5, 5.3] as [number, number]}], basis: '縮醛／原酸酯 O–CH–O（OCH2O）；窗為工程判斷，未找到可核對的資料點'},
+    ],
   },
   /** ENGINEERING DEFAULTS, NOT CALIBRATED (chosen from the step counts of the five synthetic shapes S1/G1/E1/G3/D1, not from any measured compound). */
   planning: {
