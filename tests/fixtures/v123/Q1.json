@@ -1,0 +1,3 @@
+{"id":"Q1","description":"isopropyl acetate type: CH3C(=O)OCH(CH3)2, ester O-CH at 4.99 (sept, 1H), CDCl3; IR physical (C=O and C-O strong, C-H weak). Synthetic.","targetSmiles":"CC(=O)OC(C)C","formula":"C5H10O2",
+"h1":{"solvent":"CDCl3","frequencyMHz":400,"peaks":[{"x":4.99,"integration":1,"multiplicity":"sept","j":[6.3]},{"x":2.03,"integration":3,"multiplicity":"s"},{"x":1.22,"integration":6,"multiplicity":"d","j":[6.3]}]},
+"ir":{"yAxis":"transmittance percent","coverageCm1":[4000,450],"calibrated":true,"note":"strong C=O, no C=C, no O-H","peaks":[{"x":2985,"y":75},{"x":1735,"y":8},{"x":1375,"y":55},{"x":1245,"y":12},{"x":1110,"y":25},{"x":960,"y":60}]}}

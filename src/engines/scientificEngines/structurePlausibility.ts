@@ -2,8 +2,7 @@ import {StructureParserAdapter} from '../chemistryEngine';
 import type {ObservedEvidence} from '../reasoning/types';
 import {PLAUSIBILITY_CONFIG as CFG} from './plausibilityConfig';
 import {V12_CONFIG} from '../constraints/v12Config';
-import {FORBIDDEN_FRAGMENTS} from '../constraints/forbiddenFragments';
-import {forbiddenFragmentsActive} from '../composition/planningGate';
+import {activeForbiddenFragments} from '../constraints/forbiddenFragments';
 import {matchingSMARTS} from './rdkitAdapter';
 
 /**
@@ -94,9 +93,10 @@ export function plausibilityViolations(smiles:string,ev:PlausibilityEvidence):Pl
    }
   }
  });
- if(forbiddenFragmentsActive()){
-  const hits=matchingSMARTS(smiles,FORBIDDEN_FRAGMENTS.map(f=>f.smarts));
-  for(const i of hits??[]){const f=FORBIDDEN_FRAGMENTS[i];add(`FORBIDDEN_${f.id}`,`禁含片段：${f.label}（${f.reason}）`);}
+ const forbiddenList=activeForbiddenFragments();
+ if(forbiddenList.length){
+  const hits=matchingSMARTS(smiles,forbiddenList.map(f=>f.smarts));
+  for(const i of hits??[]){const f=forbiddenList[i];add(`FORBIDDEN_${f.id}`,`禁含片段：${f.label}（${f.reason}）`);}
  }
  return out;
 }

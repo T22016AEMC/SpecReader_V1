@@ -1,0 +1,3 @@
+{"id":"M1","description":"PMA type: CH3C(=O)OCH(CH3)CH2OCH3, CDCl3","targetSmiles":"CC(=O)OC(C)COC","formula":"C6H12O3",
+"h1":{"solvent":"CDCl3","frequencyMHz":400,"peaks":[{"x":5.00,"integration":1,"multiplicity":"m"},{"x":3.40,"integration":2,"multiplicity":"d","j":[5.2]},{"x":3.34,"integration":3,"multiplicity":"s"},{"x":2.05,"integration":3,"multiplicity":"s"},{"x":1.22,"integration":3,"multiplicity":"d","j":[6.4]}]},
+"ir":{"yAxis":"transmittance percent","coverageCm1":[4000,450],"calibrated":true,"note":"no broad X-H, no C=C","peaks":[{"x":2980,"y":60},{"x":2935,"y":65},{"x":2830,"y":75},{"x":1740,"y":10},{"x":1450,"y":70},{"x":1375,"y":55},{"x":1240,"y":15},{"x":1115,"y":40},{"x":1050,"y":20},{"x":960,"y":70}]}}

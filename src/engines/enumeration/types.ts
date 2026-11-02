@@ -153,7 +153,9 @@ export type IncompleteReason =
   /** v1.2.1 (planning): round 1 found no reading that can hold the formula and did not fall back to the flexible-atom or legacy search (visited = 0). */
   | 'ROUND1_NO_TEMPLATE_READING'
   /** v1.2.1c (planning): a grade-B formula's round 2 stopped at round2ExploreMaxSteps (an exploration cap, not the analysis budget). */
-  | 'ROUND2_EXPLORE_CAP';
+  | 'ROUND2_EXPLORE_CAP'
+  /** v1.2.3 (planning): a grade-A formula's round 2 stopped at its share of the round-2 pool (pool / maxRound2Formulas; a per-formula limit, not the analysis budget). */
+  | 'ROUND2_STEP_CAP';
 export interface RejectionStats {
   sanitizeFailed: number;
   duplicatesMerged: number;

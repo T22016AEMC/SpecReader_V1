@@ -25,6 +25,11 @@ export interface IrAldehydeContext {
    * null = cannot be judged (no IR, peak-table / non-image IR, image IR whose calibration is not trusted or whose intensities are unknown). Only === true relaxes a window.
    */
   conjugatedCarbonyl?: boolean | null;
+  /**
+   * v1.2.3 (stop 3): the IR facts for the ester O–CH classes, present only while they are on. STRONG: a strong band in esterMethine.carbonylRangeCm1; ABSENT: the IR covers the aldehyde/carbonyl region
+   * with known intensities and has none; UNKNOWN: no IR, region not covered or intensities unknown.
+   */
+  esterCarbonyl?: 'STRONG' | 'ABSENT' | 'UNKNOWN';
 }
 export const NO_IR: IrAldehydeContext = {present: false, coversAldehydeRegion: false, strongCarbonyl: null, conjugatedCarbonyl: null};
 
@@ -36,6 +41,11 @@ export interface ClassifyContext {
   ir: IrAldehydeContext;
   /** v1.2.1 (B3): the shift windows per H count of the classes that have them apply (no-formula path only). */
   vinylWindows?: boolean;
+  /** v1.2.3 (stop 3): the ester / acetal O–CH classes may apply (formula O count in oxygenCount). */
+  esterMethine?: boolean;
+  oxygenCount?: number;
+  /** The planning feasibility check (which formulas are searched, in which order) counts only the ester / acetal matches that are ordinary readings; a deferred one must not make a formula look feasible or lower its DBE need. */
+  esterPlainOnly?: boolean;
 }
 export interface ClassMatch {
   classId: ShiftClassId;
@@ -46,6 +56,8 @@ export interface ClassMatch {
   hPerAtom?: number[];
   /** v1.2.1 (B3): an H count was allowed only by the extended window (conjugated C=O). */
   relaxed?: boolean;
+  /** v1.2.3 (stop 3): an ester / acetal O–CH match whose IR gate is UNKNOWN: it waits for round 2 with the alkene readings. */
+  deferred?: boolean;
 }
 export interface ClassifyResult {matches: ClassMatch[]; notes: string[]}
 
@@ -101,6 +113,17 @@ export function classifySignal(signal: H1Signal, ctx: ClassifyContext): Classify
     matches.push(allowed
       ? {classId: def.id, def, reason: `位移 ${v} ppm 在 ${def.id} 的視窗內（每原子 H 數 ${allowed.h.join('、')}${allowed.relaxed ? '；放寬窗依 IR 共軛 C=O' : ''}）`, hPerAtom: allowed.h, ...(allowed.relaxed ? {relaxed: true} : {})}
       : {classId: def.id, def, reason: `位移 ${v} ppm 在 ${def.id} 範圍 ${def.rangePpm.join('–')}`});
+  }
+  // v1.2.3 (stop 3): ester / acetal O–CH (see V12_CONFIG.esterMethine for the sources and the gate).
+  if (ctx.esterMethine && (ctx.oxygenCount ?? 0) >= V12_CONFIG.esterMethine.minOxygen && ctx.ir.esterCarbonyl !== 'ABSENT') {
+    for (const c of V12_CONFIG.esterMethine.classes) {
+      const deferred = c.alwaysDeferred || ctx.ir.esterCarbonyl !== 'STRONG';
+      if (deferred && ctx.esterPlainOnly) continue;
+      const hs = c.windows.filter(w => inRange(v, w.rangePpm)).map(w => w.h);
+      if (!hs.length) continue;
+      const def: ShiftClassDef = {id: c.id, rangePpm: [Math.min(...c.windows.map(w => w.rangePpm[0])), Math.max(...c.windows.map(w => w.rangePpm[1]))], hPerAtom: hs, hybrid: null, exchangeable: false, heteroatom: 'O', basis: c.basis};
+      matches.push({classId: c.id, def, reason: `位移 ${v} ppm 在 ${c.id} 的視窗內（每原子 H 數 ${hs.join('、')}；${deferred ? 'IR 沒有羰基證據也沒有矛盾：與烯基讀法一起放第二輪' : 'IR 有強 C=O 帶'}）`, hPerAtom: hs, ...(deferred ? {deferred: true} : {})});
+    }
   }
   if (hasExchangeableElement) {
     const ex = V12_CONFIG.exchangeable;

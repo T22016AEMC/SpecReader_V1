@@ -16,6 +16,8 @@ export interface ScoringContext {
  hardBoundsRelaxed:boolean;
  /** N gating mode (v1.1.6). */
  nitrogenMode:'EVIDENCE'|'EVEN_ION_ONLY'|'NONE';
+ /** v1.2.3 (A5): N atoms the nitrogen evidence supports; each N beyond it is scored down (weights.nitrogenExcess). Absent = no such deduction. */
+ nitrogenRequired?:number;
  /** v1.2.1 (A2): the O evidence floor; set only when useV121Planning is on, the route has no mass, and IR observations exist. */
  oxygenFloor?:OxygenEvidenceFloor|null;
  /** v1.2.1: a feature that only one modality (IR range matching) produced is reported but not scored down (3030/2965 cm-1 read as acid O–H, 1612 as amide I, … inflate the bounds). */
@@ -125,6 +127,7 @@ export function scoreComposition(counts:ElementCounts,mass:number,ion:IonHypothe
  const nFeature=ctx.features.some(f=>(f.mins.N??0)>0);
  if(n(counts,'N')&&ctx.nitrogenMode==='EVEN_ION_ONLY'){out.score-=w.nitrogenEvenIonOnly*n(counts,'N');reason(out.unknown,`含 ${n(counts,'N')} 個 N：MS 分子離子為偶數名義質量，沒有其他 N 專屬證據，信心降低`,[],'RULE');}
  else if(n(counts,'N')&&!nFeature&&ctx.nitrogenMode!=='EVIDENCE'){out.score-=w.nitrogenNoEvidence*n(counts,'N');reason(out.unknown,`含 ${n(counts,'N')} 個 N，但沒有官能基證據指向 N`,[],'RULE');}
+ if(ctx.nitrogenRequired!==undefined&&n(counts,'N')>ctx.nitrogenRequired){const extra=n(counts,'N')-ctx.nitrogenRequired;out.score-=w.nitrogenExcess*extra;reason(out.contradiction,`含 ${n(counts,'N')} 個 N，N 專屬證據只支持 ${ctx.nitrogenRequired} 個（每種證據 1 個）；多出的 ${extra} 個 N 逐個扣分（v1.2.3，不排除）`,[],'RULE');}
  // Golden Rules common ranges.
  for(const v of commonRangeViolations(counts)){out.score-=w.goldenCommon;reason(out.contradiction,`Golden Rules 常見範圍：${v}`,[],'RULE');}
  // Element priors.

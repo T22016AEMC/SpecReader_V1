@@ -1,0 +1,3 @@
+{"id":"M5","description":"prenyl acetate: (CH3)2C=CH-CH2-OC(=O)CH3, real alkene CH (t, 1H) next to an ester; CDCl3","targetSmiles":"CC(C)=CCOC(C)=O","formula":"C7H12O2",
+"h1":{"solvent":"CDCl3","frequencyMHz":400,"peaks":[{"x":5.35,"integration":1,"multiplicity":"t","j":[7.2]},{"x":4.58,"integration":2,"multiplicity":"d","j":[7.2]},{"x":2.05,"integration":3,"multiplicity":"s"},{"x":1.74,"integration":3,"multiplicity":"s"},{"x":1.68,"integration":3,"multiplicity":"s"}]},
+"ir":{"yAxis":"transmittance percent","coverageCm1":[4000,450],"calibrated":true,"note":"C=C 1675 weak","peaks":[{"x":2970,"y":55},{"x":2920,"y":60},{"x":1740,"y":10},{"x":1675,"y":80},{"x":1450,"y":65},{"x":1375,"y":50},{"x":1235,"y":12},{"x":1025,"y":35}]}}
