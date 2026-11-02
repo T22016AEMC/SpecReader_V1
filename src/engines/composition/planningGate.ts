@@ -28,5 +28,6 @@ export const v123Round1CapK1Active = (): boolean => v123Active() && V12_CONFIG.v
 export const v130Active = (): boolean => v123Active() && V12_CONFIG.useV130;
 export const v130IntensityDisplayActive = (): boolean => v130Active() && V12_CONFIG.v130.intensityDisplay;
 export const v130OvertoneActive = (): boolean => v130Active() && V12_CONFIG.v130.overtone;
-export const v130CarbonylMissingActive = (): boolean => v130Active() && V12_CONFIG.v130.carbonylMissing;
+// the v1.2.1 B4 sub-switch planning.carbonylBand also switches the v1.3.0 missing-carbonyl item off (it is the same deduction, generalised)
+export const v130CarbonylMissingActive = (): boolean => v130Active() && V12_CONFIG.v130.carbonylMissing && V12_CONFIG.planning.carbonylBand;
 export const v130DbeDemotionActive = (): boolean => v130Active() && V12_CONFIG.v130.dbeDemotion;

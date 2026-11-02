@@ -10,8 +10,9 @@ import {graphFragments} from './graphFragmentation';
 import {prepareIR,irRangeCovered} from './irSignalProcessing';
 import {ionMz,type IonAdduct} from './ionMass';
 import {V12_CONFIG} from '../constraints/v12Config';
-import {carbonylBandActive} from '../composition/planningGate';
-import {carbonylBandEntries} from './carbonylClasses';
+import {carbonylBandActive,v130CarbonylMissingActive,v130OvertoneActive} from '../composition/planningGate';
+import {carbonylBandEntries,carbonylMissingEntries} from './carbonylClasses';
+import {isIrOvertone} from './irOvertone';
 
 export interface ScientificEvidence {
   id:string;sourceModality:ExtendedSpectrumModality|'FORMULA';observationIds:string[];
@@ -142,9 +143,11 @@ export function scoreScientificEvidence(smiles:string,bundle:IntegratedAnalysisB
       compatibility=structure.molecularFormula===ev.originalObservedData.formula?1:0;method='分子式硬限制；不再當作光譜加分';
     } else if(x!==undefined && ev.sourceModality==='IR') {
       const observed=irProcessed?.peaks.find(p=>Math.abs(p.x-x)<2);
-      compatibility=observed&&candidateIRBands.length?Math.max(...candidateIRBands.map(k=>irBandMatch(k,observed,irProcessed!.peaks,(a,b)=>irRangeCovered(sources.IR!,a,b)))):0;
-      weight=Math.min(1,(observed?.signalToNoise??10)/10)*(irProcessed?.irDataQuality??.6)*(.5+.5*Math.sqrt(Math.max(0,observed?.relativeArea??1)))*(.7+.3*Math.min(1,(observed?.prominence??100)/100));
-      method='候選分子圖選出區間／環境知識，與實測峰型／寬度／伴隨峰比較；每原始峰只計一次';limitations.push('經驗振動特徵模型，非量子光譜；相對像素峰高不是吸光度');
+      // v1.3.0 (E): an overtone / combination band is not evidence for or against any candidate (it used to count as an unexplained observation, weight and all).
+      const overtone=Boolean(observed&&irProcessed&&v130OvertoneActive()&&isIrOvertone(observed,irProcessed.peaks));
+      compatibility=overtone?null:observed&&candidateIRBands.length?Math.max(...candidateIRBands.map(k=>irBandMatch(k,observed,irProcessed!.peaks,(a,b)=>irRangeCovered(sources.IR!,a,b)))):0;
+      weight=overtone?0:Math.min(1,(observed?.signalToNoise??10)/10)*(irProcessed?.irDataQuality??.6)*(.5+.5*Math.sqrt(Math.max(0,observed?.relativeArea??1)))*(.7+.3*Math.min(1,(observed?.prominence??100)/100));
+      method=overtone?'苯環泛音／合頻帶（1650–2000 cm⁻¹ 弱帶，旁有芳環帶）：不當官能基證據，不計分':'候選分子圖選出區間／環境知識，與實測峰型／寬度／伴隨峰比較；每原始峰只計一次';limitations.push('經驗振動特徵模型，非量子光譜；相對像素峰高不是吸光度');
     } else if(x!==undefined && ev.sourceModality==='1H_NMR') {
       const row=hObs.indexOf(ev),best=hAssignment.get(row);
       compatibility=best===undefined?0:hMatrix[row][best];weight=best!==undefined&&hPred[best].isExchangeable?.3:.8;
@@ -180,7 +183,10 @@ export function scoreScientificEvidence(smiles:string,bundle:IntegratedAnalysisB
   }
   if(V12_CONFIG.useV12Constraints&&hObs.length&&hPred.length)entries.push(...bidirectional1H(hObs,hPred,hAssignment,integralScale,sources['1H_NMR']?.observationCoverage==='CONFIRMED_COMPLETE'));
   if(sources.IR&&irProcessed){
+    // v1.3.0 (G4): the missing-carbonyl item of every carbonyl class; its weight is a share of the sum of this candidate's other IR weights (taken before any deduction item is added).
+    const missingCarbonyl=v130CarbonylMissingActive()?carbonylMissingEntries(smiles,sources.IR,irProcessed,entries.filter(e=>e.sourceModality==='IR').reduce((t,e)=>t+e.weight,0)):[];
     for(const [lo,hi] of [[1630,1850],[2100,2300]]){
+      if(lo===1630&&missingCarbonyl.length)continue; // the same fact (no carbonyl band) is already one item
       const expected=irPred.filter(p=>p.x>=lo&&p.x<=hi&&p.y>=70);
       if(!expected.length||!irRangeCovered(sources.IR,lo,hi)||irProcessed.peaks.some(p=>p.x>=lo&&p.x<=hi))continue;
       const id=`IR:coverage:${lo}-${hi}`;
@@ -188,7 +194,8 @@ export function scoreScientificEvidence(smiles:string,bundle:IntegratedAnalysisB
       entries.push({evidenceId:id,observationIds:[id],sourceModality:'IR',compatibility:0,weight,contribution:0,method:'實際掃描範圍內未檢出候選預期強吸收，弱反證（不適用 OH/NH）',limitations:['偵測門檻／重疊可能遮蔽；非硬限制']});
     }
     // v1.2.1 (B4): image IR with a trusted calibration and a trace over the carbonyl windows; the candidate is scored down, never rejected
-    if(carbonylBandActive())entries.push(...carbonylBandEntries(smiles,sources.IR,irProcessed));
+    if(v130CarbonylMissingActive())entries.push(...missingCarbonyl);
+    else if(carbonylBandActive())entries.push(...carbonylBandEntries(smiles,sources.IR,irProcessed));
   }
   const modalityScores:CandidateScoreLedger['modalityScores']={},modalityWeights:CandidateScoreLedger['modalityWeights']={};
   let totalWeight=0,totalContribution=0;

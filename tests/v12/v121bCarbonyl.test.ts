@@ -1,4 +1,4 @@
-import {afterEach, beforeAll, describe, expect, it} from 'vitest';
+import {afterAll, afterEach, beforeAll, describe, expect, it} from 'vitest';
 import {initializeRDKit} from '../../src/engines/scientificEngines/rdkitAdapter';
 import {WorkbenchOrchestrator} from '../../src/engines/workbenchOrchestrator';
 import {executeSixStepAnalysis} from '../../src/engines/reasoning/sixStepAnalysis';
@@ -13,7 +13,11 @@ import type {ExperimentalSpectrumData} from '../../src/types/spectrum';
 
 // v1.2.1 B4: a candidate with a carbonyl class but no strong IR band in that class's window is scored down (never rejected) when the IR is an image whose calibration is
 // trusted and whose trace covers the window. IR image: SYNTHETIC (tests/irAxisFixture.ts); the 1H comes from the hand-written E1 shape. Nothing here is a measured spectrum.
-beforeAll(() => initializeRDKit(), 60000);
+// v1.3.0: these tests pin the v1.2.1 B4 deduction (six classes, image IR, weight 0.8 × quality). The v1.3.0 generalisation (nine classes, peak tables, weight 20 % of the other IR weights) has its own tests
+// (tests/v12/v130Stop1.test.ts), so here the v1.3.0 total flag is off; no assertion of this file was changed.
+const wasV130 = V12_CONFIG.useV130;
+beforeAll(async () => { V12_CONFIG.useV130 = false; await initializeRDKit(); }, 60000);
+afterAll(() => { V12_CONFIG.useV130 = wasV130; });
 const planning = V12_CONFIG.planning;
 const saved = {...planning}, savedMissing = {...V12_CONFIG.irMissingBand};
 afterEach(() => { Object.assign(planning, saved); Object.assign(V12_CONFIG.irMissingBand, savedMissing); V12_CONFIG.useV121Planning = true; });
