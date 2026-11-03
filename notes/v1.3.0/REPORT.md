@@ -50,4 +50,9 @@
 
 ## 6. 發佈
 
-REPORT_RELEASE
+- PR：https://github.com/T22016AEMC/SpecReader_V1/pull/12 ，以 merge commit 合併。**merge commit：`5559f2a354297c42e43591ea12fd6b1d02e4daa3`**；分支最後一個提交 `e2a2099`。
+- Render 自動部署（約 1–2 分鐘）；`/api/health` 回 `{"status":"ok","version":"1.3.0","revision":"5559f2a…"}`。
+- 正式站短檢查（Chrome 1280×720，合成對甲酚型資料，不使用真實圖譜）：頁面載入、版本標示含 1.3.0；上傳合成 ¹H 與 IR 吸光度曲線並標記 10 個 IR 峰；第 3 頁分析完成（`data-result-current=true`）；結果頁 5 個分頁出現，沒有頁面錯誤。
+- 回滾：見第 4 節，merge commit 為上述 `5559f2a`（`git revert -m 1 5559f2a`）。
+- 發佈檔：`releasesSpecReader_v1.3.0.zip`（`git archive`，不含 `notes/`，1.6 MB）。
+- 本節在 merge 之後補記，只留在本機 main（未推送，未另開 PR）。
