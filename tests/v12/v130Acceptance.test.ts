@@ -13,7 +13,7 @@ beforeAll(async () => { await initializeRDKit(); V12_CONFIG.useV130 = true; }, 6
 afterAll(() => { V12_CONFIG.useV130 = was; });
 const baseline = JSON.parse(fs.readFileSync(path.resolve(__dirname, '..', 'goldens', 'v130.baseline.json'), 'utf8')).samples as V130Measure[];
 const ACID_C16 = 'Cc1ccc(C(O)(C(=O)O)c2ccc(C)cc2)cc1';
-const EXPECTED_RANK: Record<string, number> = {'v130/CR1': 2, 'v130/CR0': 2, 'v130/NITROX': 1, 'v130/EST1': 1, 'v130/AMD1': 1, 'v130/HCA': 1, 'v130/ALK1': 27, 'v130/ALK0': 27, M1: 1, P1: 1, P2: 1, P3: 1, P4: 1, B1: 1};
+const EXPECTED_RANK: Record<string, number> = {'v130/CR1': 1, 'v130/CR0': 2, 'v130/NITROX': 1, 'v130/EST1': 1, 'v130/AMD1': 1, 'v130/HCA': 1, 'v130/ALK1': 27, 'v130/ALK0': 27, M1: 1, P1: 1, P2: 1, P3: 1, P4: 1, B1: 1};
 
 describe('v1.3.0 stop 1 acceptance: ranks against the v1.2.3 baseline', () => {
   for (const c of V130_CASES) {

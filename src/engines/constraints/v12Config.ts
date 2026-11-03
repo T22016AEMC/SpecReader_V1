@@ -114,6 +114,8 @@ export const V12_CONFIG = {
     carbonylMissing: true as boolean,
     /** G5: DBE = 0 formulas are searched after the others when the IR has a strong C=O. */
     dbeDemotion: true as boolean,
+    /** Ranking: candidates with the same rounded finalScore are ordered by the unrounded ledger total first. */
+    tieBreak: true as boolean,
   },
   /**
    * v1.3.0 numbers. ALL ENGINEERING JUDGEMENT, NOT CALIBRATED (工程判斷，未查證; the planner's decisions of stop 1, no table page was checked).

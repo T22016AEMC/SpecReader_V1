@@ -31,3 +31,5 @@ export const v130OvertoneActive = (): boolean => v130Active() && V12_CONFIG.v130
 // the v1.2.1 B4 sub-switch planning.carbonylBand also switches the v1.3.0 missing-carbonyl item off (it is the same deduction, generalised)
 export const v130CarbonylMissingActive = (): boolean => v130Active() && V12_CONFIG.v130.carbonylMissing && V12_CONFIG.planning.carbonylBand;
 export const v130DbeDemotionActive = (): boolean => v130Active() && V12_CONFIG.v130.dbeDemotion;
+/** v1.3.0: tie-break of the candidate ranking by the unrounded ledger total (candidateGenerator.rankCandidates). */
+export const v130TieBreakActive = (): boolean => v130Active() && V12_CONFIG.v130.tieBreak;
