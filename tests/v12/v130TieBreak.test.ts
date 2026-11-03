@@ -7,16 +7,18 @@ import {loadV123} from '../helpers/v123Samples';
 
 // v1.3.0 ranking tie-break: candidates with the same ROUNDED finalScore are ordered by the unrounded ledger total first (higher first); flag off keeps the v1.2.3 order (contradiction count first).
 // SYNTHETIC sample CR1 (p-cresol type, tests/fixtures/v130): p-cresol and a triaryl carbinol both round to 68; the ledger totals are 68.48 and 67.83, the carbinol has fewer contradicting reasons.
+// vitest.flagoff.config.ts sets useV123 = false for the whole suite (= 1.2.2); the v1.3.0 gate needs useV123, so this file turns it on itself (like broadXhResultV123).
+const wasV123 = V12_CONFIG.useV123;
 const was = {total: V12_CONFIG.useV130, tie: V12_CONFIG.v130.tieBreak};
-beforeAll(async () => { await initializeRDKit(); }, 60000);
-afterAll(() => { V12_CONFIG.useV130 = was.total; V12_CONFIG.v130.tieBreak = was.tie; });
+beforeAll(async () => { V12_CONFIG.useV123 = true; await initializeRDKit(); }, 60000);
+afterAll(() => { V12_CONFIG.useV123 = wasV123; V12_CONFIG.useV130 = was.total; V12_CONFIG.v130.tieBreak = was.tie; });
 const TARGET = canonNoStereo('Cc1ccc(O)cc1');
 async function rank(on: boolean) {
   V12_CONFIG.useV130 = true; V12_CONFIG.v130.tieBreak = on;
   const r = await executeSixStepAnalysis({spectra: fixtureSpectra(loadV123('v130/CR1'), {denseBaseline: true}), extraInput: {}}, SHAPE_BUDGET);
   return r.rankedCandidates;
 }
-const ledgerTotal = (c: Awaited<ReturnType<typeof rank>>[number]) => c.scientificScoreLedger.totalScore;
+const ledgerTotal = (c: Awaited<ReturnType<typeof rank>>[number]) => c.scientificScoreLedger!.totalScore;
 
 describe('v1.3.0 tie-break by the unrounded ledger total', () => {
   it('flag on: ties of finalScore are ordered by the ledger total (descending), and the target is first', async () => {

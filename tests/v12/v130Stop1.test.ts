@@ -14,9 +14,11 @@ import type {ExperimentalSpectrumData, SpectralPeak} from '../../src/types/spect
 
 // v1.3.0 stop 1 (flag useV130 ON): E overtone / anhydride pair, G4 missing-carbonyl deduction for every class, G5 DBE demotion.
 // SYNTHETIC samples only (tests/fixtures/v130, CDCl3 400 MHz declared; IR is a %T peak table: a weak band has a high y). Nothing real.
+// vitest.flagoff.config.ts sets useV123 = false for the whole suite (= 1.2.2); the v1.3.0 gate needs useV123, so this file turns it on itself (like broadXhResultV123).
+const wasV123 = V12_CONFIG.useV123;
 const was = {total: V12_CONFIG.useV130, ...V12_CONFIG.v130};
-beforeAll(async () => { await initializeRDKit(); V12_CONFIG.useV130 = true; Object.assign(V12_CONFIG.v130, {intensityDisplay: true, overtone: true, carbonylMissing: true, dbeDemotion: true}); }, 60000);
-afterAll(() => { V12_CONFIG.useV130 = was.total; Object.assign(V12_CONFIG.v130, {intensityDisplay: was.intensityDisplay, overtone: was.overtone, carbonylMissing: was.carbonylMissing, dbeDemotion: was.dbeDemotion}); });
+beforeAll(async () => { await initializeRDKit(); V12_CONFIG.useV123 = true; V12_CONFIG.useV130 = true; Object.assign(V12_CONFIG.v130, {intensityDisplay: true, overtone: true, carbonylMissing: true, dbeDemotion: true}); }, 60000);
+afterAll(() => { V12_CONFIG.useV123 = wasV123; V12_CONFIG.useV130 = was.total; Object.assign(V12_CONFIG.v130, {intensityDisplay: was.intensityDisplay, overtone: was.overtone, carbonylMissing: was.carbonylMissing, dbeDemotion: was.dbeDemotion}); });
 
 const sample = (id: string, edit?: (f: V121Fixture) => void) => { const f = structuredClone(loadV123(`v130/${id}`)); edit?.(f); return f; };
 const spectraOf = (f: V121Fixture) => fixtureSpectra(f, {denseBaseline: true}) as Record<string, ExperimentalSpectrumData>;

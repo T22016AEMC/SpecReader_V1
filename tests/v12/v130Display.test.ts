@@ -7,9 +7,11 @@ import {loadV123} from '../helpers/v123Samples';
 
 // v1.3.0 (G1, stop 0): the IR finding's intensity. Before, every IR finding carried the default 85 (chemicalFeatureEngine.ts), so every band looked strong and the evidence text said "85 (透射率)".
 // SYNTHETIC sample CR1 (p-cresol type, %T peak table: the 1516 and 1236 bands are strong, 1873 / 3024 are weak). Only the display of the intensity changes; nothing else reads it.
+// vitest.flagoff.config.ts sets useV123 = false for the whole suite (= 1.2.2); the v1.3.0 gate needs useV123, so this file turns it on itself (like broadXhResultV123).
+const wasV123 = V12_CONFIG.useV123;
 const was = {total: V12_CONFIG.useV130, sub: V12_CONFIG.v130.intensityDisplay};
-beforeAll(async () => { await initializeRDKit(); });
-afterAll(() => { V12_CONFIG.useV130 = was.total; V12_CONFIG.v130.intensityDisplay = was.sub; });
+beforeAll(async () => { V12_CONFIG.useV123 = true; await initializeRDKit(); });
+afterAll(() => { V12_CONFIG.useV123 = wasV123; V12_CONFIG.useV130 = was.total; V12_CONFIG.v130.intensityDisplay = was.sub; });
 const run = () => SpectralEvidenceExtractor.extractAllEvidence(fixtureSpectra(loadV123('v130/CR1'), {denseBaseline: true}) as never);
 const findingAt = (r: ReturnType<typeof run>, x: number) => r.bundle.irFindings.filter(f => f.observedPeak === x);
 

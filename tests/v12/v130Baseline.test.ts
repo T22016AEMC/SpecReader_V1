@@ -8,9 +8,11 @@ import type {V130Measure} from '../helpers/v130Samples';
 
 // v1.3.0 "before" baseline: every synthetic sample of tests/helpers/v130Samples.ts measured with the step budget only (dense IR baseline) equals the numbers recorded on the unchanged v1.2.3 engine.
 // The flag useV130 is set to false here (whatever the default): this is the flag-off guarantee "same results as v1.2.3 (aeef61b)". Deterministic (no wall-clock budget involved).
+// the baseline is v1.2.3 (useV123 on, useV130 off); vitest.flagoff.config.ts (1.2.2) would otherwise turn useV123 off for this file.
+const wasV123 = V12_CONFIG.useV123;
 const was = V12_CONFIG.useV130;
-beforeAll(async () => { await initializeRDKit(); V12_CONFIG.useV130 = false; }, 60000);
-afterAll(() => { V12_CONFIG.useV130 = was; });
+beforeAll(async () => { await initializeRDKit(); V12_CONFIG.useV123 = true; V12_CONFIG.useV130 = false; }, 60000);
+afterAll(() => { V12_CONFIG.useV123 = wasV123; V12_CONFIG.useV130 = was; });
 const baseline = JSON.parse(fs.readFileSync(path.resolve(__dirname, '..', 'goldens', 'v130.baseline.json'), 'utf8')).samples as V130Measure[];
 
 describe('v1.3.0 baseline of the synthetic samples (flag off = v1.2.3)', () => {
