@@ -3,7 +3,8 @@ import {graphChemicalFeatures} from './graphChemicalFeatures';
 import {matchesSMARTS} from './rdkitAdapter';
 import {irRangeCovered} from './irSignalProcessing';
 import {COMPOSITION_CONFIG} from '../composition/compositionConfig';
-import {v123AmideRingReadingActive} from '../composition/planningGate';
+import {v123AmideRingReadingActive,v130OvertoneActive} from '../composition/planningGate';
+import {hasAnhydridePair,isIrOvertone} from './irOvertone';
 const SOURCE='https://www2.chemistry.msu.edu/faculty/reusch/VirtTxtJml/Spectrpy/InfraRed/infrared.htm';
 type Range=[number,number];
 export interface IRBandKnowledge {
@@ -82,6 +83,8 @@ export function irBandMatch(k:IRBandKnowledge,p:SpectralPeak,peaks:SpectralPeak[
   const LA=COMPOSITION_CONFIG.nitrogenLookAlike;
   if(peaks.some(q=>q.id!==p.id&&(inRange(q.x,LA.ringPartnerRange)||inRange(q.x,LA.ringSecondaryRange))))score*=.3;
  }
+ // v1.3.0 (E): an anhydride reading needs the coupled pair of strong C=O bands (about 1820 and 1750); a single band does not give it full credit.
+ if((k.id==='anhydride'||k.id==='anhydride-lower')&&v130OvertoneActive()&&!hasAnhydridePair(peaks))score*=.3;
  return Math.max(0,Math.min(1,score));
 }
 export function irCandidateBands(smiles:string):IRBandKnowledge[]{
@@ -100,7 +103,9 @@ export function irCandidateBands(smiles:string):IRBandKnowledge[]{
 }
 export function inferIRBands(s:ExperimentalSpectrumData):IRFunctionalGroupFinding[]{
  const peaks=s.peaks.filter(p=>![p.userClassification,p.role,p.signalRole].some(role=>role&&['NOISE','SOLVENT','IMPURITY','REFERENCE_TMS','WATER'].includes(role)));
- return peaks.flatMap(p=>IR_BAND_KNOWLEDGE.map(k=>({k,score:irBandMatch(k,p,peaks,(a,b)=>irRangeCovered(s,a,b))})).filter(v=>v.score>=.30).sort((a,b)=>b.score-a.score).slice(0,5).map(({k,score})=>({
+ // v1.3.0 (E): overtone / combination bands (weak 1650–2000 cm-1 bands next to ring evidence) are not read as functional groups; anhydride readings need the strong pair. The peaks stay in the data.
+ const v130=v130OvertoneActive(),overtone=new Set(v130?peaks.filter(p=>isIrOvertone(p,peaks)).map(p=>p.id):[]),pair=!v130||hasAnhydridePair(peaks);
+ return peaks.filter(p=>!overtone.has(p.id)).flatMap(p=>IR_BAND_KNOWLEDGE.filter(k=>pair||(k.id!=='anhydride'&&k.id!=='anhydride-lower')).map(k=>({k,score:irBandMatch(k,p,peaks,(a,b)=>irRangeCovered(s,a,b))})).filter(v=>v.score>=.30).sort((a,b)=>b.score-a.score).slice(0,5).map(({k,score})=>({
    id:`ir-range-${k.id}-${p.id}`,functionalGroup:k.label,family:k.family,observedPeak:p.x,observedWidthAndShape:`${p.shape??'未確認'}；區間 ${p.observedRange?.join('–')??'未標記'}；寬度 ${p.fwhm??p.width??'未知'}`,expectedRange:`${k.range.join('–')} cm⁻¹ ±${k.uncertainty}；${k.environment}`,region:p.x>=1500?'官能基區':'指紋區',assignment:k.label,companionPeaksObserved:k.companions.filter(range=>peaks.some(q=>q.id!==p.id&&inRange(q.x,range))).map(range=>`${range.join('–')} cm⁻¹`),matchLevel:score>.7&&k.companions.some(range=>peaks.some(q=>q.id!==p.id&&inRange(q.x,range)))&&(k.id!=='amide-nh'||peaks.some(q=>q.id!==p.id&&inRange(q.x,[1630,1695])))?'Strong':score>=.45?'Moderate':'Weak',modelType:'EMPIRICAL',confidence:Math.round(85*score),reasoning:`實測 ${p.x.toFixed(1)} cm⁻¹；峰型 ${p.shape==='broad'?'寬峰':p.shape==='sharp'?'窄峰':'未判定'}；${p.intensityKnown===false?'強度未知':'相對強度已納入'}。${k.shape==='broad'?'寬峰較支持氫鍵／帶包絡假設；':k.shape==='sharp'?'此模式通常較窄，氫鍵／重疊可例外；':''}${k.companions.length?'伴隨區 '+k.companions.map(range=>`${range.join('–')}：${peaks.some(q=>q.id!==p.id&&inRange(q.x,range))?'已標記支持':'未提供確認（不等於缺失）'}`).join('；')+'。':''}${k.id==='amide-nh'?'須比較羰基與醯胺 II，單一 NH 區峰不足確認醯胺。':''}${k.environment}。${k.measurementLimits}`,inferenceLevel:'LEVEL_3_FUNCTIONAL_GROUP_HYPOTHESIS',alternativeExplanations:k.confusable,electronicAndHBondEffects:[k.environment],evidence:{id:`ir-range-ev-${p.id}-${k.id}`,tag:'[Empirical]',modelType:'EMPIRICAL',sourceType:'Empirical Chemical Rule',certaintyCategory:'Estimated',source:'局部振動區間知識模型',reference:k.source,relevantInformation:`${k.label}／${k.environment}；不是完整分子答案`,confidence:Math.round(85*score)}
  })));
 }

@@ -16,7 +16,7 @@ import {matchingSMARTS} from './rdkitAdapter';
  * 1770–1815: same). The SMARTS that decide whether a candidate has the class are 工程判斷，未查證.
  */
 export interface CarbonylClass {
-  id: 'ESTER' | 'CONJUGATED_KETONE' | 'AMIDE' | 'QUINONE' | 'ANHYDRIDE' | 'ACYL_HALIDE';
+  id: 'ESTER' | 'CONJUGATED_KETONE' | 'AMIDE' | 'QUINONE' | 'ANHYDRIDE' | 'ACYL_HALIDE' | 'ACID' | 'ALDEHYDE' | 'KETONE';
   /** Traditional Chinese, shown in the panel. */
   label: string;
   smarts: string;
@@ -103,5 +103,70 @@ export function carbonylBandEntries(smiles: string, ir: ExperimentalSpectrumData
   return [{
     evidenceId: id, observationIds: [id], sourceModality: 'IR' as const, compatibility: 0, weight, contribution: 0, method: display, display,
     limitations: [`缺羰基帶扣分：權重 ${cfg.weight}（未校準，工程判斷，未查證）× IR 資料品質；窗口 ${classes.map(c => c.source).join('；')}`, '只在影像 IR、校正可信、描線涵蓋窗口時啟用；非硬限制'],
+  }];
+}
+
+// ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+// v1.3.0 (G4): the missing-carbonyl-band deduction for EVERY carbonyl class. The v1.2.1 functions above are unchanged (their tests pin them); the ledger calls carbonylMissingEntries when useV130 is on.
+// Three classes are added to the six: carboxylic acid, aldehyde and non-conjugated ketone. Their windows are the planner's wide windows (ENGINEERING JUDGEMENT, 工程判斷，未查證: no table page was checked;
+// the usual textbook ranges are acid about 1725–1680, aldehyde 1740–1685, saturated ketone 1725–1705; the windows are wider so that conjugation, ring size and hydrogen bonding stay inside).
+// Not modelled in this version: carboxylate salts (the SMARTS needs a neutral CO2H, so a salt gets no deduction), carbonates, carbamates, ureas, strained rings (cyclobutanone and smaller are left out of KETONE).
+// ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+const V130 = '規劃者放寬的窗（工程判斷，未查證）；常見教科書範圍：';
+export const CARBONYL_CLASSES_V130: CarbonylClass[] = [
+  {id: 'ACID', label: '羧酸', windowCm1: [1675, 1745], source: `${V130}羧酸約 1725–1680`, smarts: '[CX3](=[OX1])[OX2H1]'},
+  {id: 'ALDEHYDE', label: '醛', windowCm1: [1675, 1745], source: `${V130}醛約 1740–1685`, smarts: '[CX3H1](=[OX1])[#6]'},
+  {id: 'KETONE', label: '非共軛酮', windowCm1: [1700, 1750], source: `${V130}飽和酮約 1725–1705`,
+    smarts: '[CX3;$(C(=[OX1])([#6])[#6]);!$(C(=[OX1])[#6;$([#6]=,:[#6])]);!$([CX3;r3,r4])]=[OX1]'},
+];
+const ALL_V130 = [...CARBONYL_CLASSES, ...CARBONYL_CLASSES_V130];
+
+/** The carbonyl classes (of the nine) a candidate has. */
+export function candidateCarbonylClassesV130(smiles: string): CarbonylClass[] {
+  const hits = matchingSMARTS(smiles, ALL_V130.map(c => c.smarts)) ?? [];
+  return hits.map(i => ALL_V130[i]);
+}
+
+export type CarbonylMissingStatus = CarbonylBandStatus | {state: 'DISABLED'; reason: 'ONE_SIDED_PEAKS'};
+/**
+ * Is the missing-carbonyl-band check usable for this IR? An image IR: the v1.2.1 conditions (carbonylBandStatus). A peak table or numeric IR (v1.3.0, decision 3, ENGINEERING JUDGEMENT): it must have bands on BOTH sides of
+ * the carbonyl region (irV130.carbonylMissing.peakTableUpperCm1 and ...LowerCm1, about 1800–3100 and 1000–1650 cm-1) and known intensities; "not marked" in a table that only lists one side is not "absent".
+ */
+export function carbonylMissingStatus(ir: ExperimentalSpectrumData | undefined, processed: ExperimentalSpectrumData | null | undefined, windows: [number, number][]): CarbonylMissingStatus {
+  if (!ir) return {state: 'DISABLED', reason: 'NOT_IMAGE_IR'};
+  const isImage = Boolean(ir.digitizedFromImage || ir.sourceType === 'IMAGE_EXPERIMENTAL' || ir.sourceType === 'IMAGE_DIGITIZED');
+  if (isImage) return carbonylBandStatus(ir, processed, windows);
+  const C = V12_CONFIG.irV130.carbonylMissing;
+  const known = (processed?.peaks ?? []).filter(p => p.intensityKnown !== false && Number.isFinite(p.y) && p.y > 0);
+  if (!known.length) return {state: 'DISABLED', reason: 'INTENSITY_UNKNOWN'};
+  const side = (r: [number, number]) => known.some(p => p.x >= r[0] && p.x <= r[1]);
+  return side(C.peakTableUpperCm1) && side(C.peakTableLowerCm1) ? {state: 'ENABLED'} : {state: 'DISABLED', reason: 'ONE_SIDED_PEAKS'};
+}
+
+/**
+ * v1.3.0 (G4) ledger entries of one candidate: at most ONE `IR:carbonyl-missing:<class>[+<class>…]` item (compatibility 0), when the candidate has a carbonyl class of the nine and the IR has no band of at least
+ * presentRelativeIntensity % of the strongest band inside the union of the class windows (each widened by edgeToleranceCm1 on both sides: the soft edge). The weight is irWeightShare (20 %) × `irWeightSum`, the sum of the weights of the
+ * candidate's other IR items, so the deduction keeps its size however many bands the spectrum has (a fixed 0.8 against about 16 of other weight moved the IR score by about 2 points; the planner asked for about 20 %).
+ * The candidate is scored down, never rejected.
+ */
+export function carbonylMissingEntries(smiles: string, ir: ExperimentalSpectrumData, processed: ExperimentalSpectrumData, irWeightSum: number): ScoreLedgerEntry[] {
+  const classes = candidateCarbonylClassesV130(smiles);
+  if (!classes.length || !(irWeightSum > 0)) return [];
+  if (carbonylMissingStatus(ir, processed, classes.map(c => c.windowCm1)).state !== 'ENABLED') return [];
+  const C = V12_CONFIG.irV130.carbonylMissing;
+  const known = processed.peaks.filter(p => p.intensityKnown !== false && Number.isFinite(p.y) && p.y > 0);
+  const strongest = Math.max(...known.map(p => p.y));
+  const present = known.some(p => p.y >= (C.presentRelativeIntensity / 100) * strongest && classes.some(c => p.x >= c.windowCm1[0] - C.edgeToleranceCm1 && p.x <= c.windowCm1[1] + C.edgeToleranceCm1));
+  if (present) return [];
+  const weight = C.irWeightShare * irWeightSum;
+  const id = `IR:carbonyl-missing:${classes.map(c => c.id).join('+')}`;
+  const labels = classes.map(c => c.label).join('、');
+  const windows = classes.length === 1 ? `${classes[0].windowCm1[0]}–${classes[0].windowCm1[1]}` : classes.map(c => `${c.label} ${c.windowCm1[0]}–${c.windowCm1[1]}`).join('、');
+  const isImage = Boolean(ir.digitizedFromImage || ir.sourceType === 'IMAGE_EXPERIMENTAL' || ir.sourceType === 'IMAGE_DIGITIZED');
+  const display = `IR（${isImage ? '影像' : '峰表'}）：候選含${labels}羰基，但在 ${windows} cm⁻¹（邊界各放寬 ${C.edgeToleranceCm1}）沒有至少 ${C.presentRelativeIntensity}% 最強帶的吸收帶；已扣分，未剔除`;
+  return [{
+    evidenceId: id, observationIds: [id], sourceModality: 'IR' as const, compatibility: 0, weight, contribution: 0, method: display, display,
+    limitations: [`缺羰基帶扣分（v1.3.0）：權重 = ${C.irWeightShare} × 其餘 IR 項權重總和 ${irWeightSum.toFixed(2)}（未校準，工程判斷，未查證）；窗口 ${classes.map(c => c.source).join('；')}`,
+      isImage ? '影像 IR：校正可信、描線涵蓋窗口時啟用；非硬限制' : '峰表 IR：羰基區兩側（約 1800–3100 與 1000–1650 cm⁻¹）都有峰時啟用（工程判斷）；非硬限制；羧酸鹽、碳酸酯、胺基甲酸酯未建模'],
   }];
 }

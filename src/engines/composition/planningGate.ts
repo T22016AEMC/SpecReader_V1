@@ -23,3 +23,13 @@ export const v123Round2CapActive = (): boolean => v123Active() && V12_CONFIG.v12
 export const v123AmideRingReadingActive = (): boolean => v123Active() && V12_CONFIG.v123.amideRingReading;
 export const v123EsterMethineActive = (): boolean => v123Active() && V12_CONFIG.v123.esterMethine;
 export const v123Round1CapK1Active = (): boolean => v123Active() && V12_CONFIG.v123.round1CapK1;
+
+/** v1.3.0: each rule set runs only while the v1.2.3 gate above is open (so useV123 = false still gives v1.2.2), the total flag useV130 is on and its own sub-switch is on. */
+export const v130Active = (): boolean => v123Active() && V12_CONFIG.useV130;
+export const v130IntensityDisplayActive = (): boolean => v130Active() && V12_CONFIG.v130.intensityDisplay;
+export const v130OvertoneActive = (): boolean => v130Active() && V12_CONFIG.v130.overtone;
+// the v1.2.1 B4 sub-switch planning.carbonylBand also switches the v1.3.0 missing-carbonyl item off (it is the same deduction, generalised)
+export const v130CarbonylMissingActive = (): boolean => v130Active() && V12_CONFIG.v130.carbonylMissing && V12_CONFIG.planning.carbonylBand;
+export const v130DbeDemotionActive = (): boolean => v130Active() && V12_CONFIG.v130.dbeDemotion;
+/** v1.3.0: tie-break of the candidate ranking by the unrounded ledger total (candidateGenerator.rankCandidates). */
+export const v130TieBreakActive = (): boolean => v130Active() && V12_CONFIG.v130.tieBreak;

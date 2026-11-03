@@ -1,3 +1,4 @@
+import {v130IntensityDisplayActive} from '../composition/planningGate';
 import {
   ExperimentalSpectrumData,
   ExtendedSpectrumModality,
@@ -127,7 +128,10 @@ export class SpectralEvidenceExtractor {
       ) {
         const primaryPeak =
           (ir.observedPeaks || [ir.observedPeak])[0] ?? ir.observedPeak;
-        const rawInt = ir.observedIntensities?.[0] ?? "Medium/Strong";
+        // v1.3.0 (G1): with the flag on a finding without a known intensity says so (it used to read "85" or "Medium/Strong"), and a known one is a relative intensity, not a transmittance.
+        const rawInt = v130IntensityDisplayActive()
+          ? (ir.observedIntensities?.[0] !== undefined ? `相對強度 ${ir.observedIntensities[0]}%（占最強帶，非穿透率）` : "強度未知")
+          : ir.observedIntensities?.[0] ?? "Medium/Strong";
         const isAbsent = ir.status === "ABSENT";
         spectrumEvidenceList.push({
           id: `se-ir-${ir.id || ir.groupName || ir.functionalGroup}`,
@@ -138,7 +142,7 @@ export class SpectralEvidenceExtractor {
           scientificProvenance: "EXPERIMENTAL",
           peakPosition: primaryPeak,
           peakRange: ir.expectedRange,
-          intensity: `${rawInt} (${irSemantics})`,
+          intensity: v130IntensityDisplayActive() ? rawInt : `${rawInt} (${irSemantics})`,
           shape: ir.bandShape ?? ir.observedWidthAndShape ?? "Sharp",
           inferredGroup: ir.groupName || ir.functionalGroup,
           chemicalMeaning: `[IR ${irSemantics}] ${

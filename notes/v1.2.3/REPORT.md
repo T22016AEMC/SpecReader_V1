@@ -67,3 +67,11 @@
 3. 重新部署 `releases\SpecReader_v1.2.2.zip`。
 
 暫時止血（不重新部署程式）：把 `V12_CONFIG.useV123` 預設改成 `false`（引擎回到 1.2.2；A8 顯示另需上述 `broadXhRangeCm1`）。無資料遷移。發佈檔：`releases\SpecReader_v1.2.3.zip`。
+
+## 6. 發佈（合併後補記）
+
+- PR：https://github.com/T22016AEMC/SpecReader_V1/pull/11 ，以 merge commit 合併。**merge commit：`aeef61b3944848bbf1372b3b0b3e24833bfb9b0e`**；分支最後一個提交 `69e20be`。
+- Render 自動部署約 1–2 分鐘；`/api/health` 回 `{"status":"ok","version":"1.2.3","revision":"aeef61b…"}`。
+- 正式站短檢查（1280×720，合成對甲酚型資料，不使用真實圖譜）：頁面載入；上傳合成 ¹H／IR 並標記 IR 峰；第 3 頁分析完成；「圖譜官能基」分頁 18 個官能基群（含寬 O–H 相關列，未被隱藏）、「預測結構」3 張結論卡、診斷摘要版本 1.2.3；無 page error。
+- 回滾：見第 5 節，merge commit 為上述 `aeef61b`（`git revert -m 1 aeef61b`）。
+- 發佈檔：`releases\SpecReader_v1.2.3.zip`（`git archive`，不含 `notes/`，1.6 MB）。

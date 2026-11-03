@@ -99,6 +99,37 @@ export const V12_CONFIG = {
     amideRingReading: true as boolean,
   },
   /**
+   * v1.3.0 (IR improvements). true: an intensity that is not known is no longer shown as 85, weak overtone / combination bands (1650–2000 cm-1) are not functional-group evidence, a candidate that has a
+   * carbonyl but whose IR has no band in the carbonyl window is scored down (every carbonyl class; peak-table IR too when both sides of the carbonyl region carry bands), and a strong C=O demotes DBE = 0 formulas in the search plan.
+   * false: every path is identical to v1.2.3 (tests/v12/v130Baseline.test.ts, vitest.flagoff130.config.ts). Works only while the v1.2.3 total flag is on (so useV123 = false still gives exactly v1.2.2).
+   * The sub-switches switch off one rule set each (tests and diagnostics only).
+   */
+  useV130: true as boolean,
+  v130: {
+    /** G1: the IR finding's intensity is the real relative intensity of its peak, or unknown (not the default 85). */
+    intensityDisplay: true as boolean,
+    /** E: weak 1650–2000 cm-1 bands next to ring evidence are overtone / combination bands, not functional groups. */
+    overtone: true as boolean,
+    /** G4: missing-carbonyl-band deduction for every carbonyl class. */
+    carbonylMissing: true as boolean,
+    /** G5: DBE = 0 formulas are searched after the others when the IR has a strong C=O. */
+    dbeDemotion: true as boolean,
+    /** Ranking: candidates with the same rounded finalScore are ordered by the unrounded ledger total first. */
+    tieBreak: true as boolean,
+  },
+  /**
+   * v1.3.0 numbers. ALL ENGINEERING JUDGEMENT, NOT CALIBRATED (工程判斷，未查證; the planner's decisions of stop 1, no table page was checked).
+   * overtone: a band in rangeCm1 below maxRelativeIntensity % of the strongest band, next to minRingBands bands in the ring window, is an overtone / combination band (irOvertone.ts).
+   * anhydridePair: an anhydride needs a strong band in each window (about 1820 and 1750).
+   * carbonylMissing (G4): the missing-carbonyl-band item weighs irWeightShare × the sum of the weights of the candidate's other IR items (the planner asked for about 20 %); a band counts as present when it is at least
+   * presentRelativeIntensity % of the strongest band and lies in a window widened by edgeToleranceCm1 (soft edge); a peak table (not an image) is trusted only when it has bands on both sides of the carbonyl region.
+   */
+  irV130: {
+    overtone: {rangeCm1: [1650, 2000] as [number, number], maxRelativeIntensity: 15, ringRangeCm1: [1450, 1620] as [number, number], minRingBands: 2},
+    anhydridePair: {highRangeCm1: [1780, 1860] as [number, number], lowRangeCm1: [1720, 1790] as [number, number], minRelativeIntensity: 50},
+    carbonylMissing: {irWeightShare: 0.2, presentRelativeIntensity: 30, edgeToleranceCm1: 10, peakTableUpperCm1: [1800, 3100] as [number, number], peakTableLowerCm1: [1000, 1650] as [number, number]},
+  },
+  /**
    * v1.2.3 (stop 3, B1): two extra ¹H classes for a methine (or, for the acetal class, a CH2) on an oxygen that sits above the O_CH window (3.2–5.0). They only decide the hydrogens per atom
    * (carbon, non-exchangeable) and, through the merged key, that the atom is a free sp3 CH rather than a constrained alkene CH; they require no hybridisation. AMINAL / HEMIACETAL / the forbidden
    * fragments still apply downstream. NOT in V12_CONFIG.shiftClasses (tests/v12/v121bVinyl.test.ts pins that table).

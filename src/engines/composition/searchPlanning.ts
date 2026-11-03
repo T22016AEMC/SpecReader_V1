@@ -6,7 +6,7 @@ import {V12_CONFIG} from '../constraints/v12Config';
 import {buildProblem, parseFormula} from '../enumeration/problem';
 import {Searcher} from '../enumeration/search';
 import {COMPOSITION_CONFIG} from './compositionConfig';
-import {v123EsterMethineActive,v123NameSlotsActive,vinylWindowsActive} from './planningGate';
+import {v123EsterMethineActive,v123NameSlotsActive,v130DbeDemotionActive,vinylWindowsActive} from './planningGate';
 import {hiddenExchangeableEvidence} from './functionalGroupBounds';
 import type {CompositionHypothesis, NotSearchedReason, OxygenEvidenceFloor} from './types';
 
@@ -126,8 +126,12 @@ export function planFormulaSearch(hypotheses: CompositionHypothesis[], oxygenFlo
   /** Score used for ordering only: with hidden-exchangeable evidence the prior against missing exchangeable H is not charged. */
   const planScore = (h: CompositionHypothesis) => h.score + (hidden ? COMPOSITION_CONFIG.weights.exchangeableMissing * eOf(h) : 0);
   const scoreOrder = (a: CompositionHypothesis, b: CompositionHypothesis) => (Math.abs(planScore(a) - planScore(b)) > SCORE_TIE ? planScore(b) - planScore(a) : 0);
+  // v1.3.0 (G5): a strong C=O in the IR needs at least one double bond or ring, so a formula with DBE 0 is demoted: it is ordered (and, among the variants of one O count, chosen) after every formula with DBE ≥ 1,
+  // never removed. If the C=O reading is wrong (a water band, a ring band) the cost is that the true formula is searched later (or in round 2), not that it is lost. Flag off: no demotion.
+  const demoting = v130DbeDemotionActive() && Boolean(oxygenFloor?.strongCarbonyl);
+  const demoted = (h: CompositionHypothesis) => (demoting && h.dbe < 1 ? 1 : 0);
   /** Choice among the variants of a key: score first (higher is better), then C, H, O ascending. */
-  const better = (a: CompositionHypothesis, b: CompositionHypothesis) => scoreOrder(a, b) || tail(a, b);
+  const better = (a: CompositionHypothesis, b: CompositionHypothesis) => demoted(a) - demoted(b) || scoreOrder(a, b) || tail(a, b);
   const inRange: CompositionHypothesis[] = [];
   for (const h of hypotheses.filter(x => x.generatorSupported)) {
     const O = oOf(h);
@@ -181,7 +185,7 @@ export function planFormulaSearch(hypotheses: CompositionHypothesis[], oxygenFlo
     const needed = f.dbeNeeded === null ? null : f.dbeNeeded + (oxygenFloor?.strongCarbonyl ? 1 : 0);
     feasible.set(h.id, {hypothesis: h, order: 0, feasibility: f, dbe: {dbe: h.dbe, needed, excess: needed === null ? 0 : Math.max(0, h.dbe - needed)}});
   }
-  const planOrder = (a: PlannedFormula, b: PlannedFormula) => scoreOrder(a.hypothesis, b.hypothesis) || a.dbe.excess - b.dbe.excess || tail(a.hypothesis, b.hypothesis);
+  const planOrder = (a: PlannedFormula, b: PlannedFormula) => demoted(a.hypothesis) - demoted(b.hypothesis) || scoreOrder(a.hypothesis, b.hypothesis) || a.dbe.excess - b.dbe.excess || tail(a.hypothesis, b.hypothesis);
   const byK = new Map<number, PlannedFormula[]>();
   for (const p of feasible.values()) byK.set(kOf(p.hypothesis), [...(byK.get(kOf(p.hypothesis)) ?? []), p]);
   const ks = [...byK.keys()].sort((a, b) => a - b);

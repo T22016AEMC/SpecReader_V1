@@ -28,6 +28,7 @@ import {
 } from "./scientificEngines/fragmentConstraintSolver";
 import { ChemicalHardConstraintValidator } from "./scientificEngines/chemicalHardConstraintValidator";
 import { SpectralEvidenceExtractor } from "./scientificEngines/spectralEvidenceExtractor";
+import {v130TieBreakActive} from "./composition/planningGate";
 
 export interface UnifiedCandidatePipelineOutput {
   bundle: IntegratedAnalysisBundle;
@@ -339,6 +340,12 @@ export function rankCandidates(
   results.sort((a, b) => {
     const scoreDiff = (b.finalScore ?? 0) - (a.finalScore ?? 0);
     if (scoreDiff !== 0) return scoreDiff;
+    // v1.3.0: finalScore is the ledger total rounded to an integer. When the rounded scores tie, the unrounded ledger total decides first (higher first); before, the number of contradicting
+    // reasons did, and a simple molecule whose weak fingerprint bands have no matching band (more contradictions) lost to a larger one with a lower total. Flag off: the v1.2.3 order. Only ties are reordered.
+    if (v130TieBreakActive()) {
+      const totalDiff = (b.scientificScoreLedger?.totalScore ?? 0) - (a.scientificScoreLedger?.totalScore ?? 0);
+      if (totalDiff !== 0) return totalDiff;
+    }
     const conflictDiff =
       a.contradictingReasons.length - b.contradictingReasons.length;
     if (conflictDiff !== 0) return conflictDiff;
