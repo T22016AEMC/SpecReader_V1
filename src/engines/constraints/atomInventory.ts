@@ -1,6 +1,7 @@
 import {COMPOSITION_CONFIG} from '../composition/compositionConfig';
 import {simplestIntegerRatio} from '../composition/nmrComposition';
 import {classifySignal, NO_IR, type H1Signal, type IrAldehydeContext} from './shiftClasses';
+import {v131ReadingLineActive} from '../composition/planningGate';
 import {V12_CONFIG, type Hybrid, type RingTemplateDef, type ShiftClassId} from './v12Config';
 
 export type {H1Signal, IrAldehydeContext} from './shiftClasses';
@@ -69,6 +70,8 @@ export interface InventorySignalSummary {
   multiplicity: string | null;
   broad: boolean;
   classes: ShiftClassId[];
+  /** v1.3.1 (C, display only): every class this signal can be read as, including the deferred ones (second round: ester / acetal O–CH, alkene readings) that `classes` leaves out. Present only while the reading-line flag is on. */
+  readableClasses?: ShiftClassId[];
   singletRuleApplied: boolean;
   equivalenceRequired: boolean;
   /** v1.2.1 (B3): a vinyl H count of this signal exists only because of the extended window (IR conjugated C=O). */
@@ -250,6 +253,7 @@ export function buildAtomInventory(input: AtomInventoryInput): AtomInventoryResu
   signals.forEach((s, i) => result.signals.push({
     observationId: s.observationId, shiftPpm: s.shiftPpm, relativeIntegral: s.relativeIntegral, ratio: ratio[i], multiplicity: s.multiplicity, broad: s.broad,
     classes: [...new Set(classified[i].matches.filter(m => !m.deferred).map(m => m.classId))], singletRuleApplied: singletClean[i], equivalenceRequired: !isRelaxed(s),
+    ...(v131ReadingLineActive() ? {readableClasses: [...new Set(classified[i].matches.map(m => m.classId))]} : {}),
     ...(classified[i].matches.some(m => m.relaxed) ? {vinylRelaxed: true} : {}),
   }));
   if (!kCombinations.length) {

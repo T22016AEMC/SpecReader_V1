@@ -189,7 +189,7 @@ export function createExhaustiveGenerator(legacy: StructureGenerator): Structure
 const fmtInv = (inv: ReturnType<typeof buildAtomInventory>, patternSets: number, patternTruncated: boolean): NonNullable<V12RunDiagnostic['inventory']> => ({
   status: inv.status, reason: inv.reason, alternatives: inv.alternatives.length, truncated: inv.truncated, patternSets, patternTruncated, incompleteReasons: [...inv.incompleteReasons], ratioSum: inv.ratioSum,
   combinations: inv.kCombinations.map(c => ({k: c.k, extraExchangeable: c.extraExchangeable, ratio: c.ratio})),
-  signals: inv.signals.map(x => ({...x, classes: [...x.classes]})), voided: inv.voided, aromaticLimited: inv.aromaticLimited,
+  signals: inv.signals.map(x => ({...x, classes: [...x.classes], ...(x.readableClasses ? {readableClasses: [...x.readableClasses]} : {})})), voided: inv.voided, aromaticLimited: inv.aromaticLimited,
   alternativesPreview: inv.alternatives.slice(0, 6).map(a => ({
     id: a.id, k: a.k, extraExchangeable: a.extraExchangeable, hasVinyl: a.hasVinyl, zeroHAtoms: {...a.zeroHAtoms},
     groups: a.groups.map(g => ({observationId: g.observationId, shiftClasses: [...g.shiftClasses], hTotal: g.hTotal, atomCount: g.atomCount, hPerAtom: g.hPerAtom, element: g.element, aromatic: g.aromatic, alkene: g.alkene, exchangeable: g.exchangeable, equivalent: g.equivalent, singletRule: g.singletNoHNeighbors})),

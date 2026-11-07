@@ -28,7 +28,8 @@ import {
 } from "./scientificEngines/fragmentConstraintSolver";
 import { ChemicalHardConstraintValidator } from "./scientificEngines/chemicalHardConstraintValidator";
 import { SpectralEvidenceExtractor } from "./scientificEngines/spectralEvidenceExtractor";
-import {v130TieBreakActive} from "./composition/planningGate";
+import {v130TieBreakActive, v131ParsimonyActive} from "./composition/planningGate";
+import {parsimonyPenalties} from "./scientificEngines/parsimonyPrior";
 
 export interface UnifiedCandidatePipelineOutput {
   bundle: IntegratedAnalysisBundle;
@@ -336,6 +337,18 @@ export function rankCandidates(
     });
   }
 
+  // v1.3.1 (A): parsimony prior. A separate item (see parsimonyPrior.ts): the score and the order use total - penalty; the ledger and the modality scores are untouched. Flag off: nothing here runs.
+  const adjustedTotal = (c: CandidateResult) => (c.scientificScoreLedger?.totalScore ?? 0) - (c.parsimonyPrior?.penalty ?? 0);
+  if (v131ParsimonyActive()) {
+    const outcomes = parsimonyPenalties(results.map(c => ({key: c.id, total: c.scientificScoreLedger?.totalScore ?? 0, hydrogensPerUnit: c.scientificScoreLedger?.hydrogensPerUnit ?? null, entries: c.scientificScoreLedger?.entries ?? []})));
+    for (const c of results) {
+      const o = outcomes.get(c.id);
+      if (!o || (o.penalty === 0 && !o.exempt)) continue;
+      c.parsimonyPrior = {penalty: o.penalty, multiple: o.multiple, baseSmiles: results.find(r => r.id === o.baseKey)?.smiles ?? null, exempt: o.exempt};
+      if (o.penalty > 0) { const s = Math.round(adjustedTotal(c)); c.finalScore = s; c.overallScore = s; c.confidence = s; c.scoreBreakdown = {...c.scoreBreakdown, totalScore: s}; }
+    }
+  }
+
   // 唯一確定性排序
   results.sort((a, b) => {
     const scoreDiff = (b.finalScore ?? 0) - (a.finalScore ?? 0);
@@ -343,7 +356,7 @@ export function rankCandidates(
     // v1.3.0: finalScore is the ledger total rounded to an integer. When the rounded scores tie, the unrounded ledger total decides first (higher first); before, the number of contradicting
     // reasons did, and a simple molecule whose weak fingerprint bands have no matching band (more contradictions) lost to a larger one with a lower total. Flag off: the v1.2.3 order. Only ties are reordered.
     if (v130TieBreakActive()) {
-      const totalDiff = (b.scientificScoreLedger?.totalScore ?? 0) - (a.scientificScoreLedger?.totalScore ?? 0);
+      const totalDiff = adjustedTotal(b) - adjustedTotal(a);
       if (totalDiff !== 0) return totalDiff;
     }
     const conflictDiff =

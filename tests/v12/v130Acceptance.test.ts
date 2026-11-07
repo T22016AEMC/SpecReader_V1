@@ -10,9 +10,10 @@ import type {V130Measure} from '../helpers/v130Samples';
 // Rules: no sample gets worse; the carboxylic acid without any carbonyl band (C16H16O3 type) no longer ranks before p-cresol (it ranked first); everything else as recorded.
 // vitest.flagoff.config.ts sets useV123 = false for the whole suite (= 1.2.2); the v1.3.0 gate needs useV123, so this file turns it on itself (like broadXhResultV123).
 const wasV123 = V12_CONFIG.useV123;
-const was = V12_CONFIG.useV130;
-beforeAll(async () => { await initializeRDKit(); V12_CONFIG.useV123 = true; V12_CONFIG.useV130 = true; }, 60000);
-afterAll(() => { V12_CONFIG.useV123 = wasV123; V12_CONFIG.useV130 = was; });
+const was = V12_CONFIG.useV130, wasV131 = V12_CONFIG.useV131;
+// v1.3.1: this file pins the v1.3.0 ranks, so the v1.3.1 total flag is off here (the v1.3.1 changes are measured in v131Acceptance.test.ts; ALK0 moves 27 -> 26 there through the parsimony prior)
+beforeAll(async () => { await initializeRDKit(); V12_CONFIG.useV123 = true; V12_CONFIG.useV130 = true; V12_CONFIG.useV131 = false; }, 60000);
+afterAll(() => { V12_CONFIG.useV123 = wasV123; V12_CONFIG.useV130 = was; V12_CONFIG.useV131 = wasV131; });
 const baseline = JSON.parse(fs.readFileSync(path.resolve(__dirname, '..', 'goldens', 'v130.baseline.json'), 'utf8')).samples as V130Measure[];
 const ACID_C16 = 'Cc1ccc(C(O)(C(=O)O)c2ccc(C)cc2)cc1';
 const EXPECTED_RANK: Record<string, number> = {'v130/CR1': 1, 'v130/CR0': 2, 'v130/NITROX': 1, 'v130/EST1': 1, 'v130/AMD1': 1, 'v130/HCA': 1, 'v130/ALK1': 27, 'v130/ALK0': 27, M1: 1, P1: 1, P2: 1, P3: 1, P4: 1, B1: 1};
