@@ -130,6 +130,35 @@ export const V12_CONFIG = {
     carbonylMissing: {irWeightShare: 0.2, presentRelativeIntensity: 30, edgeToleranceCm1: 10, peakTableUpperCm1: [1800, 3100] as [number, number], peakTableLowerCm1: [1000, 1650] as [number, number]},
   },
   /**
+   * v1.3.1 (small version). true: (A) a parsimony prior breaks near-ties in favour of the smaller molecule over its multiples, (B) the ynol C#C–OH is a forbidden fragment no IR band unlocks,
+   * (C) the diagnostic summary's ¹H reading line lists every readable class of a signal. false: every path is identical to v1.3.0 (tests/v12/v131Baseline.test.ts, vitest.flagoff131.config.ts).
+   * Works only while the v1.3.0 total flag (and through it the v1.2.3 flag) is on. The sub-switches switch off one rule set each (tests and diagnostics only).
+   */
+  useV131: true as boolean,
+  v131: {
+    /** A: the parsimony prior (candidateGenerator.rankCandidates; numbers in parsimonyV131). */
+    parsimony: true as boolean,
+    /** B: forbidden fragment ynol C#C-OH. */
+    forbiddenAlkynol: true as boolean,
+    /** C: the ¹H reading line of the diagnostic summary lists all readable classes. */
+    readingLine: true as boolean,
+  },
+  /**
+   * v1.3.1 parsimony prior. ALL NUMBERS ARE ENGINEERING JUDGEMENT, NOT CALIBRATED (工程判斷，待 1.4.0 檢討).
+   * A candidate whose non-exchangeable hydrogen count is an integer multiple (m >= 2) of another candidate's is "a multiple" of it (dimer, trimer ... of the same integral ratio).
+   * It loses penaltyPoints from its total (a SEPARATE item, the ledger itself is untouched) only when a smaller candidate is within windowPoints below ... or above it (smaller.total > multiple.total - windowPoints),
+   * and only when the multiple has no extra evidence over that smaller candidate: no observation (weight >= extraMinWeight) that the multiple explains (compatibility >= explainedMin) and the smaller one does not (compatibility < unexplainedMax).
+   * Conversion: one fully mismatched weak fingerprint IR band moves the total by about 1 point (weight 0.85 of an IR weight sum about 13, IR modality share about 0.55 of the total, measured on tests/fixtures/v130/CR1),
+   * so penaltyPoints = 1 is "the difference of one weak fingerprint band" and windowPoints = 2 "two of them"; a clear evidence gap (more than the window) is never touched, and the penalty cannot overturn a gap larger than penaltyPoints.
+   */
+  parsimonyV131: {
+    windowPoints: 2,
+    penaltyPoints: 1,
+    explainedMin: 0.6,
+    unexplainedMax: 0.4,
+    extraMinWeight: 0.3,
+  },
+  /**
    * v1.2.3 (stop 3, B1): two extra ¹H classes for a methine (or, for the acetal class, a CH2) on an oxygen that sits above the O_CH window (3.2–5.0). They only decide the hydrogens per atom
    * (carbon, non-exchangeable) and, through the merged key, that the atom is a free sp3 CH rather than a constrained alkene CH; they require no hybridisation. AMINAL / HEMIACETAL / the forbidden
    * fragments still apply downstream. NOT in V12_CONFIG.shiftClasses (tests/v12/v121bVinyl.test.ts pins that table).

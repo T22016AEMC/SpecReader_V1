@@ -89,7 +89,7 @@ function h1Lines(input: DiagnosticInput, cap: number): string[] {
   const signals = input.panel?.inventory?.formulas[0]?.signals ?? [];
   const reading = (p: H1PeakLike): string => {
     const s = signals.find(x => Math.abs(Number(x.shift) - p.position) < 0.006);
-    return s ? `｜${s.classes}｜${s.equivalence === '要求' ? '要求等價' : '不要求等價'}${s.singlet === '套用' ? '｜單峰規則套用' : ''}` : '';
+    return s ? `｜${s.readingClasses ?? s.classes}｜${s.equivalence === '要求' ? '要求等價' : '不要求等價'}${s.singlet === '套用' ? '｜單峰規則套用' : ''}` : '';
   };
   const lines = input.h1Peaks.slice(0, cap).map(p => {
     const j = p.jValues?.length ? `（J = ${p.jValues.map(v => Number(v.toFixed(1))).join(', ')}）` : '';

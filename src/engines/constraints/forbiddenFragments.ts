@@ -15,7 +15,7 @@ export interface ForbiddenFragment {
   stage: 'LEAF';
 }
 
-import {forbiddenFragmentsActive, v123ForbiddenNActive} from '../composition/planningGate';
+import {forbiddenFragmentsActive, v123ForbiddenNActive, v131ForbiddenAlkynolActive} from '../composition/planningGate';
 
 export const FORBIDDEN_SOURCE = '工程判斷，未查證';
 
@@ -58,10 +58,19 @@ export const V123_FORBIDDEN_FRAGMENTS: ForbiddenFragment[] = [
   {id: 'OH_ON_EPOXIDE_CARBON', smarts: '[CX4;r3]([OX2H1])[OX2;r3]', label: '環氧碳上有 OH', reason: '不是可分離的穩定結構', source: FORBIDDEN_SOURCE, stage: 'LEAF'},
 ];
 
-/** The list the leaf, the downstream plausibility gate and the legacy supplement apply: the v1.2.1 list (while its gate is open) plus the v1.2.3 list (while its gate is open). */
-export const activeForbiddenFragments = (): ForbiddenFragment[] => [...(forbiddenFragmentsActive() ? FORBIDDEN_FRAGMENTS : []), ...(v123ForbiddenNActive() ? V123_FORBIDDEN_FRAGMENTS : [])];
+/**
+ * v1.3.1 (B): the ynol C#C–OH (an alkyne carbon that carries a free OH). It is unstable and tautomerises to a ketene / enolate; no IR band unlocks it (same treatment as the v1.2.3 N–O list).
+ * [CX2]#[CX2][OX2H1] needs the OH on an sp carbon: propargyl alcohol (O on an sp3 carbon), an alkynyl ether (no H on O), an ynoic acid (O on a C=O carbon) and an alcohol elsewhere in an alkyne-bearing molecule do not match
+ * (tests/v12/v131Alkynol.test.ts: 1 molecule must hit, 30+ must not). SOURCE: 工程判斷：炔醇不穩定，互變成烯酮／烯酮化物 (no literature page checked).
+ */
+export const V131_FORBIDDEN_FRAGMENTS: ForbiddenFragment[] = [
+  {id: 'ALKYNOL', smarts: '[CX2]#[CX2][OX2H1]', label: '炔醇 C≡C–OH', reason: '不穩定，互變成烯酮／烯酮化物，IR 帶也不能放行', source: '工程判斷：炔醇不穩定，互變成烯酮／烯酮化物', stage: 'LEAF'},
+];
+
+/** The list the leaf, the downstream plausibility gate and the legacy supplement apply: the v1.2.1 list, the v1.2.3 list and the v1.3.1 list, each while its own gate is open. */
+export const activeForbiddenFragments = (): ForbiddenFragment[] => [...(forbiddenFragmentsActive() ? FORBIDDEN_FRAGMENTS : []), ...(v123ForbiddenNActive() ? V123_FORBIDDEN_FRAGMENTS : []), ...(v131ForbiddenAlkynolActive() ? V131_FORBIDDEN_FRAGMENTS : [])];
 
 /** The pipeline passes the v1.2.3 list to the leaf explicitly (the enumerator's own default stays the v1.2.1 list, so the enumerator-level tests are unchanged); {} while the v1.2.3 list is off. */
-export const v123LeafFragments = (): {fragments?: ForbiddenFragment[]} => (v123ForbiddenNActive() ? {fragments: activeForbiddenFragments()} : {});
+export const v123LeafFragments = (): {fragments?: ForbiddenFragment[]} => (v123ForbiddenNActive() || v131ForbiddenAlkynolActive() ? {fragments: activeForbiddenFragments()} : {});
 
-export const forbiddenById = (id: string): ForbiddenFragment | undefined => FORBIDDEN_FRAGMENTS.find(f => f.id === id) ?? V123_FORBIDDEN_FRAGMENTS.find(f => f.id === id);
+export const forbiddenById = (id: string): ForbiddenFragment | undefined => FORBIDDEN_FRAGMENTS.find(f => f.id === id) ?? V123_FORBIDDEN_FRAGMENTS.find(f => f.id === id) ?? V131_FORBIDDEN_FRAGMENTS.find(f => f.id === id);

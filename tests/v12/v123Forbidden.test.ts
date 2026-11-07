@@ -1,6 +1,7 @@
 import {afterEach, beforeAll, describe, expect, it} from 'vitest';
 import {V12_CONFIG} from '../../src/engines/constraints/v12Config';
-import {activeForbiddenFragments, FORBIDDEN_FRAGMENTS, forbiddenById, V123_FORBIDDEN_FRAGMENTS} from '../../src/engines/constraints/forbiddenFragments';
+import {activeForbiddenFragments, FORBIDDEN_FRAGMENTS, forbiddenById, V123_FORBIDDEN_FRAGMENTS, V131_FORBIDDEN_FRAGMENTS} from '../../src/engines/constraints/forbiddenFragments';
+import {v131ForbiddenAlkynolActive} from '../../src/engines/composition/planningGate';
 import {initializeRDKit, matchingSMARTS} from '../../src/engines/scientificEngines/rdkitAdapter';
 import {NO_PLAUSIBILITY_EVIDENCE, plausibilityViolations} from '../../src/engines/scientificEngines/structurePlausibility';
 
@@ -70,9 +71,11 @@ describe('v1.2.3 forbidden fragments: gating and the three that IR cannot unlock
   });
   it('the sub-switch forbiddenN switches off just this list; nitro, N-oxide, oxime and a single N–OH stay legal with the flag on', () => {
     V12_CONFIG.useV123 = true;
-    expect(activeForbiddenFragments()).toHaveLength(FORBIDDEN_FRAGMENTS.length + 9);
+    // v1.3.1: the ynol list (V131_FORBIDDEN_FRAGMENTS, own flag useV131) is part of the active list when its gate is open; it is a separate list, so the nine above are unchanged
+    const ynol = v131ForbiddenAlkynolActive() ? V131_FORBIDDEN_FRAGMENTS.length : 0;   // 0 with useV131 = false (vitest.flagoff131.config.ts): then the list is exactly the v1.3.0 one
+    expect(activeForbiddenFragments()).toHaveLength(FORBIDDEN_FRAGMENTS.length + 9 + ynol);
     V12_CONFIG.v123.forbiddenN = false;
-    expect(activeForbiddenFragments()).toHaveLength(FORBIDDEN_FRAGMENTS.length);
+    expect(activeForbiddenFragments()).toHaveLength(FORBIDDEN_FRAGMENTS.length + ynol);
     V12_CONFIG.v123.forbiddenN = true;
     for (const smiles of ['Cc1ccc([N+](=O)[O-])cc1', '[O-][n+]1ccccc1', 'CC(C)=NO', 'CNO']) expect(rulesOf(smiles).filter(r => r.startsWith('FORBIDDEN_'))).toEqual([]);
   });

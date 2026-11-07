@@ -6,7 +6,7 @@ import {COMPOSITION_CONFIG} from '../composition/compositionConfig';
 import {SULFUR_NOT_CONSIDERED as SULFUR_TEXT} from '../composition/inferComposition';
 import {exclusionLines, exclusionStats, zeroCandidateExplanation, type ZeroCandidateExplanation} from './exclusionStats';
 import {CARBONYL_CLASSES, CARBONYL_STATUS_TEXT, type CarbonylBandStatus} from '../scientificEngines/carbonylClasses';
-import {vinylWindowsActive} from '../composition/planningGate';
+import {vinylWindowsActive, v131ReadingLineActive} from '../composition/planningGate';
 import type {CandidateOrigin, EnumerationDiagnostics, EnumerationRunDiagnostic, IncompleteReason, V12RunDiagnostic} from './types';
 
 /**
@@ -57,7 +57,7 @@ export interface InventoryFormulaView {
   badges: PanelBadge[];
   combinations: string[];
   /** Column headers are fixed by the component; `hText` is for the first reading. */
-  signals: {shift: string; integral: string; ratio: string; hText: string; multiplicity: string; classes: string; hPerAtom: string; atoms: string; equivalence: string; singlet: string}[];
+  signals: {shift: string; integral: string; ratio: string; hText: string; multiplicity: string; classes: string; /** v1.3.1 (C): every readable class of the signal (diagnostic summary only); absent while the flag is off. */ readingClasses?: string; hPerAtom: string; atoms: string; equivalence: string; singlet: string}[];
   preview: string[];
   countsText: string | null;
   voided: {text: string}[];
@@ -216,6 +216,8 @@ function searchCell(h: CompositionInferenceResult['hypotheses'][number], run: Co
 export const SHIFT_CLASS_LABEL: Record<string, string> = {
   ARO_CH: '芳香 CH', VINYL_CH: '烯基 CH', ALDEHYDE: '醛基 H', O_CH: '接 O 的碳 H', N_CH: '接 N 的碳 H', ALPHA_CH: '鄰羰基／芳環／炔的碳 H', ALKYL_CH: '烷基 H', EXCHANGEABLE: '可交換 H（OH／NH）',
 };
+/** v1.3.1 (C): the labels of the diagnostic summary's reading line; the two v1.2.3 classes have no entry in SHIFT_CLASS_LABEL. */
+export const READING_CLASS_LABEL: Record<string, string> = {...SHIFT_CLASS_LABEL, ESTER_O_CH: '酯氧次甲基（RC(=O)O–CH）', ACETAL_O_CH: '縮醛／原酸酯 O–CH–O'};
 export const INVENTORY_NOTES = [
   '原子清單是由 1H 積分與位移類別推得的假設讀法，不是確認的結構；位移類別的數值是工程預設，未校準。',
   '位移類別只決定每原子 H 數與環模板，不要求原子的混成或鄰接元素（例如 3.9 ppm 的 CH2 可以不接 O）；位移的鑑別留給評分。',
@@ -248,6 +250,7 @@ function inventoryView(formula: string, v: V12RunDiagnostic): InventoryFormulaVi
   const signals = (inv?.signals ?? []).map(s => ({
     shift: num(s.shiftPpm), integral: s.relativeIntegral === null ? '—' : num(s.relativeIntegral), ratio: s.ratio === null ? '—' : String(s.ratio),
     hText: s.ratio === null || !first ? '—' : String(s.ratio * first.k), multiplicity: s.multiplicity ?? '—', classes: (s.classes.map(x => SHIFT_CLASS_LABEL[x] ?? x).join('、') || '—') + (s.vinylRelaxed ? VINYL_RELAXED_NOTE : ''),
+    ...(v131ReadingLineActive() && s.readableClasses ? {readingClasses: (s.readableClasses.map(x => READING_CLASS_LABEL[x] ?? x).join('、') || '—') + (s.vinylRelaxed ? VINYL_RELAXED_NOTE : '')} : {}),
     hPerAtom: '', atoms: '', equivalence: s.equivalenceRequired ? '要求' : '不要求', singlet: s.singletRuleApplied ? '套用' : '—',
   }));
   const firstAlt = inv?.alternativesPreview[0];

@@ -33,3 +33,9 @@ export const v130CarbonylMissingActive = (): boolean => v130Active() && V12_CONF
 export const v130DbeDemotionActive = (): boolean => v130Active() && V12_CONFIG.v130.dbeDemotion;
 /** v1.3.0: tie-break of the candidate ranking by the unrounded ledger total (candidateGenerator.rankCandidates). */
 export const v130TieBreakActive = (): boolean => v130Active() && V12_CONFIG.v130.tieBreak;
+
+/** v1.3.1: each rule set runs only while the v1.3.0 gate above is open (so useV130 = false still gives v1.2.3), the total flag useV131 is on and its own sub-switch is on. */
+export const v131Active = (): boolean => v130Active() && V12_CONFIG.useV131;
+export const v131ParsimonyActive = (): boolean => v131Active() && V12_CONFIG.v131.parsimony;
+export const v131ForbiddenAlkynolActive = (): boolean => v131Active() && V12_CONFIG.v131.forbiddenAlkynol;
+export const v131ReadingLineActive = (): boolean => v131Active() && V12_CONFIG.v131.readingLine;

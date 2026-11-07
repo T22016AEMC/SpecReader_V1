@@ -1624,6 +1624,8 @@ export interface CandidateConstraintSatisfaction {
 
 export interface CandidateStructure {
   scientificScoreLedger?: import('../engines/scientificEngines/evidenceLedger').CandidateScoreLedger;
+  /** v1.3.1 (A): the parsimony prior of this candidate (a separate item; the ledger is untouched). penalty > 0: the points taken off the total for the final score and the order. */
+  parsimonyPrior?: {penalty: number; multiple: number | null; baseSmiles: string | null; exempt: boolean};
   scoreMeaning?: 'UNCALIBRATED_COMPATIBILITY';
   nmrConsistencyAnalysis?: CandidateNMRConsistencyAnalysis;
   rank: number;

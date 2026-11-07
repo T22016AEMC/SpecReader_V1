@@ -78,6 +78,11 @@ export function CandidateEvidence({cand, graphInfo, modalityCount, evidence, obs
           <EvidenceTable entries={entries} observations={observations} />
         </details>
       )}
+      {cand.parsimonyPrior && cand.parsimonyPrior.penalty > 0 && (
+        <div className="text-[11px] text-slate-400" data-testid="candidate-parsimony-note">
+          簡約先驗：分數與較小的候選接近，而這個候選是它的 {cand.parsimonyPrior.multiple} 倍數式，沒有額外證據只有這個候選能解釋，所以總分扣 {cand.parsimonyPrior.penalty} 分（只用來打破近分；工程判斷）。
+        </div>
+      )}
       <div className="font-mono text-xs text-slate-400">
         IUPAC: {cand.iupacName} | <strong className="text-cyan-300">{cand.molecularFormula}</strong> (IHD={cand.unsaturationIndex})
       </div>

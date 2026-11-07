@@ -10,7 +10,7 @@ import {graphFragments} from './graphFragmentation';
 import {prepareIR,irRangeCovered} from './irSignalProcessing';
 import {ionMz,type IonAdduct} from './ionMass';
 import {V12_CONFIG} from '../constraints/v12Config';
-import {carbonylBandActive,v130CarbonylMissingActive,v130OvertoneActive} from '../composition/planningGate';
+import {carbonylBandActive,v130CarbonylMissingActive,v130OvertoneActive,v131ParsimonyActive} from '../composition/planningGate';
 import {carbonylBandEntries,carbonylMissingEntries} from './carbonylClasses';
 import {isIrOvertone} from './irOvertone';
 
@@ -24,7 +24,9 @@ export interface ScientificEvidence {
 export interface ScoreLedgerEntry {evidenceId:string;observationIds:string[];sourceModality:ScientificEvidence['sourceModality'];compatibility:number|null;weight:number;contribution:number;method:string;limitations:string[];
  /** v1.2: one readable Traditional-Chinese line for the candidate card (shift, H count, reason, discount); never an internal code. */
  display?:string}
-export interface CandidateScoreLedger {entries:ScoreLedgerEntry[];modalityScores:Partial<Record<ExtendedSpectrumModality,number|null>>;modalityWeights:Partial<Record<ExtendedSpectrumModality,number>>;totalScore:number;scoreMeaning:'UNCALIBRATED_COMPATIBILITY';formulaHardCompatible:boolean;limitations:string[]}
+export interface CandidateScoreLedger {entries:ScoreLedgerEntry[];modalityScores:Partial<Record<ExtendedSpectrumModality,number|null>>;modalityWeights:Partial<Record<ExtendedSpectrumModality,number>>;totalScore:number;scoreMeaning:'UNCALIBRATED_COMPATIBILITY';formulaHardCompatible:boolean;limitations:string[];
+ /** v1.3.1: hydrogens per integral unit of the 1H table under this candidate (1 / the integral scale); present only while the parsimony prior is on, null when fewer than two signals are matched. */
+ hydrogensPerUnit?:number|null}
 function analyte(p:SpectralPeak):boolean {
   return Number.isFinite(p.x)&&Number.isFinite(p.y)&&!p.isPredictedPeak&&!(p.pixelX!==undefined&&p.isCalibrated!==true)&&![p.role,p.signalRole,p.userClassification,p.classificationTag].some(r=>r&&['NOISE','SOLVENT','IMPURITY','WATER','REFERENCE_TMS','ARTIFACT'].includes(r));
 }
@@ -200,6 +202,6 @@ export function scoreScientificEvidence(smiles:string,bundle:IntegratedAnalysisB
   const modalityScores:CandidateScoreLedger['modalityScores']={},modalityWeights:CandidateScoreLedger['modalityWeights']={};
   let totalWeight=0,totalContribution=0;
   for(const mod of ['IR','1H_NMR','13C_NMR','MS','MS/MS','ToF-SIMS'] as const){const terms=entries.filter(e=>e.sourceModality===mod&&e.weight>0);const total=terms.reduce((s,e)=>s+e.weight,0);modalityScores[mod]=total?100*terms.reduce((s,e)=>s+e.contribution,0)/total:null;const reliability=terms.length?total/terms.length:0;modalityWeights[mod]=reliability;if(modalityScores[mod]!=null){totalWeight+=reliability;totalContribution+=modalityScores[mod]!*reliability;}}
-  return {entries,modalityScores,modalityWeights,totalScore:totalWeight?totalContribution/totalWeight:0,scoreMeaning:'UNCALIBRATED_COMPATIBILITY',formulaHardCompatible:!bundle.userSuppliedFormula||bundle.userSuppliedFormula===structure.molecularFormula,limitations:['候選集合非完整異構物搜尋；全域峰配對每側最多 128 個環境；排名不能證明唯一結構','評分是未校準的模型相容度，並非結構正確機率']};
+  return {...(v131ParsimonyActive()?{hydrogensPerUnit:integralScale?1/integralScale:null}:{}),entries,modalityScores,modalityWeights,totalScore:totalWeight?totalContribution/totalWeight:0,scoreMeaning:'UNCALIBRATED_COMPATIBILITY',formulaHardCompatible:!bundle.userSuppliedFormula||bundle.userSuppliedFormula===structure.molecularFormula,limitations:['候選集合非完整異構物搜尋；全域峰配對每側最多 128 個環境；排名不能證明唯一結構','評分是未校準的模型相容度，並非結構正確機率']};
 }
 
