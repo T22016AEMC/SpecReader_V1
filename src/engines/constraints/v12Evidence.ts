@@ -1,5 +1,5 @@
 import type {ObservedEvidence} from '../reasoning/types';
-import {strongIrBands} from './requiredSubstructures';
+import {strongCarbonylBands} from './requiredSubstructures';
 import type {H1Signal, IrAldehydeContext} from './shiftClasses';
 import {V12_CONFIG} from './v12Config';
 import {v123EsterMethineActive} from '../composition/planningGate';
@@ -38,9 +38,9 @@ export function irAldehydeContext(observations: ObservedEvidence[], coversRegion
   // B3: true / false only for an image IR with a trusted calibration and known intensities; peak-table (non-image) IR, untrusted calibration and unknown intensities give null.
   const judged = Boolean(irImage?.isImage && irImage.calibrationTrusted && known);
   const em = V12_CONFIG.esterMethine;
-  const esterCarbonyl = v123EsterMethineActive() ? {esterCarbonyl: (coversRegion && known ? (strongIrBands(observations, em.carbonylRangeCm1, em.strongRelativeIntensity).length > 0 ? (ir.some(o => o.value >= em.alkeneBandRangeCm1[0] && o.value <= em.alkeneBandRangeCm1[1]) ? 'UNKNOWN' : 'STRONG') : 'ABSENT') : 'UNKNOWN') as 'STRONG' | 'ABSENT' | 'UNKNOWN'} : {};
+  const esterCarbonyl = v123EsterMethineActive() ? {esterCarbonyl: (coversRegion && known ? (strongCarbonylBands(observations, em.carbonylRangeCm1, em.strongRelativeIntensity).length > 0 ? (ir.some(o => o.value >= em.alkeneBandRangeCm1[0] && o.value <= em.alkeneBandRangeCm1[1]) ? 'UNKNOWN' : 'STRONG') : 'ABSENT') : 'UNKNOWN') as 'STRONG' | 'ABSENT' | 'UNKNOWN'} : {};
   return {
-    ...esterCarbonyl, present: true, coversAldehydeRegion: coversRegion, strongCarbonyl: known ? strongIrBands(observations, c.rangeCm1, c.strongRelativeIntensity).length > 0 : null,
-    conjugatedCarbonyl: judged ? strongIrBands(observations, j.rangeCm1, j.strongRelativeIntensity).length > 0 : null,
+    ...esterCarbonyl, present: true, coversAldehydeRegion: coversRegion, strongCarbonyl: known ? strongCarbonylBands(observations, c.rangeCm1, c.strongRelativeIntensity).length > 0 : null,
+    conjugatedCarbonyl: judged ? strongCarbonylBands(observations, j.rangeCm1, j.strongRelativeIntensity).length > 0 : null,
   };
 }

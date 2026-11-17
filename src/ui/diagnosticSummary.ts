@@ -2,6 +2,7 @@ import type {PanelModel} from '../engines/enumeration/compositionPanelModel';
 import type {DataCheckResult} from './dataCheck';
 import {fmtIntegral, fmtScoreOf100, fmtShift1H, fmtWavenumber} from './format';
 import {obsLabels, type ObservationLike} from './obsLabel';
+import {experimentLabelText, negativeEvidenceStateText, type ExperimentName} from '../engines/constraints/experimentFlags';
 
 /**
  * Plain-text diagnostic summary and full formula table of the 診斷 tab (v1.2.2, DESIGN_REPORT B1.7).
@@ -15,6 +16,18 @@ export const SUMMARY_SECTION_TITLES = ['資料檢查', '¹H 峰表與程式的�
 
 export interface H1PeakLike {position: number; integration?: number | null; multiplicity?: string; jValues?: number[]}
 export interface IrPeakLike {position: number; broad?: boolean}
+export interface AnalysisPeakCounts {total: number; autoUnconfirmed: number}
+/** The observations of the reasoning trace (ObservedEvidence has `origin`; ObservationLike does not need it). */
+export interface OriginObservation extends ObservationLike {origin?: string; userOverride?: boolean; optional?: boolean}
+/**
+ * v1.3.2: how many peaks of one modality the analysis used, and how many of those came from automatic detection and were not confirmed by the user (origin EXTRACTED and no user override).
+ * undefined when the trace has no observations (nothing to report).
+ */
+export function analysisPeakCounts(observations: readonly ObservationLike[] | undefined, modality: string): AnalysisPeakCounts | undefined {
+  if (!observations?.length) return undefined;
+  const used = (observations as readonly OriginObservation[]).filter(o => o.modality === modality && !o.optional);
+  return {total: used.length, autoUnconfirmed: used.filter(o => o.origin === 'EXTRACTED' && !o.userOverride).length};
+}
 export interface TopCandidateLike {rank: number; formula: string; score: number | null; smiles: string}
 /** The slice of the composition inference result the summary reads (O floor and N evidence sources). */
 export interface CompositionSourcesLike {
@@ -31,6 +44,15 @@ export interface DiagnosticInput {
   dataCheck: DataCheckResult;
   h1Peaks: H1PeakLike[];
   irPeaks: IrPeakLike[];
+  /**
+   * v1.3.2 (optional; the line is printed only when given): the IR peaks the ANALYSIS used (the observations of the reasoning trace), not the page list, and how many of them are automatically
+   * detected and not confirmed by the user. Built by `analysisPeakCounts`.
+   */
+  analysisIrPeaks?: AnalysisPeakCounts;
+  /**
+   * v1.4.1 stop 20 (optional): the experiments (URL parameter exp) that are on in the analysis worker; one line "已啟用實驗功能：¹H 新規則／IR 新規則" under the header when any is on, nothing otherwise.
+   */
+  experiments?: readonly ExperimentName[];
   /** Calibration wording of the IR spectrum, e.g. the label of `calibrationStatus`. */
   irCalibrationText?: string;
   /** Functional-group groups hidden by the IR filter / shown (counts only). */
@@ -109,6 +131,12 @@ function build(input: DiagnosticInput, caps: Caps): string[] {
   const searched = rows.filter(isSearchedRow), unsearched = rows.filter(r => !isSearchedRow(r));
   out.push('SpecReader 診斷摘要', `產生時間：${input.generatedAt}｜版本 ${input.appVersion}｜${input.resultIsCurrent ? '結果為目前輸入' : '資料已變更，以下為舊結果'}`);
 
+  const experimentText = experimentLabelText(input.experiments);
+  if (experimentText) out.push(`已啟用實驗功能：${experimentText}`);
+  // v1.4.2 stop 30: the state of each of the three negative-evidence groups, only when at least one is on
+  const negText = negativeEvidenceStateText(input.experiments);
+  if (negText) out.push(negText);
+
   section(SUMMARY_SECTION_TITLES[0], [
     ...input.dataCheck.items.map(i => `- ${i.text}${i.detail ? `｜${i.detail}` : ''}`),
     ...(input.dataCheck.unprovidedText ? [`- ${input.dataCheck.unprovidedText}`] : []),
@@ -118,6 +146,7 @@ function build(input: DiagnosticInput, caps: Caps): string[] {
   section(SUMMARY_SECTION_TITLES[2], input.irPeaks.length ? [
     `- 校正方式：${input.irCalibrationText ?? '未記錄'}`,
     `- 峰（${input.irPeaks.length}）：${input.irPeaks.map(p => `${fmtWavenumber(p.position)}${p.broad ? '（寬）' : ''}`).join('、')} cm⁻¹`,
+    ...(input.analysisIrPeaks ? [`- 分析使用 ${input.analysisIrPeaks.total} 個峰，其中 ${input.analysisIrPeaks.autoUnconfirmed} 個為自動偵測未確認`] : []),
     `- 官能基（IR）：顯示 ${input.shownIrGroups} 項；因 IR 證據不足而隱藏 ${input.hiddenIrGroups} 項（只是顯示層篩選，匯出與本摘要的資料不變）`,
   ] : ['- 未提供 IR']);
 

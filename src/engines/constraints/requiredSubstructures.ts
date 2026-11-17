@@ -1,5 +1,6 @@
 import type {ObservedEvidence} from '../reasoning/types';
 import {V12_CONFIG, type StrongEvidenceRuleDef} from './v12Config';
+import {v132StrongCarbonylActive,v132WindowsActive} from '../composition/planningGate';
 
 /** A substructure that strong evidence requires in every candidate (matches may overlap other atoms and substructures). */
 export interface RequiredSubstructure {id: string; smarts: string; label: string; evidenceObservationIds: string[]; strength: 'STRONG'}
@@ -12,6 +13,22 @@ export function strongIrBands(observations: ObservedEvidence[], range: [number, 
   const strongest = Math.max(0, ...ir.map(o => (o.relativeIntensity !== null && o.relativeIntensity > 0 ? o.relativeIntensity : 0)));
   if (strongest <= 0) return [];
   return ir.filter(o => inRange(o.value, range) && o.relativeIntensity !== null && o.relativeIntensity >= minRelative * strongest);
+}
+
+/**
+ * v1.3.2: THE "strong C=O" judgement. Every place that asks whether a C=O band is strong calls this (oxygen floor, STRONG_CARBONYL required substructure, ester / aldehyde / conjugated-carbonyl gates; the
+ * DBE demotion and the O window follow from the floor). A band in v132StrongCarbonyl.rangeCm1 (1700–1800 cm-1) is strong at v132StrongCarbonyl.relativeIntensity of the strongest IR band while v132StrongCarbonylActive();
+ * a band elsewhere in `range`, or any band with the flag off, is judged at `minRelative` (the caller's old share, 0.5). C–O and other bands do not use this function. 工程判斷，未查證 (see v12Config).
+ */
+export function strongCarbonylBands(observations: ObservedEvidence[], range: [number, number], minRelative: number): ObservedEvidence[] {
+  if (!v132StrongCarbonylActive()) return strongIrBands(observations, range, minRelative);
+  const c0 = V12_CONFIG.v132StrongCarbonyl;
+  const c = v132WindowsActive() ? {...c0, rangeCm1: [c0.rangeCm1[0], c0.upperEdgeWindowsCm1] as [number, number]} : c0;
+  if (v132WindowsActive() && range[1] === 1800) range = [range[0], c0.upperEdgeWindowsCm1];
+  const ir = observations.filter(o => o.modality === 'IR' && !o.optional);
+  const strongest = Math.max(0, ...ir.map(o => (o.relativeIntensity !== null && o.relativeIntensity > 0 ? o.relativeIntensity : 0)));
+  if (strongest <= 0) return [];
+  return ir.filter(o => inRange(o.value, range) && o.relativeIntensity !== null && o.relativeIntensity >= (inRange(o.value, c.rangeCm1) ? Math.min(minRelative, c.relativeIntensity) : minRelative) * strongest);
 }
 
 function paraDoublets(observations: ObservedEvidence[]): string[] | null {
@@ -39,7 +56,7 @@ function ethylQt(observations: ObservedEvidence[]): string[] | null {
 
 function detect(rule: StrongEvidenceRuleDef, observations: ObservedEvidence[]): string[] | null {
   if (rule.modality === 'IR' && rule.irRangeCm1 && rule.irMinRelativeIntensity !== undefined) {
-    const hits = strongIrBands(observations, rule.irRangeCm1, rule.irMinRelativeIntensity);
+    const hits = (rule.carbonyl ? strongCarbonylBands : strongIrBands)(observations, rule.irRangeCm1, rule.irMinRelativeIntensity);
     return hits.length ? hits.map(o => o.id) : null;
   }
   if (rule.h1Kind === 'PARA_DOUBLETS') return paraDoublets(observations);

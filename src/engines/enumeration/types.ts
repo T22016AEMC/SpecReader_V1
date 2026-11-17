@@ -106,6 +106,11 @@ export interface EnumerationRequest {
   alternatives?: FragmentAlternativeSet[];
   forbid?: ForbiddenSpec;
   budget?: EnumerationBudget;
+  /**
+   * v1.4.2 stop 34: candidates an earlier call for the same formula already found (canonical SMILES -> alternative set ids). They count as found from the start
+   * (a leaf that rebuilds one is a duplicate; the candidate cap counts them) and are returned again with the new ones. Absent = an empty start (the old behaviour).
+   */
+  known?: ReadonlyMap<string, readonly string[]>;
 }
 
 export type EnumerationErrorCode =
@@ -155,7 +160,9 @@ export type IncompleteReason =
   /** v1.2.1c (planning): a grade-B formula's round 2 stopped at round2ExploreMaxSteps (an exploration cap, not the analysis budget). */
   | 'ROUND2_EXPLORE_CAP'
   /** v1.2.3 (planning): a grade-A formula's round 2 stopped at its share of the round-2 pool (pool / maxRound2Formulas; a per-formula limit, not the analysis budget). */
-  | 'ROUND2_STEP_CAP';
+  | 'ROUND2_STEP_CAP'
+  /** v1.4.2 stop 34 (planning): round 1 of an alkene-exception formula ran the deferred ester / acetal O–CH readings after the alkene readings, under their own step cap (V12_CONFIG.v123.deferredSecondPassMaxStates), and they stopped at it. */
+  | 'ROUND1_DEFERRED_STEP_CAP';
 export interface RejectionStats {
   sanitizeFailed: number;
   duplicatesMerged: number;

@@ -5,6 +5,9 @@ import {V12_CONFIG} from '../../src/engines/constraints/v12Config';
 import {initializeRDKit} from '../../src/engines/scientificEngines/rdkitAdapter';
 import {measureV130, V130_CASES} from '../helpers/v130Samples';
 import type {V130Measure} from '../helpers/v130Samples';
+import {usePreV142Defaults} from '../helpers/v142PreDefaults';
+// v1.4.2 stop 36 (E): this file pins results recorded under the defaults before 1.4.2; the new rule sets (on by default since 1.4.2) are switched to their old values here. No expected value changed.
+usePreV142Defaults();
 
 // v1.3.0 "before" baseline: every synthetic sample of tests/helpers/v130Samples.ts measured with the step budget only (dense IR baseline) equals the numbers recorded on the unchanged v1.2.3 engine.
 // The flag useV130 is set to false here (whatever the default): this is the flag-off guarantee "same results as v1.2.3 (aeef61b)". Deterministic (no wall-clock budget involved).

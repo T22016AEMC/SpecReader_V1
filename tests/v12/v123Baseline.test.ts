@@ -5,6 +5,9 @@ import {V12_CONFIG} from '../../src/engines/constraints/v12Config';
 import {initializeRDKit} from '../../src/engines/scientificEngines/rdkitAdapter';
 import {measureSample, V123_ALL_SAMPLES} from '../helpers/v123Samples';
 import type {SampleMeasure} from '../helpers/v123Samples';
+import {usePreV142Defaults} from '../helpers/v142PreDefaults';
+// v1.4.2 stop 36 (E): this file pins results recorded under the defaults before 1.4.2; the new rule sets (on by default since 1.4.2) are switched to their old values here. No expected value changed.
+usePreV142Defaults();
 
 // v1.2.3 "before" baseline: every synthetic sample (p-cresol x4, BPA x2, PMA x2, alkene controls x5, crotonate) measured with the step budget only,
 // sparse and dense IR baseline, equals the numbers recorded on the unchanged engine. Deterministic (no wall-clock budget involved).

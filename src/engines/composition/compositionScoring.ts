@@ -5,6 +5,7 @@ import {commonRangeViolations,dbeOf} from './goldenRules';
 import type {ElementEvidence,IonIsotopes,IsotopeObservation} from './msComposition';
 import type {NmrEvidence} from './nmrComposition';
 import {V12_CONFIG} from '../constraints/v12Config';
+import {v132BestFindingActive} from './planningGate';
 import type {CompositionReason,ElementCounts,IonHypothesis,OxygenEvidenceFloor} from './types';
 
 export interface ScoringContext {
@@ -124,7 +125,8 @@ export function scoreComposition(counts:ElementCounts,mass:number,ion:IonHypothe
   const kk=Math.max(1,k??1),limit=kk*ctx.oxygenFloor.floor+V12_CONFIG.planning.oxygenAllowedAboveFloor,O=n(counts,'O');
   if(O>limit){out.score-=w.oxygenExcess*(O-limit);reason(out.contradiction,`O=${O} 超過 IR 證據的 O 視窗上緣 ${limit}（下限 ${ctx.oxygenFloor.floor}，k=${kk}：k × 下限 ＋ ${V12_CONFIG.planning.oxygenAllowedAboveFloor}；超過起逐級扣分）`,ctx.oxygenFloor.sources.flatMap(x=>x.observationIds),'IR');}
  }
- const nFeature=ctx.features.some(f=>(f.mins.N??0)>0);
+ // v1.3.2 (stop 4): an AMIDE bound that only a single IR carbonyl band suggests (range-matched, not hard) is not N evidence, so it does not lift the "no functional-group evidence for N" deduction.
+ const nFeature=ctx.features.some(f=>(f.mins.N??0)>0&&!(v132BestFindingActive()&&f.key==='AMIDE'&&!f.hard));
  if(n(counts,'N')&&ctx.nitrogenMode==='EVEN_ION_ONLY'){out.score-=w.nitrogenEvenIonOnly*n(counts,'N');reason(out.unknown,`含 ${n(counts,'N')} 個 N：MS 分子離子為偶數名義質量，沒有其他 N 專屬證據，信心降低`,[],'RULE');}
  else if(n(counts,'N')&&!nFeature&&ctx.nitrogenMode!=='EVIDENCE'){out.score-=w.nitrogenNoEvidence*n(counts,'N');reason(out.unknown,`含 ${n(counts,'N')} 個 N，但沒有官能基證據指向 N`,[],'RULE');}
  if(ctx.nitrogenRequired!==undefined&&n(counts,'N')>ctx.nitrogenRequired){const extra=n(counts,'N')-ctx.nitrogenRequired;out.score-=w.nitrogenExcess*extra;reason(out.contradiction,`含 ${n(counts,'N')} 個 N，N 專屬證據只支持 ${ctx.nitrogenRequired} 個（每種證據 1 個）；多出的 ${extra} 個 N 逐個扣分（v1.2.3，不排除）`,[],'RULE');}

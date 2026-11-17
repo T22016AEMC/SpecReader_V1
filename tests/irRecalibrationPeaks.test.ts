@@ -14,6 +14,8 @@ beforeAll(()=>initializeRDKit());
 const pt=(cm:number)=>{const r=refPoint(cm);return {pixelX:r.pixelX,pixelY:0,realX:r.physicalX,realY:0};};
 const two=(s:ExperimentalSpectrumData)=>WorkbenchOrchestrator.applyTwoPointCalibration(s,{pointA:pt(3500),pointB:pt(830)});
 const piece=(s:ExperimentalSpectrumData)=>WorkbenchOrchestrator.applyPiecewiseCalibration(s,{points:[pt(3000),pt(1500),pt(500)].map(p=>({pixelX:p.pixelX,realX:p.realX})),presetId:'IR_SCALE_BREAK_2000'});
+// v1.3.2: calibration no longer marks peaks by itself; the page-1 button "自動尋峰" (reRunAutoPeakDetection) does. These tests are about the peaks detected on the traced curve, so they ask for them.
+const askAuto=(s:ExperimentalSpectrumData)=>SpectrumParser.reRunAutoPeakDetection(s);
 const view=(s:ExperimentalSpectrumData)=>s.peaks.map(p=>({x:p.x,y:p.y,pixelX:p.pixelX??null,id:p.id})).sort((a,b)=>a.x-b.x);
 /** Traced curve (same definition as the engine uses for re-detection): x calibrated, y = 100·(bottom−py)/(bottom−top). */
 const curve=(s:ExperimentalSpectrumData)=>{const c=s.imageCalibration!;return s.irPixelCurve!.map(p=>({x:SpectrumParser.pixelToPhysicalX(p.x,c),y:100*(c.plotBottomPx-p.y)/(c.plotBottomPx-c.plotTopPx)}));};
@@ -21,7 +23,7 @@ const curveAt=(s:ExperimentalSpectrumData,x:number)=>curve(s).reduce((b,q)=>Math
 
 describe('T1 re-detected peaks carry the traced curve intensity',()=>{
  it('every re-detected peak y equals the curve at its x; strongest band lowest, weakest highest',()=>{
-  const s=piece(syntheticSegmentedIRImage([]));
+  const s=askAuto(piece(syntheticSegmentedIRImage([])));
   const auto=s.peaks.filter(p=>p.id.startsWith('ir-auto-px'));
   expect(auto.length).toBeGreaterThan(4);
   for(const p of auto)expect(Math.abs(p.y-curveAt(s,p.x)),`peak ${p.x}`).toBeLessThan(0.6);
@@ -70,7 +72,7 @@ describe('T3 user marks and edited peaks survive repeated calibration',()=>{
 
 describe('T3b a user-edited re-detected peak survives and is converted again from its pixel',()=>{
  it('edit flag, text and id are kept; x follows the new calibration; no duplicate appears',()=>{
-  const a=two(syntheticSegmentedIRImage([]));
+  const a=askAuto(two(syntheticSegmentedIRImage([])));
   const autos=a.peaks.filter(p=>p.id.startsWith('ir-auto-px'));
   const target=autos.reduce((b,p)=>p.y<b.y?p:b);   // the strongest re-detected band
   const edited={...a,peaks:a.peaks.map(p=>p.id===target.id?{...p,userModified:true,assignment:'user note'}:p)};
@@ -91,14 +93,14 @@ describe('T5 complete flow: calibrated image → IR evidence → N evidence',()=
  const nitro:[number,number,number][]=[[3100,15,10],[1525,12,62],[1345,12,60],[850,12,30]];
  const plan=(s:ExperimentalSpectrumData)=>createReasoningPlan(WorkbenchOrchestrator.prepareModeAEvidence({IR:s},{}).bundle);
  it('strong bands stay the strongest observations and a real nitro pair is N evidence; alkyl-aromatic is not (no page-1 marks, only re-detected peaks)',()=>{
-  const n=plan(piece(syntheticSegmentedIRImage([],nitro)));
+  const n=plan(askAuto(piece(syntheticSegmentedIRImage([],nitro))));
   const ir=n.observations.filter(o=>o.modality==='IR');
   const at=(x:number)=>ir.find(o=>Math.abs(o.value-x)<=3)!;
   expect(at(1525)).toBeDefined();expect(at(1345)).toBeDefined();expect(at(3100)).toBeDefined();
   expect(at(1525).relativeIntensity!).toBeGreaterThan(at(3100).relativeIntensity!);
   expect(at(1345).relativeIntensity!).toBeGreaterThan(at(850).relativeIntensity!);
   expect(n.nitrogenEvidence!.mode).toBe('EVIDENCE');
-  const a=plan(piece(syntheticSegmentedIRImage([])));
+  const a=plan(askAuto(piece(syntheticSegmentedIRImage([]))));
   const air=a.observations.filter(o=>o.modality==='IR');
   const strongest=air.reduce((b,o)=>(o.relativeIntensity??0)>(b.relativeIntensity??0)?o:b);
   expect(Math.abs(strongest.value-1240)).toBeLessThan(4);   // the deepest synthetic band

@@ -9,6 +9,9 @@ import {CandidateGenerator} from '../src/engines/candidateGenerator';
 import {StructureParserAdapter} from '../src/engines/chemistryEngine';
 import type {AnalysisInput} from '../src/engines/analysisSession';
 import type {ExperimentalSpectrumData,SpectralPeak} from '../src/types/spectrum';
+import {usePreV142Defaults} from './helpers/v142PreDefaults';
+// v1.4.2 stop 36 (E): this file pins results recorded under the defaults before 1.4.2; the new rule sets (on by default since 1.4.2) are switched to their old values here. No expected value changed.
+usePreV142Defaults();
 
 // Acceptance A, B, E, F (v1.1.7-hotfix.1) through the complete analysis flow. `runLikeWorker` performs exactly what
 // src/workers/modeA.worker.ts does (RDKit init, IR snapshot refresh, executeSixStepAnalysis); a Web Worker is not

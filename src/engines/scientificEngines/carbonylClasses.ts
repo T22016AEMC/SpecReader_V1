@@ -1,7 +1,7 @@
 import type {ExperimentalSpectrumData} from '../../types/spectrum';
 import {V12_CONFIG} from '../constraints/v12Config';
 import type {ScoreLedgerEntry} from './evidenceLedger';
-import {carbonylBandActive} from '../composition/planningGate';
+import {carbonylBandActive, v141RingCarbonylActive} from '../composition/planningGate';
 import {irCalibrationTrusted, irImageRangeCovered, prepareIR} from './irSignalProcessing';
 import {matchingSMARTS} from './rdkitAdapter';
 
@@ -16,7 +16,7 @@ import {matchingSMARTS} from './rdkitAdapter';
  * 1770–1815: same). The SMARTS that decide whether a candidate has the class are 工程判斷，未查證.
  */
 export interface CarbonylClass {
-  id: 'ESTER' | 'CONJUGATED_KETONE' | 'AMIDE' | 'QUINONE' | 'ANHYDRIDE' | 'ACYL_HALIDE' | 'ACID' | 'ALDEHYDE' | 'KETONE';
+  id: 'ESTER' | 'CONJUGATED_KETONE' | 'AMIDE' | 'QUINONE' | 'ANHYDRIDE' | 'ACYL_HALIDE' | 'ACID' | 'ALDEHYDE' | 'KETONE' | 'LACTONE5' | 'LACTONE4' | 'LACTAM4';
   /** Traditional Chinese, shown in the panel. */
   label: string;
   smarts: string;
@@ -43,10 +43,38 @@ export const CARBONYL_CLASSES: CarbonylClass[] = [
     smarts: '[CX3](=[OX1])[F,Cl,Br,I]'},
 ];
 
-/** The carbonyl classes (of the six) a candidate has; empty = B4 does not apply (acids, aldehydes, non-conjugated ketones, no carbonyl). */
+// ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+// v1.4.1 (ir.ringCarbonyl): ring strain raises the C=O frequency, so the gamma-lactone (and any 5-ring lactone), the beta-lactone and the beta-lactam are often OUTSIDE the ester / amide window above, and were
+// scored down as "carbonyl band missing" (v1.4.0: gamma-butyrolactone at 1775 lost 12 IR points to this). With the flag on, ESTER and AMIDE no longer claim those ring carbonyls and three classes with wide windows
+// take them. The windows are textbook-style (gamma-lactone ~1795-1760, beta-lactone ~1840, beta-lactam ~1780-1730) made WIDE on purpose: each one runs DOWN to the lower edge of the class it takes the carbonyl from (ESTER 1710, AMIDE 1630),
+// so a candidate is never deducted where v1.4.0 did not deduct it (stop 18: with the narrow windows 1740-1810 / 1780-1860 / 1710-1800 two beta-lactone candidates of the ranking pool lost 1.4 IR points, because an observed ester band
+// at 1740 no longer counted for them; the design report's claim 'only deducts less' needs the wide lower edge). UNCALIBRATED, 工程判斷，未查證.
+// A five-membered cyclic anhydride (succinic anhydride) is excluded from LACTONE5 by the SMARTS (it has its own ANHYDRIDE class). Five-membered cyclic carbonates have no missing-carbonyl class (carbonates are not modelled).
+// ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+const V141_RING = '寬窗（工程判斷，未查證，未經校準）；環張力使 C=O 上移，常見教科書範圍：';
+export const CARBONYL_CLASSES_V141_RING: CarbonylClass[] = [
+  {id: 'LACTONE5', label: '五員環內酯', windowCm1: [1710, 1810], source: `${V141_RING}γ-內酯約 1795–1760（下緣沿用 ESTER 窗 1710）`,
+    smarts: '[CX3;r5;$(C(=[OX1])([#6])[OX2;r5]);!$(C(=[OX1])[OX2][CX3]=[OX1])]=[OX1]'},
+  {id: 'LACTONE4', label: '四員環內酯（β-內酯）', windowCm1: [1710, 1860], source: `${V141_RING}β-內酯約 1840（下緣沿用 ESTER 窗 1710）`,
+    smarts: '[CX3;r4;$(C(=[OX1])([#6])[OX2;r4])]=[OX1]'},
+  {id: 'LACTAM4', label: 'β-內醯胺', windowCm1: [1630, 1800], source: `${V141_RING}β-內醯胺約 1780–1730（下緣沿用 AMIDE 窗 1630）`,
+    smarts: '[CX3;r4;$(C(=[OX1])([#6])[NX3;r4])]=[OX1]'},
+];
+/** ESTER without the 4- / 5-membered ring lactones, AMIDE without the beta-lactam (everything else about the two classes is unchanged). */
+const NO_RING_LACTONE = ';!$([CX3;r4,r5](=[OX1])[OX2;r4,r5])';
+const NO_BETA_LACTAM = ';!$([CX3;r4](=[OX1])[NX3;r4])';
+/** The class list with the ring-carbonyl refinement: ESTER / AMIDE narrowed, the three ring classes appended (so the class order, and with it the item id, of every other candidate is unchanged). */
+export function withRingCarbonyl(classes: CarbonylClass[]): CarbonylClass[] {
+  const withExtra = (smarts: string, extra: string) => { const i = smarts.lastIndexOf(']=[OX1]'); return `${smarts.slice(0, i)}${extra}${smarts.slice(i)}`; }; // the extra condition goes into the last atom bracket (the carbonyl carbon)
+  const narrowed = classes.map(c => c.id === 'ESTER' ? {...c, smarts: withExtra(c.smarts, NO_RING_LACTONE)} : c.id === 'AMIDE' ? {...c, smarts: withExtra(c.smarts, NO_BETA_LACTAM)} : c);
+  return [...narrowed, ...CARBONYL_CLASSES_V141_RING];
+}
+
+/** The carbonyl classes (of the six) a candidate has; empty = B4 does not apply (acids, aldehydes, non-conjugated ketones, no carbonyl). With ir.ringCarbonyl on: the ring-carbonyl refinement (above). */
 export function candidateCarbonylClasses(smiles: string): CarbonylClass[] {
-  const hits = matchingSMARTS(smiles, CARBONYL_CLASSES.map(c => c.smarts)) ?? [];
-  return hits.map(i => CARBONYL_CLASSES[i]);
+  const all = v141RingCarbonylActive() ? withRingCarbonyl(CARBONYL_CLASSES) : CARBONYL_CLASSES;
+  const hits = matchingSMARTS(smiles, all.map(c => c.smarts)) ?? [];
+  return hits.map(i => all[i]);
 }
 
 export type CarbonylBandStatus =
@@ -121,10 +149,11 @@ export const CARBONYL_CLASSES_V130: CarbonylClass[] = [
 ];
 const ALL_V130 = [...CARBONYL_CLASSES, ...CARBONYL_CLASSES_V130];
 
-/** The carbonyl classes (of the nine) a candidate has. */
+/** The carbonyl classes (of the nine) a candidate has. With ir.ringCarbonyl on: the ring-carbonyl refinement (v1.4.1). */
 export function candidateCarbonylClassesV130(smiles: string): CarbonylClass[] {
-  const hits = matchingSMARTS(smiles, ALL_V130.map(c => c.smarts)) ?? [];
-  return hits.map(i => ALL_V130[i]);
+  const all = v141RingCarbonylActive() ? withRingCarbonyl(ALL_V130) : ALL_V130;
+  const hits = matchingSMARTS(smiles, all.map(c => c.smarts)) ?? [];
+  return hits.map(i => all[i]);
 }
 
 export type CarbonylMissingStatus = CarbonylBandStatus | {state: 'DISABLED'; reason: 'ONE_SIDED_PEAKS'};

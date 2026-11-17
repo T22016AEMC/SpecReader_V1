@@ -4,6 +4,9 @@ import {beforeAll, describe, expect, it} from 'vitest';
 import {initializeRDKit} from '../../src/engines/scientificEngines/rdkitAdapter';
 import {V12_CONFIG} from '../../src/engines/constraints/v12Config';
 import {compactSnapshot, compareGolden, v121GoldenScenarios} from '../helpers/v121Golden';
+import {usePreV142Defaults} from '../helpers/v142PreDefaults';
+// v1.4.2 stop 36 (E): this file pins results recorded under the defaults before 1.4.2; the new rule sets (on by default since 1.4.2) are switched to their old values here. No expected value changed.
+usePreV142Defaults();
 
 // v1.2.1 flag guarantee: with useV121Planning = false the whole pipeline (hypothesis list, searched list, runs, candidates, ranking, score ledger
 // and the composition-panel model with all its texts) equals what v1.2.0 produced. The golden was recorded on the unmodified v1.2.0 code

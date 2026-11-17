@@ -4,6 +4,9 @@ import {beforeAll, describe, expect, it} from 'vitest';
 import {initializeRDKit} from '../../src/engines/scientificEngines/rdkitAdapter';
 import {V12_CONFIG} from '../../src/engines/constraints/v12Config';
 import {irAndPeakTables, legacyGoldenScenarios} from '../helpers/v12Golden';
+import {usePreV142Defaults} from '../helpers/v142PreDefaults';
+// v1.4.2 stop 36 (E): this file pins results recorded under the defaults before 1.4.2; the new rule sets (on by default since 1.4.2) are switched to their old values here. No expected value changed.
+usePreV142Defaults();
 
 // v1.2 flag guarantee: with useV12Constraints = false the pipeline gives the same candidates, runs, status, termination, score ledger
 // fields, IR markers and peak tables as v1.1.8. The golden file was captured on the v1.1.8 code before any v1.2 code was written.

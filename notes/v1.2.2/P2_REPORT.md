@@ -16,7 +16,7 @@
    - **如果舊的那一個視窗還開著，再啟動一次會直接當掉**：`Error: listen EADDRINUSE: address already in use 0.0.0.0:3000`（我重現了這個錯誤；同時還會出現 `WebSocket server error: Port 24678 is already in use`，這行本身無害，只代表即時重新整理要手動按 F5）。
    - 第一次啟動時 Vite 會「重新最佳化相依套件」，頁面可能要等幾秒才出現。
    - 我沒有確認使用者那次「打不開」的真正原因；最可能是上面兩點之一（沒有網址可點、或埠 3000 已被舊視窗占用）。沒有改 `package.json` 或 `server.ts`。
-   - **啟動方式（Windows，用白話）**：①用檔案總管打開 `C:\Users\He Chi-Liang\Desktop\程式\SpecReader\SpecReader_V1`；②在最上方的網址列（顯示資料夾路徑那一條）點一下，把文字換成 `cmd`，按 Enter，會跳出一個已經在這個資料夾的黑色視窗；③輸入 `corepack pnpm@11.25.0 dev` 按 Enter；④等到出現含 `"port":3000` 的那一行；⑤打開瀏覽器，網址列輸入 `http://localhost:3000`；⑥用完在黑色視窗按 Ctrl＋C（或直接關掉視窗）。若出現 `EADDRINUSE`，代表有另一個舊視窗還開著：直接用 `http://localhost:3000`，或關掉舊視窗再試；要換埠就先輸入 `set PORT=3001`，再 `corepack pnpm@11.25.0 dev`，網址改成 `http://localhost:3001`。
+   - **啟動方式（Windows，用白話）**：①用檔案總管打開 `<本機路徑>\SpecReader_V1`；②在最上方的網址列（顯示資料夾路徑那一條）點一下，把文字換成 `cmd`，按 Enter，會跳出一個已經在這個資料夾的黑色視窗；③輸入 `corepack pnpm@11.25.0 dev` 按 Enter；④等到出現含 `"port":3000` 的那一行；⑤打開瀏覽器，網址列輸入 `http://localhost:3000`；⑥用完在黑色視窗按 Ctrl＋C（或直接關掉視窗）。若出現 `EADDRINUSE`，代表有另一個舊視窗還開著：直接用 `http://localhost:3000`，或關掉舊視窗再試；要換埠就先輸入 `set PORT=3001`，再 `corepack pnpm@11.25.0 dev`，網址改成 `http://localhost:3001`。
 
 ## P2a 第 1 頁做了什麼
 | 設計項（B2.1） | 實作 |

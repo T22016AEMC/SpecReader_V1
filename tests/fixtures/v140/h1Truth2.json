@@ -1,0 +1,3577 @@
+{
+ "meta": {
+  "tier": 2,
+  "description": "Tier 2 truth set (validation only, tolerance +-0.15 ppm, exchangeable protons +-0.5). Values and source labels are the planner (user) list of 2026-11-09: part A = SDBS / ChemicalBook / RSC SI values looked up by the user; part B = Hans Reich NMR collection (organicchemistrydata.org). Only numbers and source labels are stored (no images, no text copied). SMILES and SMARTS were written by the executor.",
+  "reichNote": "Reich values were read by hand from structure figures, not copied from text; most carry no solvent (stored as \"unspecified\").",
+  "grades": {
+   "A": "user-looked-up measured value (SDBS / ChemicalBook / RSC SI), CDCl3",
+   "T1g": "user states the value is of tier-1 quality (RSC SI measured, independently agrees with Reich / Pretsch; Chem. Sci. 2020 SI)",
+   "B": "Reich hand-read value"
+  },
+  "alternatives": "a signal whose ppm is an array has two literature sets; the error is the smaller one",
+  "duplicatesOfTier1NotStored": [
+   "ethyl acetate (Reich 4.12/2.05/1.25)",
+   "triethylamine (1.03/2.53)",
+   "dimethylacetamide (2.08, 2.94/3.02)",
+   "diethyl ether (1.21/3.48)",
+   "1,2-dimethoxyethane (3.40/3.55)",
+   "ethanol (1.25/3.72)",
+   "2-propanol (1.22/4.04)",
+   "propionic acid COOH (kept once, from the A list)"
+  ],
+  "excludedByPlanner": [
+   "thiophene Reich 6.99 / 7.18 (assignment unclear)",
+   "benzoic acid H3/H4/H5",
+   "indole / benzofuran / benzothiophene benzo-ring positions",
+   "norbornane positions",
+   "(CH3)2SO 2.50 (solvent unknown)"
+  ],
+  "round2": {
+   "description": "Stop 13: second batch of truth values from the planner list of 2026-11-10 (parts A-G; part H in benzeneIncrements). Entries carry round: 2. Journal values carry candidate: true (grade J). Calibration rule of the stop: tier-2 and candidate data may calibrate a class only with >= 3 independent compounds, leave-one-out validation and a lower mean error; exchangeable protons only widen the tolerance (+-0.5).",
+   "notUsed": [
+    "1-butene",
+    "isobutene",
+    "1-butyne",
+    "2-methoxytetrahydropyran",
+    "1,1-diethoxyethane tier-1 value",
+    "propene Reich values 5.63 / 4.96 / 4.88 (Fulmer 5.80 / 4.94 / 5.03 is tier 1)",
+    "benzaldehyde Reich 9.99 (Fulmer 10.03 is tier 1)"
+   ],
+   "rangeOnly": "a signal with rangeOnly: true has error 0 inside [range] and the distance to the nearest end outside",
+   "exchangeable": "OH / SH / NH / COOH: tolerance +-0.5, never a calibration point"
+  },
+  "restrictedEntries": "v1.4.2 stop 35: the 13 grade-A entries (user-looked-up SDBS / ChemicalBook / RSC SI values) are not in this public file; they are kept in a local-only file (tests/fixtures/local-only/restricted-sources/h1Truth2.gradeA.json, git-ignored). Tests that need them are skipped when it is absent."
+ },
+ "compounds": [
+  {
+   "compound": "isopropyl acetate",
+   "smiles": "CC(=O)OC(C)C",
+   "solvent": "CDCl3",
+   "tier": 2,
+   "grade": "T1g",
+   "source": "RSC SI measured value (user list); Reich / Pretsch 4.99 agrees independently: treated as tier-1 grade by the planner",
+   "signals": [
+    {
+     "label": "OCH",
+     "smarts": "[CH](C)(C)OC=O",
+     "ppm": 4.98,
+     "nH": 1,
+     "mult": "sept"
+    },
+    {
+     "label": "COCH3",
+     "smarts": "[CH3]C(=O)O",
+     "ppm": 1.99,
+     "nH": 3
+    },
+    {
+     "label": "CH3",
+     "smarts": "[CH3]C(C)O",
+     "ppm": 1.21,
+     "nH": 6,
+     "mult": "d"
+    }
+   ]
+  },
+  {
+   "compound": "cyclohexyl acetate",
+   "smiles": "CC(=O)OC1CCCCC1",
+   "solvent": "CDCl3",
+   "tier": 2,
+   "grade": "T1g",
+   "source": "RSC SI measured value (user list), tier-1 grade; only these two signals are used, the ring CH2 are not",
+   "signals": [
+    {
+     "label": "OCH",
+     "smarts": "[CH](C)(C)OC=O",
+     "ppm": 4.75,
+     "nH": 1,
+     "mult": "m"
+    },
+    {
+     "label": "COCH3",
+     "smarts": "[CH3]C(=O)O",
+     "ppm": 2.03,
+     "nH": 3
+    }
+   ]
+  },
+  {
+   "compound": "1,1-diethoxyethane",
+   "smiles": "CC(OCC)OCC",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: acetals (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH",
+     "smarts": "[CH](C)(O)O",
+     "ppm": 4.72,
+     "nH": 1
+    },
+    {
+     "label": "CH3 (on acetal C)",
+     "smarts": "[CH3][CH](O)O",
+     "ppm": 1.32,
+     "nH": 3
+    },
+    {
+     "label": "OCH2",
+     "smarts": "[CH2](C)O",
+     "ppm": 3.6,
+     "nH": 4,
+     "range": [
+      3.5,
+      3.7
+     ]
+    },
+    {
+     "label": "OCH2CH3",
+     "smarts": "[CH3][CH2]O",
+     "ppm": 1.2,
+     "nH": 6
+    }
+   ]
+  },
+  {
+   "compound": "bromoacetaldehyde dimethyl acetal",
+   "smiles": "COC(CBr)OC",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: acetals (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH",
+     "smarts": "[CH](C)(O)O",
+     "ppm": 4.54,
+     "nH": 1
+    },
+    {
+     "label": "CH2Br",
+     "smarts": "[CH2]Br",
+     "ppm": 3.37,
+     "nH": 2
+    },
+    {
+     "label": "OCH3",
+     "smarts": "[CH3]O",
+     "ppm": 3.4,
+     "nH": 6
+    }
+   ]
+  },
+  {
+   "compound": "trimethyl orthoformate",
+   "smiles": "COC(OC)OC",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: acetals (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH",
+     "smarts": "[CH](O)(O)O",
+     "ppm": 5.1,
+     "nH": 1
+    },
+    {
+     "label": "OCH3",
+     "smarts": "[CH3]O",
+     "ppm": 3.3,
+     "nH": 9
+    }
+   ]
+  },
+  {
+   "compound": "methyl formate",
+   "smiles": "COC=O",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: esters (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "OCH3",
+     "smarts": "[CH3]OC=O",
+     "ppm": 3.77,
+     "nH": 3
+    },
+    {
+     "label": "CHO",
+     "smarts": "[CH](=O)O",
+     "ppm": 8.08,
+     "nH": 1
+    }
+   ]
+  },
+  {
+   "compound": "ethyl formate",
+   "smiles": "CCOC=O",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: esters (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "OCH2",
+     "smarts": "[CH2]OC=O",
+     "ppm": 4.22,
+     "nH": 2
+    },
+    {
+     "label": "CH3",
+     "smarts": "[CH3]C",
+     "ppm": 1.29,
+     "nH": 3
+    },
+    {
+     "label": "CHO",
+     "smarts": "[CH](=O)O",
+     "ppm": 8.04,
+     "nH": 1
+    }
+   ]
+  },
+  {
+   "compound": "isopropyl formate",
+   "smiles": "CC(C)OC=O",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: esters (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "OCH",
+     "smarts": "[CH](C)(C)OC=O",
+     "ppm": 5.13,
+     "nH": 1
+    },
+    {
+     "label": "CH3",
+     "smarts": "[CH3]C",
+     "ppm": 1.29,
+     "nH": 6
+    },
+    {
+     "label": "CHO",
+     "smarts": "[CH](=O)O",
+     "ppm": 8.02,
+     "nH": 1
+    }
+   ]
+  },
+  {
+   "compound": "tert-butyl acetate",
+   "smiles": "CC(=O)OC(C)(C)C",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: esters (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "COCH3",
+     "smarts": "[CH3]C(=O)O",
+     "ppm": 1.97,
+     "nH": 3
+    },
+    {
+     "label": "C(CH3)3",
+     "smarts": "[CH3]C(C)(C)O",
+     "ppm": 1.45,
+     "nH": 9
+    }
+   ]
+  },
+  {
+   "compound": "benzyl acetate",
+   "smiles": "CC(=O)OCc1ccccc1",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: esters (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "OCH2",
+     "smarts": "[CH2](O)c",
+     "ppm": 5.08,
+     "nH": 2
+    },
+    {
+     "label": "COCH3",
+     "smarts": "[CH3]C(=O)O",
+     "ppm": 2.06,
+     "nH": 3
+    }
+   ]
+  },
+  {
+   "compound": "2-chloroethyl acetate",
+   "smiles": "CC(=O)OCCCl",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: esters (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "OCH2",
+     "smarts": "[CH2]([CH2]Cl)O",
+     "ppm": 4.35,
+     "nH": 2
+    },
+    {
+     "label": "CH2Cl",
+     "smarts": "[CH2]Cl",
+     "ppm": 3.67,
+     "nH": 2
+    },
+    {
+     "label": "COCH3",
+     "smarts": "[CH3]C(=O)O",
+     "ppm": 2.1,
+     "nH": 3
+    }
+   ]
+  },
+  {
+   "compound": "methyl propionate",
+   "smiles": "CCC(=O)OC",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: esters (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "OCH3",
+     "smarts": "[CH3]OC=O",
+     "ppm": 3.67,
+     "nH": 3
+    },
+    {
+     "label": "CH2",
+     "smarts": "[CH2]C(=O)O",
+     "ppm": 2.32,
+     "nH": 2
+    },
+    {
+     "label": "CH3",
+     "smarts": "[CH3]C",
+     "ppm": 1.15,
+     "nH": 3
+    }
+   ]
+  },
+  {
+   "compound": "methyl butyrate",
+   "smiles": "CCCC(=O)OC",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: esters (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "OCH3",
+     "smarts": "[CH3]OC=O",
+     "ppm": 3.67,
+     "nH": 3
+    },
+    {
+     "label": "CH2 (alpha)",
+     "smarts": "[CH2]C(=O)O",
+     "ppm": 2.22,
+     "nH": 2
+    },
+    {
+     "label": "CH2 (beta)",
+     "smarts": "[CH2]([CH3])[CH2]C=O",
+     "ppm": 1.65,
+     "nH": 2
+    },
+    {
+     "label": "CH3",
+     "smarts": "[CH3]C",
+     "ppm": 0.98,
+     "nH": 3
+    }
+   ]
+  },
+  {
+   "compound": "methyl isobutyrate",
+   "smiles": "CC(C)C(=O)OC",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: esters (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "OCH3",
+     "smarts": "[CH3]OC=O",
+     "ppm": 3.67,
+     "nH": 3
+    },
+    {
+     "label": "CH",
+     "smarts": "[CH](C)(C)C=O",
+     "ppm": 2.56,
+     "nH": 1
+    },
+    {
+     "label": "CH3",
+     "smarts": "[CH3]C(C)C=O",
+     "ppm": 1.17,
+     "nH": 6
+    }
+   ]
+  },
+  {
+   "compound": "ethylene oxide",
+   "smiles": "C1CO1",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: epoxides and four-membered rings (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH2",
+     "smarts": "[CH2]",
+     "ppm": 2.54,
+     "nH": 4
+    }
+   ]
+  },
+  {
+   "compound": "oxetane",
+   "smiles": "C1COC1",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: epoxides and four-membered rings (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "OCH2",
+     "smarts": "[CH2]O",
+     "ppm": 4.73,
+     "nH": 4
+    },
+    {
+     "label": "CH2",
+     "smarts": "[CH2;!$([CH2]O)]",
+     "ppm": 2.72,
+     "nH": 2
+    }
+   ]
+  },
+  {
+   "compound": "beta-propiolactone",
+   "smiles": "O=C1CCO1",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: epoxides and four-membered rings (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "OCH2",
+     "smarts": "[CH2]O",
+     "ppm": 4.29,
+     "nH": 2
+    },
+    {
+     "label": "CH2CO",
+     "smarts": "[CH2]C=O",
+     "ppm": 3.56,
+     "nH": 2
+    }
+   ]
+  },
+  {
+   "compound": "methyl fluoride",
+   "smiles": "CF",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: methyl shifts (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH3",
+     "smarts": "[CH3]F",
+     "ppm": 4.26,
+     "nH": 3
+    }
+   ]
+  },
+  {
+   "compound": "methyl chloride",
+   "smiles": "CCl",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: methyl shifts (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH3",
+     "smarts": "[CH3]Cl",
+     "ppm": 3.05,
+     "nH": 3
+    }
+   ]
+  },
+  {
+   "compound": "methyl bromide",
+   "smiles": "CBr",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: methyl shifts (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH3",
+     "smarts": "[CH3]Br",
+     "ppm": 2.69,
+     "nH": 3
+    }
+   ]
+  },
+  {
+   "compound": "methyl iodide",
+   "smiles": "CI",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: methyl shifts (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH3",
+     "smarts": "[CH3]I",
+     "ppm": 2.19,
+     "nH": 3
+    }
+   ]
+  },
+  {
+   "compound": "methanol (Reich)",
+   "smiles": "CO",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: methyl shifts (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH3",
+     "smarts": "[CH3]O",
+     "ppm": 3.38,
+     "nH": 3
+    }
+   ]
+  },
+  {
+   "compound": "dimethyl ether",
+   "smiles": "COC",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: methyl shifts (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH3",
+     "smarts": "[CH3]O",
+     "ppm": 3.24,
+     "nH": 6
+    }
+   ]
+  },
+  {
+   "compound": "anisole OCH3",
+   "smiles": "COc1ccccc1",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: methyl shifts (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH3",
+     "smarts": "[CH3]Oc",
+     "ppm": 3.73,
+     "nH": 3
+    }
+   ]
+  },
+  {
+   "compound": "methylamine",
+   "smiles": "CN",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: methyl shifts (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH3",
+     "smarts": "[CH3]N",
+     "ppm": 2.36,
+     "nH": 3
+    }
+   ]
+  },
+  {
+   "compound": "dimethylamine",
+   "smiles": "CNC",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: methyl shifts (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH3",
+     "smarts": "[CH3]N",
+     "ppm": 2.3,
+     "nH": 6
+    }
+   ]
+  },
+  {
+   "compound": "trimethylamine",
+   "smiles": "CN(C)C",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: methyl shifts (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH3",
+     "smarts": "[CH3]N",
+     "ppm": 2.22,
+     "nH": 9
+    }
+   ]
+  },
+  {
+   "compound": "methanethiol",
+   "smiles": "CS",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: methyl shifts (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH3",
+     "smarts": "[CH3]S",
+     "ppm": 2,
+     "nH": 3
+    }
+   ]
+  },
+  {
+   "compound": "dimethyl sulfide",
+   "smiles": "CSC",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: methyl shifts (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH3",
+     "smarts": "[CH3]S",
+     "ppm": 2.08,
+     "nH": 6
+    }
+   ]
+  },
+  {
+   "compound": "thioanisole (methyl phenyl sulfide)",
+   "smiles": "CSc1ccccc1",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: methyl shifts (read by hand from the structure figure, not text copied); 2.44 from the methyl-shift list, 2.47 from the sulfur list (two Reich values of one compound, both kept)",
+   "signals": [
+    {
+     "label": "CH3",
+     "smarts": "[CH3]S",
+     "ppm": [
+      2.44,
+      2.47
+     ],
+     "nH": 3
+    }
+   ]
+  },
+  {
+   "compound": "dimethyl disulfide",
+   "smiles": "CSSC",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: methyl shifts (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH3",
+     "smarts": "[CH3]S",
+     "ppm": 2.32,
+     "nH": 6
+    }
+   ]
+  },
+  {
+   "compound": "dimethyl sulfone",
+   "smiles": "CS(C)(=O)=O",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: methyl shifts (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH3",
+     "smarts": "[CH3]S",
+     "ppm": 2.84,
+     "nH": 6
+    }
+   ]
+  },
+  {
+   "compound": "methyl azide",
+   "smiles": "CN=[N+]=[N-]",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: methyl shifts (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH3",
+     "smarts": "[CH3]N",
+     "ppm": 3.04,
+     "nH": 3
+    }
+   ]
+  },
+  {
+   "compound": "methyl isothiocyanate",
+   "smiles": "CN=C=S",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: methyl shifts (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH3",
+     "smarts": "[CH3]N",
+     "ppm": 3.37,
+     "nH": 3
+    }
+   ]
+  },
+  {
+   "compound": "ethyl fluoride",
+   "smiles": "CCF",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: haloalkanes (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH3",
+     "smarts": "[CH3]C",
+     "ppm": 1.09,
+     "nH": 3
+    },
+    {
+     "label": "CH2X",
+     "smarts": "[CH2]F",
+     "ppm": 4.24,
+     "nH": 2
+    }
+   ]
+  },
+  {
+   "compound": "ethyl chloride",
+   "smiles": "CCCl",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: haloalkanes (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH3",
+     "smarts": "[CH3]C",
+     "ppm": 1.48,
+     "nH": 3
+    },
+    {
+     "label": "CH2X",
+     "smarts": "[CH2]Cl",
+     "ppm": 3.57,
+     "nH": 2
+    }
+   ]
+  },
+  {
+   "compound": "ethyl bromide",
+   "smiles": "CCBr",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: haloalkanes (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH3",
+     "smarts": "[CH3]C",
+     "ppm": 1.67,
+     "nH": 3
+    },
+    {
+     "label": "CH2X",
+     "smarts": "[CH2]Br",
+     "ppm": 3.43,
+     "nH": 2
+    }
+   ]
+  },
+  {
+   "compound": "ethyl iodide",
+   "smiles": "CCI",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: haloalkanes (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH3",
+     "smarts": "[CH3]C",
+     "ppm": 1.83,
+     "nH": 3
+    },
+    {
+     "label": "CH2X",
+     "smarts": "[CH2]I",
+     "ppm": 3.2,
+     "nH": 2
+    }
+   ]
+  },
+  {
+   "compound": "propyl fluoride",
+   "smiles": "CCCF",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: haloalkanes (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH2X",
+     "smarts": "[CH2]F",
+     "ppm": 4.3,
+     "nH": 2
+    },
+    {
+     "label": "middle CH2",
+     "smarts": "[CH2]([CH3])[CH2]F",
+     "ppm": 1.68,
+     "nH": 2
+    },
+    {
+     "label": "CH3",
+     "smarts": "[CH3]C",
+     "ppm": 0.97,
+     "nH": 3
+    }
+   ]
+  },
+  {
+   "compound": "propyl chloride",
+   "smiles": "CCCCl",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: haloalkanes (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH2X",
+     "smarts": "[CH2]Cl",
+     "ppm": 3.47,
+     "nH": 2
+    },
+    {
+     "label": "middle CH2",
+     "smarts": "[CH2]([CH3])[CH2]Cl",
+     "ppm": 1.81,
+     "nH": 2
+    },
+    {
+     "label": "CH3",
+     "smarts": "[CH3]C",
+     "ppm": 1.06,
+     "nH": 3
+    }
+   ]
+  },
+  {
+   "compound": "propyl bromide",
+   "smiles": "CCCBr",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: haloalkanes (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH2X",
+     "smarts": "[CH2]Br",
+     "ppm": 3.35,
+     "nH": 2
+    },
+    {
+     "label": "middle CH2",
+     "smarts": "[CH2]([CH3])[CH2]Br",
+     "ppm": 1.89,
+     "nH": 2
+    },
+    {
+     "label": "CH3",
+     "smarts": "[CH3]C",
+     "ppm": 1.06,
+     "nH": 3
+    }
+   ]
+  },
+  {
+   "compound": "propyl iodide",
+   "smiles": "CCCI",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: haloalkanes (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH2X",
+     "smarts": "[CH2]I",
+     "ppm": 3.16,
+     "nH": 2
+    },
+    {
+     "label": "middle CH2",
+     "smarts": "[CH2]([CH3])[CH2]I",
+     "ppm": 1.88,
+     "nH": 2
+    },
+    {
+     "label": "CH3",
+     "smarts": "[CH3]C",
+     "ppm": 1.03,
+     "nH": 3
+    }
+   ]
+  },
+  {
+   "compound": "isopropyl chloride",
+   "smiles": "CC(C)Cl",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: haloalkanes (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CHX",
+     "smarts": "[CH](C)(C)Cl",
+     "ppm": 4.13,
+     "nH": 1
+    },
+    {
+     "label": "CH3",
+     "smarts": "[CH3]C",
+     "ppm": 1.54,
+     "nH": 6
+    }
+   ]
+  },
+  {
+   "compound": "isopropyl bromide",
+   "smiles": "CC(C)Br",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: haloalkanes (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CHX",
+     "smarts": "[CH](C)(C)Br",
+     "ppm": 4.2,
+     "nH": 1
+    },
+    {
+     "label": "CH3",
+     "smarts": "[CH3]C",
+     "ppm": 1.71,
+     "nH": 6
+    }
+   ]
+  },
+  {
+   "compound": "isopropyl iodide",
+   "smiles": "CC(C)I",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: haloalkanes (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CHX",
+     "smarts": "[CH](C)(C)I",
+     "ppm": 4.24,
+     "nH": 1
+    },
+    {
+     "label": "CH3",
+     "smarts": "[CH3]C",
+     "ppm": 1.88,
+     "nH": 6
+    }
+   ]
+  },
+  {
+   "compound": "tert-butyl fluoride",
+   "smiles": "CC(C)(C)F",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: haloalkanes (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH3",
+     "smarts": "[CH3]C",
+     "ppm": 1.34,
+     "nH": 9
+    }
+   ]
+  },
+  {
+   "compound": "tert-butyl chloride",
+   "smiles": "CC(C)(C)Cl",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: haloalkanes (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH3",
+     "smarts": "[CH3]C",
+     "ppm": 1.58,
+     "nH": 9
+    }
+   ]
+  },
+  {
+   "compound": "tert-butyl bromide",
+   "smiles": "CC(C)(C)Br",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: haloalkanes (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH3",
+     "smarts": "[CH3]C",
+     "ppm": 1.76,
+     "nH": 9
+    }
+   ]
+  },
+  {
+   "compound": "tert-butyl iodide",
+   "smiles": "CC(C)(C)I",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: haloalkanes (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH3",
+     "smarts": "[CH3]C",
+     "ppm": 1.95,
+     "nH": 9
+    }
+   ]
+  },
+  {
+   "compound": "propargyl alcohol",
+   "smiles": "C#CCO",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: propargyl HC#C-CH2-X (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH2",
+     "smarts": "[CH2]O",
+     "ppm": 4.23,
+     "nH": 2
+    },
+    {
+     "label": "C#C-H",
+     "smarts": "[CH]#C",
+     "ppm": 2.44,
+     "nH": 1
+    }
+   ]
+  },
+  {
+   "compound": "propargyl chloride",
+   "smiles": "C#CCCl",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: propargyl HC#C-CH2-X (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH2",
+     "smarts": "[CH2]Cl",
+     "ppm": 4.09,
+     "nH": 2
+    },
+    {
+     "label": "C#C-H",
+     "smarts": "[CH]#C",
+     "ppm": 2.4,
+     "nH": 1
+    }
+   ]
+  },
+  {
+   "compound": "propargyl bromide",
+   "smiles": "C#CCBr",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: propargyl HC#C-CH2-X (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH2",
+     "smarts": "[CH2]Br",
+     "ppm": 3.88,
+     "nH": 2
+    },
+    {
+     "label": "C#C-H",
+     "smarts": "[CH]#C",
+     "ppm": 2.52,
+     "nH": 1
+    }
+   ]
+  },
+  {
+   "compound": "propargyl iodide",
+   "smiles": "C#CCI",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: propargyl HC#C-CH2-X (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH2",
+     "smarts": "[CH2]I",
+     "ppm": 3.36,
+     "nH": 2
+    },
+    {
+     "label": "C#C-H",
+     "smarts": "[CH]#C",
+     "ppm": 2.25,
+     "nH": 1
+    }
+   ]
+  },
+  {
+   "compound": "methyl propargyl sulfide",
+   "smiles": "C#CCSC",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: propargyl HC#C-CH2-X (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH2",
+     "smarts": "[CH2]S",
+     "ppm": 3.14,
+     "nH": 2
+    },
+    {
+     "label": "C#C-H",
+     "smarts": "[CH]#C",
+     "ppm": 2.09,
+     "nH": 1
+    }
+   ]
+  },
+  {
+   "compound": "propyne",
+   "smiles": "CC#C",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: propargyl HC#C-CH2-X (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH3",
+     "smarts": "[CH3]C#C",
+     "ppm": 1.8,
+     "nH": 3
+    },
+    {
+     "label": "C#C-H",
+     "smarts": "[CH]#C",
+     "ppm": 1.8,
+     "nH": 1
+    }
+   ]
+  },
+  {
+   "compound": "ethyl phenyl sulfide",
+   "smiles": "CCSc1ccccc1",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: sulfur (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "SCH2",
+     "smarts": "[CH2]S",
+     "ppm": 2.86,
+     "nH": 2
+    },
+    {
+     "label": "CH3",
+     "smarts": "[CH3]C",
+     "ppm": 1.27,
+     "nH": 3
+    }
+   ]
+  },
+  {
+   "compound": "benzyl methyl sulfide",
+   "smiles": "CSCc1ccccc1",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: sulfur (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH2",
+     "smarts": "[CH2]S",
+     "ppm": 3.57,
+     "nH": 2
+    },
+    {
+     "label": "SCH3",
+     "smarts": "[CH3]S",
+     "ppm": 1.88,
+     "nH": 3
+    }
+   ]
+  },
+  {
+   "compound": "propanethiol",
+   "smiles": "CCCS",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: sulfur (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH3",
+     "smarts": "[CH3]C",
+     "ppm": 0.99,
+     "nH": 3
+    },
+    {
+     "label": "CH2",
+     "smarts": "[CH2]([CH3])[CH2]S",
+     "ppm": 1.63,
+     "nH": 2
+    },
+    {
+     "label": "SCH2",
+     "smarts": "[CH2]S",
+     "ppm": 2.5,
+     "nH": 2
+    }
+   ]
+  },
+  {
+   "compound": "isopropyl thiol",
+   "smiles": "CC(C)S",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: sulfur (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH",
+     "smarts": "[CH](C)(C)S",
+     "ppm": 3.16,
+     "nH": 1
+    },
+    {
+     "label": "CH3",
+     "smarts": "[CH3]C",
+     "ppm": 1.34,
+     "nH": 6
+    }
+   ]
+  },
+  {
+   "compound": "tert-butyl thiol",
+   "smiles": "CC(C)(C)S",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: sulfur (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH3",
+     "smarts": "[CH3]C",
+     "ppm": 1.43,
+     "nH": 9
+    }
+   ]
+  },
+  {
+   "compound": "aryl methyl sulfide (model: thioanisole)",
+   "smiles": "CSc1ccccc1",
+   "solvent": "CDCl3",
+   "tier": 2,
+   "grade": "T1g",
+   "source": "Chem. Sci. 2020 SI (CDCl3), user list: tier-1 grade; only the shift is given, not the H count; model structures written here (the paper has various aryl groups)",
+   "signals": [
+    {
+     "label": "S-CH3",
+     "smarts": "[CH3]S",
+     "ppm": 2.46,
+     "nH": 3,
+     "note": "the SI gives a range for several aryl sulfides; the centre is used",
+     "range": [
+      2.42,
+      2.5
+     ]
+    }
+   ]
+  },
+  {
+   "compound": "aryl cyclohexyl sulfide (model: cyclohexyl phenyl sulfide)",
+   "smiles": "C1CCC(CC1)Sc1ccccc1",
+   "solvent": "CDCl3",
+   "tier": 2,
+   "grade": "T1g",
+   "source": "Chem. Sci. 2020 SI (CDCl3), user list: tier-1 grade; only the shift is given, not the H count; model structures written here (the paper has various aryl groups)",
+   "signals": [
+    {
+     "label": "S-CH",
+     "smarts": "[CH]S",
+     "ppm": 2.9,
+     "nH": 1
+    }
+   ]
+  },
+  {
+   "compound": "aryl decyl sulfide (model: decyl phenyl sulfide)",
+   "smiles": "CCCCCCCCCCSc1ccccc1",
+   "solvent": "CDCl3",
+   "tier": 2,
+   "grade": "T1g",
+   "source": "Chem. Sci. 2020 SI (CDCl3), user list: tier-1 grade; only the shift is given, not the H count; model structures written here (the paper has various aryl groups)",
+   "signals": [
+    {
+     "label": "S-CH2",
+     "smarts": "[CH2]S",
+     "ppm": 2.81,
+     "nH": 2
+    }
+   ]
+  },
+  {
+   "compound": "diethylamine",
+   "smiles": "CCNCC",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: amines (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH3",
+     "smarts": "[CH3]C",
+     "ppm": 1.11,
+     "nH": 6
+    },
+    {
+     "label": "CH2",
+     "smarts": "[CH2]N",
+     "ppm": 2.65,
+     "nH": 4
+    }
+   ]
+  },
+  {
+   "compound": "ethylamine",
+   "smiles": "CCN",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: amines (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH3",
+     "smarts": "[CH3]C",
+     "ppm": 1.1,
+     "nH": 3
+    },
+    {
+     "label": "CH2",
+     "smarts": "[CH2]N",
+     "ppm": 2.74,
+     "nH": 2
+    }
+   ]
+  },
+  {
+   "compound": "propylamine",
+   "smiles": "CCCN",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: amines (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH3",
+     "smarts": "[CH3]C",
+     "ppm": 0.93,
+     "nH": 3
+    },
+    {
+     "label": "CH2",
+     "smarts": "[CH2]([CH3])[CH2]N",
+     "ppm": 1.43,
+     "nH": 2
+    },
+    {
+     "label": "NCH2",
+     "smarts": "[CH2]N",
+     "ppm": 2.61,
+     "nH": 2
+    }
+   ]
+  },
+  {
+   "compound": "isopropylamine",
+   "smiles": "CC(C)N",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: amines (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH3",
+     "smarts": "[CH3]C",
+     "ppm": 1.03,
+     "nH": 6
+    },
+    {
+     "label": "CH",
+     "smarts": "[CH](C)(C)N",
+     "ppm": 3.07,
+     "nH": 1
+    }
+   ]
+  },
+  {
+   "compound": "diisopropylamine",
+   "smiles": "CC(C)NC(C)C",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: amines (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH",
+     "smarts": "[CH](C)(C)N",
+     "ppm": 3.07,
+     "nH": 2
+    },
+    {
+     "label": "CH3",
+     "smarts": "[CH3]C",
+     "ppm": 1.04,
+     "nH": 12
+    }
+   ]
+  },
+  {
+   "compound": "tert-butylamine",
+   "smiles": "CC(C)(C)N",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: amines (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH3",
+     "smarts": "[CH3]C",
+     "ppm": 1.15,
+     "nH": 9
+    }
+   ]
+  },
+  {
+   "compound": "propionamide",
+   "smiles": "CCC(N)=O",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: amides (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH3",
+     "smarts": "[CH3]C",
+     "ppm": 1.13,
+     "nH": 3
+    },
+    {
+     "label": "CH2",
+     "smarts": "[CH2]C(N)=O",
+     "ppm": 2.23,
+     "nH": 2
+    }
+   ]
+  },
+  {
+   "compound": "N-ethylacetamide",
+   "smiles": "CCNC(C)=O",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: amides (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "COCH3",
+     "smarts": "[CH3]C(=O)N",
+     "ppm": 1.98,
+     "nH": 3
+    },
+    {
+     "label": "NCH2",
+     "smarts": "[CH2]N",
+     "ppm": 3.25,
+     "nH": 2
+    },
+    {
+     "label": "CH3",
+     "smarts": "[CH3][CH2]",
+     "ppm": 1.14,
+     "nH": 3
+    }
+   ]
+  },
+  {
+   "compound": "tetrahydropyran",
+   "smiles": "C1CCOCC1",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: ethers and alcohols (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "OCH2",
+     "smarts": "[CH2]O",
+     "ppm": 3.65,
+     "nH": 4
+    },
+    {
+     "label": "CH2",
+     "smarts": "[CH2;!$([CH2]O)]",
+     "ppm": 1.59,
+     "nH": 6
+    }
+   ]
+  },
+  {
+   "compound": "1-propanol",
+   "smiles": "CCCO",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: ethers and alcohols (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH3",
+     "smarts": "[CH3]C",
+     "ppm": 0.92,
+     "nH": 3
+    },
+    {
+     "label": "CH2",
+     "smarts": "[CH2]([CH3])[CH2]O",
+     "ppm": 1.57,
+     "nH": 2
+    },
+    {
+     "label": "OCH2",
+     "smarts": "[CH2]O",
+     "ppm": 3.58,
+     "nH": 2
+    }
+   ]
+  },
+  {
+   "compound": "neopentyl alcohol",
+   "smiles": "CC(C)(C)CO",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: ethers and alcohols (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH3",
+     "smarts": "[CH3]C",
+     "ppm": 0.87,
+     "nH": 9
+    },
+    {
+     "label": "CH2",
+     "smarts": "[CH2]O",
+     "ppm": 3.2,
+     "nH": 2
+    }
+   ]
+  },
+  {
+   "compound": "cyclopentane",
+   "smiles": "C1CCCC1",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: cycloalkanes and cycloalkenes (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH2",
+     "smarts": "[CH2]",
+     "ppm": 1.51,
+     "nH": 10
+    }
+   ]
+  },
+  {
+   "compound": "cycloheptane",
+   "smiles": "C1CCCCCC1",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: cycloalkanes and cycloalkenes (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH2",
+     "smarts": "[CH2]",
+     "ppm": 1.53,
+     "nH": 14
+    }
+   ]
+  },
+  {
+   "compound": "cyclopentene",
+   "smiles": "C1=CCCC1",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: cycloalkanes and cycloalkenes (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "vinyl",
+     "smarts": "[CH]=[CH]",
+     "ppm": 5.66,
+     "nH": 2
+    },
+    {
+     "label": "allylic",
+     "smarts": "[CH2]C=C",
+     "ppm": 2.27,
+     "nH": 4
+    },
+    {
+     "label": "CH2",
+     "smarts": "[CH2;!$([CH2]C=C)]",
+     "ppm": 1.79,
+     "nH": 2
+    }
+   ]
+  },
+  {
+   "compound": "cyclopentanone",
+   "smiles": "O=C1CCCC1",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: cycloalkanes and cycloalkenes (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "alpha",
+     "smarts": "[CH2]C(=O)",
+     "ppm": 2.05,
+     "nH": 4
+    },
+    {
+     "label": "beta",
+     "smarts": "[CH2][CH2]C(=O)",
+     "ppm": 1.92,
+     "nH": 4
+    }
+   ]
+  },
+  {
+   "compound": "cyclopropane",
+   "smiles": "C1CC1",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: cycloalkanes and cycloalkenes (read by hand from the structure figure, not text copied); Baranac-Stojanovic 2013 SI",
+   "signals": [
+    {
+     "label": "CH2",
+     "smarts": "[CH2]",
+     "ppm": 0.22,
+     "nH": 6
+    }
+   ]
+  },
+  {
+   "compound": "cyclobutane",
+   "smiles": "C1CCC1",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: cycloalkanes and cycloalkenes (read by hand from the structure figure, not text copied); Baranac-Stojanovic 2013 SI",
+   "signals": [
+    {
+     "label": "CH2",
+     "smarts": "[CH2]",
+     "ppm": 1.98,
+     "nH": 8
+    }
+   ]
+  },
+  {
+   "compound": "acetic acid (Reich)",
+   "smiles": "CC(=O)O",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: carboxylic acids (COOH exchangeable, concentration dependent) (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH3",
+     "smarts": "[CH3]C(=O)O",
+     "ppm": 2.1,
+     "nH": 3
+    },
+    {
+     "label": "COOH",
+     "smarts": "[OH]C=O",
+     "ppm": 11.37,
+     "nH": 1,
+     "exchangeable": true
+    }
+   ]
+  },
+  {
+   "compound": "butyric acid",
+   "smiles": "CCCC(=O)O",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: carboxylic acids (COOH exchangeable, concentration dependent) (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH3",
+     "smarts": "[CH3]C",
+     "ppm": 0.98,
+     "nH": 3
+    },
+    {
+     "label": "CH2",
+     "smarts": "[CH2]([CH3])[CH2]C=O",
+     "ppm": 1.65,
+     "nH": 2
+    },
+    {
+     "label": "CH2CO",
+     "smarts": "[CH2]C(=O)O",
+     "ppm": 2.35,
+     "nH": 2
+    }
+   ]
+  },
+  {
+   "compound": "isobutyric acid",
+   "smiles": "CC(C)C(=O)O",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: carboxylic acids (COOH exchangeable, concentration dependent) (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH",
+     "smarts": "[CH](C)(C)C=O",
+     "ppm": 2.62,
+     "nH": 1
+    },
+    {
+     "label": "CH3",
+     "smarts": "[CH3]C",
+     "ppm": 1.2,
+     "nH": 6
+    }
+   ]
+  },
+  {
+   "compound": "pivalic acid",
+   "smiles": "CC(C)(C)C(=O)O",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: carboxylic acids (COOH exchangeable, concentration dependent) (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH3",
+     "smarts": "[CH3]C",
+     "ppm": 1.23,
+     "nH": 9
+    },
+    {
+     "label": "COOH",
+     "smarts": "[OH]C=O",
+     "ppm": 11.49,
+     "nH": 1,
+     "exchangeable": true
+    }
+   ]
+  },
+  {
+   "compound": "chloroacetic acid",
+   "smiles": "ClCC(=O)O",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: carboxylic acids (COOH exchangeable, concentration dependent) (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH2",
+     "smarts": "[CH2]Cl",
+     "ppm": 4.14,
+     "nH": 2
+    }
+   ]
+  },
+  {
+   "compound": "dichloroacetic acid",
+   "smiles": "ClC(Cl)C(=O)O",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: carboxylic acids (COOH exchangeable, concentration dependent) (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH",
+     "smarts": "[CH](Cl)Cl",
+     "ppm": 5.98,
+     "nH": 1
+    }
+   ]
+  },
+  {
+   "compound": "2-chloropropionic acid",
+   "smiles": "CC(Cl)C(=O)O",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: carboxylic acids (COOH exchangeable, concentration dependent) (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH",
+     "smarts": "[CH](C)(Cl)C=O",
+     "ppm": 4.47,
+     "nH": 1
+    },
+    {
+     "label": "CH3",
+     "smarts": "[CH3]C",
+     "ppm": 1.73,
+     "nH": 3
+    },
+    {
+     "label": "COOH",
+     "smarts": "[OH]C=O",
+     "ppm": 11.22,
+     "nH": 1,
+     "exchangeable": true
+    }
+   ]
+  },
+  {
+   "compound": "2-phenylpropionic acid",
+   "smiles": "CC(c1ccccc1)C(=O)O",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: carboxylic acids (COOH exchangeable, concentration dependent) (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH",
+     "smarts": "[CH](C)(c)C=O",
+     "ppm": 3.62,
+     "nH": 1
+    },
+    {
+     "label": "CH3",
+     "smarts": "[CH3]C",
+     "ppm": 1.45,
+     "nH": 3
+    },
+    {
+     "label": "COOH",
+     "smarts": "[OH]C=O",
+     "ppm": 12.56,
+     "nH": 1,
+     "exchangeable": true
+    }
+   ]
+  },
+  {
+   "compound": "indole",
+   "smiles": "c1ccc2[nH]ccc2c1",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: heteroaromatic and fused rings (read by hand from the structure figure, not text copied); benzo-ring positions not used",
+   "signals": [
+    {
+     "label": "H2",
+     "smarts": "[cH]:[nH]",
+     "ppm": 7.26,
+     "nH": 1
+    },
+    {
+     "label": "H3",
+     "smarts": "[cH;r5]:[cH]:[nH]",
+     "ppm": 6.45,
+     "nH": 1
+    },
+    {
+     "label": "NH",
+     "smarts": "[nH]",
+     "ppm": 10.1,
+     "nH": 1,
+     "exchangeable": true
+    }
+   ]
+  },
+  {
+   "compound": "benzofuran",
+   "smiles": "c1ccc2occc2c1",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: heteroaromatic and fused rings (read by hand from the structure figure, not text copied); benzo-ring positions not used",
+   "signals": [
+    {
+     "label": "H2",
+     "smarts": "[cH]:o",
+     "ppm": 7.52,
+     "nH": 1
+    },
+    {
+     "label": "H3",
+     "smarts": "[cH;r5]:[cH]:o",
+     "ppm": 6.66,
+     "nH": 1
+    }
+   ]
+  },
+  {
+   "compound": "1-tetralone",
+   "smiles": "O=C1CCCc2ccccc12",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: heteroaromatic and fused rings (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "ArH (peri to C=O)",
+     "smarts": "[cH]:c(C=O)",
+     "ppm": 8.01,
+     "nH": 1
+    },
+    {
+     "label": "ArCH2",
+     "smarts": "[CH2]c",
+     "ppm": 2.93,
+     "nH": 2
+    },
+    {
+     "label": "CH2CO",
+     "smarts": "[CH2]C(=O)",
+     "ppm": 2.63,
+     "nH": 2
+    },
+    {
+     "label": "middle CH2",
+     "smarts": "[CH2]([CH2])[CH2]",
+     "ppm": 2.12,
+     "nH": 2
+    }
+   ]
+  },
+  {
+   "compound": "tetramethylethylene",
+   "smiles": "CC(C)=C(C)C",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: other (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "CH3",
+     "smarts": "[CH3]C=C",
+     "ppm": 1.61,
+     "nH": 12
+    }
+   ]
+  },
+  {
+   "compound": "2-chloropropene",
+   "smiles": "C=C(C)Cl",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Reich organicchemistrydata.org: other (read by hand from the structure figure, not text copied)",
+   "signals": [
+    {
+     "label": "=CH2 (5.02)",
+     "smarts": "[CH2]=C",
+     "ppm": 5.02,
+     "nH": 1,
+     "note": "two hydrogens of one carbon, paired in ascending order"
+    },
+    {
+     "label": "=CH2 (4.99)",
+     "smarts": "[CH2]=C",
+     "ppm": 4.99,
+     "nH": 1,
+     "note": "see above"
+    },
+    {
+     "label": "CH3",
+     "smarts": "[CH3]C(Cl)=C",
+     "ppm": 2.07,
+     "nH": 3
+    }
+   ]
+  },
+  {
+   "compound": "3-methyl-1-butyne",
+   "smiles": "C#CC(C)C",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Hans Reich NMR collection (organicchemistrydata.org), hand-read, stop-13 list part A",
+   "round": 2,
+   "signals": [
+    {
+     "label": "C#C-H",
+     "smarts": "[CH]#C",
+     "ppm": 1.86,
+     "nH": 1
+    },
+    {
+     "label": "CH",
+     "smarts": "[CH](C)(C)C#C",
+     "ppm": 2.51,
+     "nH": 1
+    },
+    {
+     "label": "CH3",
+     "smarts": "[CH3][CH](C)C#C",
+     "ppm": 1.18,
+     "nH": 6
+    }
+   ]
+  },
+  {
+   "compound": "2-methyl-3-butyn-2-ol",
+   "smiles": "C#CC(C)(C)O",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Hans Reich NMR collection (organicchemistrydata.org), hand-read, stop-13 list part A",
+   "round": 2,
+   "signals": [
+    {
+     "label": "C#C-H",
+     "smarts": "[CH]#C",
+     "ppm": 2.44,
+     "nH": 1
+    },
+    {
+     "label": "OH",
+     "smarts": "[OH]C",
+     "ppm": 2.27,
+     "nH": 1,
+     "exchangeable": true
+    },
+    {
+     "label": "CH3",
+     "smarts": "[CH3]C(C)(O)C#C",
+     "ppm": 1.55,
+     "nH": 6
+    }
+   ]
+  },
+  {
+   "compound": "3-butyn-1-ol",
+   "smiles": "C#CCCO",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Hans Reich NMR collection (organicchemistrydata.org), hand-read, stop-13 list part A",
+   "round": 2,
+   "signals": [
+    {
+     "label": "C#C-H",
+     "smarts": "[CH]#C",
+     "ppm": 2.01,
+     "nH": 1,
+     "mult": "t"
+    },
+    {
+     "label": "propargylic CH2",
+     "smarts": "[CH2]C#C",
+     "ppm": 2.39,
+     "nH": 2
+    },
+    {
+     "label": "OCH2",
+     "smarts": "[CH2](O)C",
+     "ppm": 3.68,
+     "nH": 2
+    }
+   ]
+  },
+  {
+   "compound": "2-butyne-1,4-diol",
+   "smiles": "OCC#CCO",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Hans Reich NMR collection (organicchemistrydata.org), hand-read, stop-13 list part A",
+   "round": 2,
+   "signals": [
+    {
+     "label": "CH2",
+     "smarts": "[CH2](O)C#C",
+     "ppm": 4.28,
+     "nH": 4
+    }
+   ]
+  },
+  {
+   "compound": "1,4-dichloro-2-butyne",
+   "smiles": "ClCC#CCCl",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Hans Reich NMR collection (organicchemistrydata.org), hand-read, stop-13 list part A",
+   "round": 2,
+   "signals": [
+    {
+     "label": "CH2",
+     "smarts": "[CH2](Cl)C#C",
+     "ppm": 4.2,
+     "nH": 4
+    }
+   ]
+  },
+  {
+   "compound": "ethylene (Reich)",
+   "smiles": "C=C",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Hans Reich NMR collection (organicchemistrydata.org), hand-read, stop-13 list part B",
+   "round": 2,
+   "note": "Reich textbook base value; Fulmer 2010 (tier 1) has 5.40 for the same compound. Not used for any calibration.",
+   "signals": [
+    {
+     "label": "CH2=CH2",
+     "smarts": "[CH2]=[CH2]",
+     "ppm": 5.25,
+     "nH": 4
+    }
+   ]
+  },
+  {
+   "compound": "vinyl fluoride",
+   "smiles": "C=CF",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Hans Reich NMR collection (organicchemistrydata.org), hand-read, stop-13 list part B",
+   "round": 2,
+   "note": "Hcis = =CH2 hydrogen cis (same side) to R, Htrans = trans to R; the =CH2 pair is paired with the predicted pair in ascending order of shift (the label is not checked)",
+   "signals": [
+    {
+     "label": "Hgem",
+     "smarts": "[CH]=[CH2]",
+     "ppm": 6.47,
+     "nH": 1
+    },
+    {
+     "label": "Hcis",
+     "smarts": "[CH2]=[CH]",
+     "ppm": 4.69,
+     "nH": 1
+    },
+    {
+     "label": "Htrans",
+     "smarts": "[CH2]=[CH]",
+     "ppm": 4.3,
+     "nH": 1
+    }
+   ]
+  },
+  {
+   "compound": "vinyl chloride",
+   "smiles": "C=CCl",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Hans Reich NMR collection (organicchemistrydata.org), hand-read, stop-13 list part B",
+   "round": 2,
+   "note": "Hcis = =CH2 hydrogen cis (same side) to R, Htrans = trans to R; the =CH2 pair is paired with the predicted pair in ascending order of shift (the label is not checked)",
+   "signals": [
+    {
+     "label": "Hgem",
+     "smarts": "[CH]=[CH2]",
+     "ppm": 6.19,
+     "nH": 1
+    },
+    {
+     "label": "Hcis",
+     "smarts": "[CH2]=[CH]",
+     "ppm": 5.39,
+     "nH": 1
+    },
+    {
+     "label": "Htrans",
+     "smarts": "[CH2]=[CH]",
+     "ppm": 5.27,
+     "nH": 1
+    }
+   ]
+  },
+  {
+   "compound": "vinyl bromide",
+   "smiles": "C=CBr",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Hans Reich NMR collection (organicchemistrydata.org), hand-read, stop-13 list part B",
+   "round": 2,
+   "note": "Hcis = =CH2 hydrogen cis (same side) to R, Htrans = trans to R; the =CH2 pair is paired with the predicted pair in ascending order of shift (the label is not checked)",
+   "signals": [
+    {
+     "label": "Hgem",
+     "smarts": "[CH]=[CH2]",
+     "ppm": 6.53,
+     "nH": 1
+    },
+    {
+     "label": "Hcis",
+     "smarts": "[CH2]=[CH]",
+     "ppm": 5.74,
+     "nH": 1
+    },
+    {
+     "label": "Htrans",
+     "smarts": "[CH2]=[CH]",
+     "ppm": 5.83,
+     "nH": 1
+    }
+   ]
+  },
+  {
+   "compound": "vinyl iodide",
+   "smiles": "C=CI",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Hans Reich NMR collection (organicchemistrydata.org), hand-read, stop-13 list part B",
+   "round": 2,
+   "note": "Hcis = =CH2 hydrogen cis (same side) to R, Htrans = trans to R; the =CH2 pair is paired with the predicted pair in ascending order of shift (the label is not checked)",
+   "signals": [
+    {
+     "label": "Hgem",
+     "smarts": "[CH]=[CH2]",
+     "ppm": 6.49,
+     "nH": 1
+    },
+    {
+     "label": "Hcis",
+     "smarts": "[CH2]=[CH]",
+     "ppm": 6.44,
+     "nH": 1
+    },
+    {
+     "label": "Htrans",
+     "smarts": "[CH2]=[CH]",
+     "ppm": 6.17,
+     "nH": 1
+    }
+   ]
+  },
+  {
+   "compound": "methyl vinyl ether",
+   "smiles": "C=COC",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Hans Reich NMR collection (organicchemistrydata.org), hand-read, stop-13 list part B",
+   "round": 2,
+   "note": "Hcis = =CH2 hydrogen cis (same side) to R, Htrans = trans to R; the =CH2 pair is paired with the predicted pair in ascending order of shift (the label is not checked)",
+   "signals": [
+    {
+     "label": "Hgem",
+     "smarts": "[CH]=[CH2]",
+     "ppm": 6.56,
+     "nH": 1
+    },
+    {
+     "label": "Hcis",
+     "smarts": "[CH2]=[CH]",
+     "ppm": 4.25,
+     "nH": 1
+    },
+    {
+     "label": "Htrans",
+     "smarts": "[CH2]=[CH]",
+     "ppm": 4.03,
+     "nH": 1
+    }
+   ]
+  },
+  {
+   "compound": "ethyl vinyl ether",
+   "smiles": "C=COCC",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Hans Reich NMR collection (organicchemistrydata.org), hand-read, stop-13 list part B",
+   "round": 2,
+   "note": "Hcis = =CH2 hydrogen cis (same side) to R, Htrans = trans to R; the =CH2 pair is paired with the predicted pair in ascending order of shift (the label is not checked)",
+   "signals": [
+    {
+     "label": "Hgem",
+     "smarts": "[CH]=[CH2]",
+     "ppm": 6.32,
+     "nH": 1
+    },
+    {
+     "label": "Hcis",
+     "smarts": "[CH2]=[CH]",
+     "ppm": 4.03,
+     "nH": 1
+    },
+    {
+     "label": "Htrans",
+     "smarts": "[CH2]=[CH]",
+     "ppm": 3.86,
+     "nH": 1
+    }
+   ]
+  },
+  {
+   "compound": "vinyl acetate",
+   "smiles": "C=COC(C)=O",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Hans Reich NMR collection (organicchemistrydata.org), hand-read, stop-13 list part B",
+   "round": 2,
+   "note": "Hcis = =CH2 hydrogen cis (same side) to R, Htrans = trans to R; the =CH2 pair is paired with the predicted pair in ascending order of shift (the label is not checked)",
+   "signals": [
+    {
+     "label": "Hgem",
+     "smarts": "[CH]=[CH2]",
+     "ppm": 7.27,
+     "nH": 1
+    },
+    {
+     "label": "Hcis",
+     "smarts": "[CH2]=[CH]",
+     "ppm": 4.89,
+     "nH": 1
+    },
+    {
+     "label": "Htrans",
+     "smarts": "[CH2]=[CH]",
+     "ppm": 5.57,
+     "nH": 1
+    }
+   ]
+  },
+  {
+   "compound": "methyl vinyl sulfide",
+   "smiles": "C=CSC",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Hans Reich NMR collection (organicchemistrydata.org), hand-read, stop-13 list part B",
+   "round": 2,
+   "note": "Hcis = =CH2 hydrogen cis (same side) to R, Htrans = trans to R; the =CH2 pair is paired with the predicted pair in ascending order of shift (the label is not checked)",
+   "signals": [
+    {
+     "label": "Hgem",
+     "smarts": "[CH]=[CH2]",
+     "ppm": 6.35,
+     "nH": 1
+    },
+    {
+     "label": "Hcis",
+     "smarts": "[CH2]=[CH]",
+     "ppm": 4.86,
+     "nH": 1
+    },
+    {
+     "label": "Htrans",
+     "smarts": "[CH2]=[CH]",
+     "ppm": 5.07,
+     "nH": 1
+    }
+   ]
+  },
+  {
+   "compound": "styrene",
+   "smiles": "C=Cc1ccccc1",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Hans Reich NMR collection (organicchemistrydata.org), hand-read, stop-13 list part B",
+   "round": 2,
+   "note": "Hcis = =CH2 hydrogen cis (same side) to R, Htrans = trans to R; the =CH2 pair is paired with the predicted pair in ascending order of shift (the label is not checked)",
+   "signals": [
+    {
+     "label": "Hgem",
+     "smarts": "[CH]=[CH2]",
+     "ppm": 6.69,
+     "nH": 1
+    },
+    {
+     "label": "Hcis",
+     "smarts": "[CH2]=[CH]",
+     "ppm": 5.7,
+     "nH": 1
+    },
+    {
+     "label": "Htrans",
+     "smarts": "[CH2]=[CH]",
+     "ppm": 5.22,
+     "nH": 1
+    }
+   ]
+  },
+  {
+   "compound": "4-vinylpyridine",
+   "smiles": "C=Cc1ccncc1",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Hans Reich NMR collection (organicchemistrydata.org), hand-read, stop-13 list part B",
+   "round": 2,
+   "note": "Hcis = =CH2 hydrogen cis (same side) to R, Htrans = trans to R; the =CH2 pair is paired with the predicted pair in ascending order of shift (the label is not checked)",
+   "signals": [
+    {
+     "label": "Hgem",
+     "smarts": "[CH]=[CH2]",
+     "ppm": 6.61,
+     "nH": 1
+    },
+    {
+     "label": "Hcis",
+     "smarts": "[CH2]=[CH]",
+     "ppm": 5.91,
+     "nH": 1
+    },
+    {
+     "label": "Htrans",
+     "smarts": "[CH2]=[CH]",
+     "ppm": 5.42,
+     "nH": 1
+    }
+   ]
+  },
+  {
+   "compound": "3-methyl-1-butene",
+   "smiles": "C=CC(C)C",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Hans Reich NMR collection (organicchemistrydata.org), hand-read, stop-13 list part B",
+   "round": 2,
+   "note": "Hcis = =CH2 hydrogen cis (same side) to R, Htrans = trans to R; the =CH2 pair is paired with the predicted pair in ascending order of shift (the label is not checked)",
+   "signals": [
+    {
+     "label": "Hgem",
+     "smarts": "[CH]=[CH2]",
+     "ppm": 5.73,
+     "nH": 1
+    },
+    {
+     "label": "Hcis",
+     "smarts": "[CH2]=[CH]",
+     "ppm": 4.91,
+     "nH": 1
+    },
+    {
+     "label": "Htrans",
+     "smarts": "[CH2]=[CH]",
+     "ppm": 4.82,
+     "nH": 1
+    }
+   ]
+  },
+  {
+   "compound": "allyl alcohol",
+   "smiles": "C=CCO",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Hans Reich NMR collection (organicchemistrydata.org), hand-read, stop-13 list part B",
+   "round": 2,
+   "note": "Hcis = =CH2 hydrogen cis (same side) to R, Htrans = trans to R; the =CH2 pair is paired with the predicted pair in ascending order of shift (the label is not checked)",
+   "signals": [
+    {
+     "label": "Hgem",
+     "smarts": "[CH]=[CH2]",
+     "ppm": 6,
+     "nH": 1
+    },
+    {
+     "label": "Hcis",
+     "smarts": "[CH2]=[CH]",
+     "ppm": 5.25,
+     "nH": 1
+    },
+    {
+     "label": "Htrans",
+     "smarts": "[CH2]=[CH]",
+     "ppm": 5.13,
+     "nH": 1
+    }
+   ]
+  },
+  {
+   "compound": "3,3,3-trifluoropropene",
+   "smiles": "C=CC(F)(F)F",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Hans Reich NMR collection (organicchemistrydata.org), hand-read, stop-13 list part B",
+   "round": 2,
+   "note": "Hcis = =CH2 hydrogen cis (same side) to R, Htrans = trans to R; the =CH2 pair is paired with the predicted pair in ascending order of shift (the label is not checked)",
+   "signals": [
+    {
+     "label": "Hgem",
+     "smarts": "[CH]=[CH2]",
+     "ppm": 5.9,
+     "nH": 1
+    },
+    {
+     "label": "Hcis",
+     "smarts": "[CH2]=[CH]",
+     "ppm": 5.85,
+     "nH": 1
+    },
+    {
+     "label": "Htrans",
+     "smarts": "[CH2]=[CH]",
+     "ppm": 5.66,
+     "nH": 1
+    }
+   ]
+  },
+  {
+   "compound": "3,3,3-trichloropropene",
+   "smiles": "C=CC(Cl)(Cl)Cl",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Hans Reich NMR collection (organicchemistrydata.org), hand-read, stop-13 list part B",
+   "round": 2,
+   "note": "Hcis = =CH2 hydrogen cis (same side) to R, Htrans = trans to R; the =CH2 pair is paired with the predicted pair in ascending order of shift (the label is not checked)",
+   "signals": [
+    {
+     "label": "Hgem",
+     "smarts": "[CH]=[CH2]",
+     "ppm": 6.48,
+     "nH": 1
+    },
+    {
+     "label": "Hcis",
+     "smarts": "[CH2]=[CH]",
+     "ppm": 5.79,
+     "nH": 1
+    },
+    {
+     "label": "Htrans",
+     "smarts": "[CH2]=[CH]",
+     "ppm": 5.32,
+     "nH": 1
+    }
+   ]
+  },
+  {
+   "compound": "acetaldehyde (Reich, stop 13)",
+   "smiles": "CC=O",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Hans Reich NMR collection (organicchemistrydata.org), hand-read, stop-13 list part C",
+   "round": 2,
+   "note": "same compound as the round-1 acetaldehyde entry",
+   "signals": [
+    {
+     "label": "CHO",
+     "smarts": "[CH](=O)C",
+     "ppm": 9.79,
+     "nH": 1
+    },
+    {
+     "label": "CH3",
+     "smarts": "[CH3]C=O",
+     "ppm": 2.2,
+     "nH": 3
+    }
+   ]
+  },
+  {
+   "compound": "propanal",
+   "smiles": "CCC=O",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Hans Reich NMR collection (organicchemistrydata.org), hand-read, stop-13 list part C",
+   "round": 2,
+   "signals": [
+    {
+     "label": "CHO",
+     "smarts": "[CH](=O)C",
+     "ppm": 9.79,
+     "nH": 1
+    },
+    {
+     "label": "CH2",
+     "smarts": "[CH2]C=O",
+     "ppm": 2.46,
+     "nH": 2
+    },
+    {
+     "label": "CH3",
+     "smarts": "[CH3]C",
+     "ppm": 1.13,
+     "nH": 3
+    }
+   ]
+  },
+  {
+   "compound": "isobutyraldehyde",
+   "smiles": "CC(C)C=O",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Hans Reich NMR collection (organicchemistrydata.org), hand-read, stop-13 list part C",
+   "round": 2,
+   "signals": [
+    {
+     "label": "CHO",
+     "smarts": "[CH](=O)C",
+     "ppm": 9.62,
+     "nH": 1
+    },
+    {
+     "label": "CH",
+     "smarts": "[CH](C)(C)C=O",
+     "ppm": 2.44,
+     "nH": 1
+    },
+    {
+     "label": "CH3",
+     "smarts": "[CH3]C",
+     "ppm": 1.14,
+     "nH": 6
+    }
+   ]
+  },
+  {
+   "compound": "butanal",
+   "smiles": "CCCC=O",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Hans Reich NMR collection (organicchemistrydata.org), hand-read, stop-13 list part C",
+   "round": 2,
+   "signals": [
+    {
+     "label": "CHO",
+     "smarts": "[CH](=O)C",
+     "ppm": 9.74,
+     "nH": 1
+    },
+    {
+     "label": "alpha CH2",
+     "smarts": "[CH2]C=O",
+     "ppm": 2.42,
+     "nH": 2
+    },
+    {
+     "label": "beta CH2",
+     "smarts": "[CH2]([CH2]C=O)[CH3]",
+     "ppm": 1.67,
+     "nH": 2
+    },
+    {
+     "label": "CH3",
+     "smarts": "[CH3][CH2]",
+     "ppm": 0.97,
+     "nH": 3
+    }
+   ]
+  },
+  {
+   "compound": "pivalaldehyde",
+   "smiles": "CC(C)(C)C=O",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Hans Reich NMR collection (organicchemistrydata.org), hand-read, stop-13 list part C",
+   "round": 2,
+   "signals": [
+    {
+     "label": "CHO",
+     "smarts": "[CH](=O)C",
+     "ppm": 9.51,
+     "nH": 1
+    },
+    {
+     "label": "CH3",
+     "smarts": "[CH3]C(C)(C)C=O",
+     "ppm": 1.07,
+     "nH": 9
+    }
+   ]
+  },
+  {
+   "compound": "N-methylpyrrolidone (NMP)",
+   "smiles": "CN1CCCC1=O",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Hans Reich NMR collection (organicchemistrydata.org), hand-read, stop-13 list part D",
+   "round": 2,
+   "signals": [
+    {
+     "label": "NCH3",
+     "smarts": "[CH3]N",
+     "ppm": 2.88,
+     "nH": 3
+    },
+    {
+     "label": "NCH2",
+     "smarts": "[CH2]N",
+     "ppm": 3.41,
+     "nH": 2
+    },
+    {
+     "label": "CH2CO",
+     "smarts": "[CH2]C=O",
+     "ppm": 2.39,
+     "nH": 2
+    },
+    {
+     "label": "middle CH2",
+     "smarts": "[CH2]([CH2]N)[CH2]C=O",
+     "ppm": 2.05,
+     "nH": 2
+    }
+   ]
+  },
+  {
+   "compound": "N-methyl-2-piperidone",
+   "smiles": "CN1CCCCC1=O",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Hans Reich NMR collection (organicchemistrydata.org), hand-read, stop-13 list part D",
+   "round": 2,
+   "signals": [
+    {
+     "label": "NCH3",
+     "smarts": "[CH3]N",
+     "ppm": 2.88,
+     "nH": 3
+    },
+    {
+     "label": "NCH2",
+     "smarts": "[CH2]N",
+     "ppm": 3.32,
+     "nH": 2
+    },
+    {
+     "label": "CH2CO",
+     "smarts": "[CH2]C=O",
+     "ppm": 2.27,
+     "nH": 2
+    }
+   ]
+  },
+  {
+   "compound": "methyl fluoride (stop 13)",
+   "smiles": "CF",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Hans Reich NMR collection / J. Am. Chem. Soc. 57, 5361 (as listed in the stop-13 list part E), hand-read",
+   "round": 2,
+   "note": "same compound as the round-1 entry (4.26); the two sources disagree",
+   "signals": [
+    {
+     "label": "CH3",
+     "smarts": "[CH3]F",
+     "ppm": 4.1,
+     "nH": 3
+    }
+   ]
+  },
+  {
+   "compound": "methyl chloride (stop 13)",
+   "smiles": "CCl",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Hans Reich NMR collection / J. Am. Chem. Soc. 57, 5361 (as listed in the stop-13 list part E), hand-read",
+   "round": 2,
+   "note": "same compound as the round-1 entry",
+   "signals": [
+    {
+     "label": "CH3",
+     "smarts": "[CH3]Cl",
+     "ppm": 3.05,
+     "nH": 3
+    }
+   ]
+  },
+  {
+   "compound": "methyl bromide (stop 13)",
+   "smiles": "CBr",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Hans Reich NMR collection / J. Am. Chem. Soc. 57, 5361 (as listed in the stop-13 list part E), hand-read",
+   "round": 2,
+   "note": "same compound as the round-1 entry",
+   "signals": [
+    {
+     "label": "CH3",
+     "smarts": "[CH3]Br",
+     "ppm": 2.68,
+     "nH": 3
+    }
+   ]
+  },
+  {
+   "compound": "methyl iodide (stop 13)",
+   "smiles": "CI",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Hans Reich NMR collection / J. Am. Chem. Soc. 57, 5361 (as listed in the stop-13 list part E), hand-read",
+   "round": 2,
+   "note": "same compound as the round-1 entry",
+   "signals": [
+    {
+     "label": "CH3",
+     "smarts": "[CH3]I",
+     "ppm": 2.16,
+     "nH": 3
+    }
+   ]
+  },
+  {
+   "compound": "difluoromethane",
+   "smiles": "FCF",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Hans Reich NMR collection / J. Am. Chem. Soc. 57, 5361 (as listed in the stop-13 list part E), hand-read",
+   "round": 2,
+   "signals": [
+    {
+     "label": "CH2",
+     "smarts": "[CH2](F)F",
+     "ppm": 5.45,
+     "nH": 2
+    }
+   ]
+  },
+  {
+   "compound": "dichloromethane (stop 13)",
+   "smiles": "ClCCl",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Hans Reich NMR collection / J. Am. Chem. Soc. 57, 5361 (as listed in the stop-13 list part E), hand-read",
+   "round": 2,
+   "note": "same compound as tier 1 (Fulmer 5.30)",
+   "signals": [
+    {
+     "label": "CH2",
+     "smarts": "[CH2](Cl)Cl",
+     "ppm": 5.33,
+     "nH": 2
+    }
+   ]
+  },
+  {
+   "compound": "dibromomethane",
+   "smiles": "BrCBr",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Hans Reich NMR collection / J. Am. Chem. Soc. 57, 5361 (as listed in the stop-13 list part E), hand-read",
+   "round": 2,
+   "signals": [
+    {
+     "label": "CH2",
+     "smarts": "[CH2](Br)Br",
+     "ppm": 4.94,
+     "nH": 2
+    }
+   ]
+  },
+  {
+   "compound": "diiodomethane",
+   "smiles": "ICI",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Hans Reich NMR collection / J. Am. Chem. Soc. 57, 5361 (as listed in the stop-13 list part E), hand-read",
+   "round": 2,
+   "signals": [
+    {
+     "label": "CH2",
+     "smarts": "[CH2](I)I",
+     "ppm": 3.9,
+     "nH": 2
+    }
+   ]
+  },
+  {
+   "compound": "fluoroform",
+   "smiles": "FC(F)F",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Hans Reich NMR collection / J. Am. Chem. Soc. 57, 5361 (as listed in the stop-13 list part E), hand-read",
+   "round": 2,
+   "signals": [
+    {
+     "label": "CH",
+     "smarts": "[CH](F)(F)F",
+     "ppm": 6.25,
+     "nH": 1
+    }
+   ]
+  },
+  {
+   "compound": "chloroform (stop 13)",
+   "smiles": "ClC(Cl)Cl",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Hans Reich NMR collection / J. Am. Chem. Soc. 57, 5361 (as listed in the stop-13 list part E), hand-read",
+   "round": 2,
+   "note": "same compound as tier 1 (Fulmer 7.26)",
+   "signals": [
+    {
+     "label": "CH",
+     "smarts": "[CH](Cl)(Cl)Cl",
+     "ppm": 7.25,
+     "nH": 1
+    }
+   ]
+  },
+  {
+   "compound": "bromoform",
+   "smiles": "BrC(Br)Br",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Hans Reich NMR collection / J. Am. Chem. Soc. 57, 5361 (as listed in the stop-13 list part E), hand-read",
+   "round": 2,
+   "signals": [
+    {
+     "label": "CH",
+     "smarts": "[CH](Br)(Br)Br",
+     "ppm": 6.83,
+     "nH": 1
+    }
+   ]
+  },
+  {
+   "compound": "iodoform",
+   "smiles": "IC(I)I",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Hans Reich NMR collection / J. Am. Chem. Soc. 57, 5361 (as listed in the stop-13 list part E), hand-read",
+   "round": 2,
+   "signals": [
+    {
+     "label": "CH",
+     "smarts": "[CH](I)(I)I",
+     "ppm": 4.91,
+     "nH": 1
+    }
+   ]
+  },
+  {
+   "compound": "1,2-dichloroethane (stop 13)",
+   "smiles": "ClCCCl",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Hans Reich NMR collection / J. Am. Chem. Soc. 57, 5361 (as listed in the stop-13 list part E), hand-read",
+   "round": 2,
+   "note": "same compound as tier 1 (Fulmer 3.73)",
+   "signals": [
+    {
+     "label": "CH2",
+     "smarts": "[CH2]Cl",
+     "ppm": 3.73,
+     "nH": 4
+    }
+   ]
+  },
+  {
+   "compound": "1,2-dibromoethane",
+   "smiles": "BrCCBr",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Hans Reich NMR collection / J. Am. Chem. Soc. 57, 5361 (as listed in the stop-13 list part E), hand-read",
+   "round": 2,
+   "signals": [
+    {
+     "label": "CH2",
+     "smarts": "[CH2]Br",
+     "ppm": 3.63,
+     "nH": 4
+    }
+   ]
+  },
+  {
+   "compound": "p-cresol",
+   "smiles": "Cc1ccc(O)cc1",
+   "solvent": "CDCl3",
+   "tier": 2,
+   "grade": "J",
+   "source": "journal value from the stop-13 list part F (p-cresol, CDCl3), tier-1 candidate",
+   "round": 2,
+   "candidate": true,
+   "signals": [
+    {
+     "label": "H3/H5 (ortho to CH3)",
+     "smarts": "[cH]:[cH]:c-[OH]",
+     "ppm": 7.03,
+     "nH": 2,
+     "mult": "d"
+    },
+    {
+     "label": "H2/H6 (ortho to OH)",
+     "smarts": "[cH]:c-[OH]",
+     "ppm": 6.73,
+     "nH": 2,
+     "mult": "d"
+    },
+    {
+     "label": "OH",
+     "smarts": "[OH]c",
+     "ppm": 4.71,
+     "nH": 1,
+     "exchangeable": true
+    },
+    {
+     "label": "CH3",
+     "smarts": "[CH3]c",
+     "ppm": 2.27,
+     "nH": 3
+    }
+   ]
+  },
+  {
+   "compound": "phenol OH (DMSO-d6)",
+   "smiles": "Oc1ccccc1",
+   "solvent": "DMSO-d6",
+   "tier": 2,
+   "grade": "J",
+   "source": "journal value from the stop-13 list part F (phenol OH, DMSO-d6), tier-1 candidate",
+   "round": 2,
+   "candidate": true,
+   "signals": [
+    {
+     "label": "OH",
+     "smarts": "[OH]c",
+     "ppm": 9.36,
+     "nH": 1,
+     "exchangeable": true
+    }
+   ]
+  },
+  {
+   "compound": "phenol OH (acetone-d6)",
+   "smiles": "Oc1ccccc1",
+   "solvent": "acetone-d6",
+   "tier": 2,
+   "grade": "J",
+   "source": "journal value from the stop-13 list part F (phenol OH, acetone-d6), tier-1 candidate",
+   "round": 2,
+   "candidate": true,
+   "signals": [
+    {
+     "label": "OH",
+     "smarts": "[OH]c",
+     "ppm": 8.29,
+     "nH": 1,
+     "exchangeable": true
+    }
+   ]
+  },
+  {
+   "compound": "phenol OH (CDCl3)",
+   "smiles": "Oc1ccccc1",
+   "solvent": "CDCl3",
+   "tier": 2,
+   "grade": "J",
+   "source": "journal value from the stop-13 list part F (phenol OH, CDCl3), tier-1 candidate",
+   "round": 2,
+   "candidate": true,
+   "signals": [
+    {
+     "label": "OH",
+     "smarts": "[OH]c",
+     "ppm": 4.65,
+     "nH": 1,
+     "exchangeable": true
+    }
+   ]
+  },
+  {
+   "compound": "benzoic acid (DMSO-d6)",
+   "smiles": "OC(=O)c1ccccc1",
+   "solvent": "DMSO-d6",
+   "tier": 2,
+   "grade": "J",
+   "source": "journal value from the stop-13 list part F (benzoic acid, DMSO-d6), tier-1 candidate",
+   "round": 2,
+   "candidate": true,
+   "signals": [
+    {
+     "label": "COOH",
+     "smarts": "[OH]C=O",
+     "ppm": 12.9,
+     "nH": 1,
+     "exchangeable": true
+    },
+    {
+     "label": "H2/H6",
+     "smarts": "[cH]:c-C(=O)O",
+     "ppm": 7.95,
+     "nH": 2
+    },
+    {
+     "label": "H4",
+     "smarts": "[cH]:[cH]:[cH]:c-C(=O)O",
+     "ppm": 7.62,
+     "nH": 1
+    },
+    {
+     "label": "H3/H5",
+     "smarts": "[cH]:[cH]:c-C(=O)O",
+     "ppm": 7.5,
+     "nH": 2
+    }
+   ]
+  },
+  {
+   "compound": "4-hydroxybenzoic acid (DMSO-d6)",
+   "smiles": "OC(=O)c1ccc(O)cc1",
+   "solvent": "DMSO-d6",
+   "tier": 2,
+   "grade": "J",
+   "source": "journal value from the stop-13 list part F (4-hydroxybenzoic acid, DMSO-d6), tier-1 candidate",
+   "round": 2,
+   "candidate": true,
+   "signals": [
+    {
+     "label": "COOH",
+     "smarts": "[OH]C=O",
+     "ppm": 12.41,
+     "nH": 1,
+     "exchangeable": true
+    },
+    {
+     "label": "phenol OH",
+     "smarts": "[OH]c",
+     "ppm": 10.22,
+     "nH": 1,
+     "exchangeable": true
+    },
+    {
+     "label": "H2/H6 (ortho to COOH)",
+     "smarts": "[cH]:c-C(=O)O",
+     "ppm": 7.79,
+     "nH": 2,
+     "mult": "d"
+    },
+    {
+     "label": "H3/H5 (ortho to OH)",
+     "smarts": "[cH]:c-[OH]",
+     "ppm": 6.82,
+     "nH": 2,
+     "mult": "d"
+    }
+   ]
+  },
+  {
+   "compound": "tetralin",
+   "smiles": "c1ccc2CCCCc2c1",
+   "solvent": "CDCl3",
+   "tier": 2,
+   "grade": "J",
+   "source": "journal value from the stop-13 list part F (1,2,3,4-tetrahydronaphthalene, CDCl3), tier-1 candidate",
+   "round": 2,
+   "candidate": true,
+   "signals": [
+    {
+     "label": "aromatic",
+     "smarts": "[cH]",
+     "ppm": 7.07,
+     "nH": 4,
+     "range": [
+      7.04,
+      7.1
+     ],
+     "rangeOnly": true
+    },
+    {
+     "label": "benzylic CH2",
+     "smarts": "[CH2]c",
+     "ppm": 2.765,
+     "nH": 4,
+     "range": [
+      2.74,
+      2.79
+     ],
+     "rangeOnly": true
+    },
+    {
+     "label": "C2/C3 CH2",
+     "smarts": "[CH2;!$([CH2]c)]",
+     "ppm": 1.8,
+     "nH": 4,
+     "range": [
+      1.77,
+      1.83
+     ],
+     "rangeOnly": true
+    }
+   ]
+  },
+  {
+   "compound": "diisopropyl ether",
+   "smiles": "CC(C)OC(C)C",
+   "solvent": "CDCl3",
+   "tier": 2,
+   "grade": "J",
+   "source": "journal value from the stop-13 list part F (diisopropyl ether, CDCl3), tier-1 candidate",
+   "round": 2,
+   "candidate": true,
+   "signals": [
+    {
+     "label": "OCH",
+     "smarts": "[CH](C)(C)O",
+     "ppm": 3.64,
+     "nH": 2,
+     "mult": "septet"
+    },
+    {
+     "label": "CH3",
+     "smarts": "[CH3]C",
+     "ppm": 1.13,
+     "nH": 12,
+     "mult": "d"
+    }
+   ]
+  },
+  {
+   "compound": "cyclohexene oxide",
+   "smiles": "C1CCC2OC2C1",
+   "solvent": "CDCl3",
+   "tier": 2,
+   "grade": "J",
+   "source": "journal value from the stop-13 list part F (cyclohexene oxide, CDCl3), tier-1 candidate",
+   "round": 2,
+   "candidate": true,
+   "note": "ring CH2: four literature groups with unknown assignment, only the class is checked (interval 1.23-1.94)",
+   "signals": [
+    {
+     "label": "epoxide CH",
+     "smarts": "[CH]1OC1",
+     "ppm": 3.11,
+     "nH": 2
+    },
+    {
+     "label": "ring CH2 (four groups 1.94 / 1.82 / 1.42 / 1.23, assignment unknown)",
+     "smarts": "[CH2;!$([CH2]1OC1)]",
+     "ppm": 1.6,
+     "nH": 8,
+     "range": [
+      1.23,
+      1.94
+     ],
+     "rangeOnly": true
+    }
+   ]
+  },
+  {
+   "compound": "aniline",
+   "smiles": "Nc1ccccc1",
+   "solvent": "CDCl3",
+   "tier": 2,
+   "grade": "J",
+   "source": "journal value from the stop-13 list part F (aniline, CDCl3), tier-1 candidate",
+   "round": 2,
+   "candidate": true,
+   "signals": [
+    {
+     "label": "NH2",
+     "smarts": "[NH2]c",
+     "ppm": 3.55,
+     "nH": 2,
+     "exchangeable": true
+    },
+    {
+     "label": "meta H (2H)",
+     "smarts": "[cH]:[cH]:c-N",
+     "ppm": 7.135,
+     "nH": 2,
+     "range": [
+      7.02,
+      7.25
+     ],
+     "rangeOnly": true
+    },
+    {
+     "label": "ortho + para H (3H)",
+     "smarts": "[cH;$([cH]:c-N),$([cH]:[cH]:[cH]:c-N)]",
+     "ppm": 6.685,
+     "nH": 3,
+     "range": [
+      6.55,
+      6.82
+     ],
+     "rangeOnly": true
+    }
+   ]
+  },
+  {
+   "compound": "bromobenzene",
+   "smiles": "Brc1ccccc1",
+   "solvent": "CDCl3",
+   "tier": 2,
+   "grade": "J",
+   "source": "journal value from the stop-13 list part F (bromobenzene, CDCl3), tier-1 candidate",
+   "round": 2,
+   "candidate": true,
+   "note": "\"about 7.5\" and \"about 7.2\" in the list: the second as an interval of +-0.15, the first as a point (tier-2 tolerance)",
+   "signals": [
+    {
+     "label": "H2/H6",
+     "smarts": "[cH]:c-Br",
+     "ppm": 7.5,
+     "nH": 2
+    },
+    {
+     "label": "H3/H4/H5 (about 7.2)",
+     "smarts": "[cH;$([cH]:[cH]:c-Br),$([cH]:[cH]:[cH]:c-Br)]",
+     "ppm": 7.2,
+     "nH": 3,
+     "range": [
+      7.05,
+      7.35
+     ],
+     "rangeOnly": true
+    }
+   ]
+  },
+  {
+   "compound": "chlorobenzene",
+   "smiles": "Clc1ccccc1",
+   "solvent": "CDCl3",
+   "tier": 2,
+   "grade": "J",
+   "source": "journal value from the stop-13 list part F (chlorobenzene, CDCl3), tier-1 candidate",
+   "round": 2,
+   "candidate": true,
+   "signals": [
+    {
+     "label": "aromatic",
+     "smarts": "[cH]",
+     "ppm": 7.285,
+     "nH": 5,
+     "range": [
+      7.14,
+      7.43
+     ],
+     "rangeOnly": true
+    }
+   ]
+  },
+  {
+   "compound": "benzenethiol",
+   "smiles": "Sc1ccccc1",
+   "solvent": "CDCl3",
+   "tier": 2,
+   "grade": "J",
+   "source": "journal value from the stop-13 list part F (benzenethiol, CDCl3), tier-1 candidate",
+   "round": 2,
+   "candidate": true,
+   "signals": [
+    {
+     "label": "aromatic",
+     "smarts": "[cH]",
+     "ppm": 7.195,
+     "nH": 5,
+     "range": [
+      6.97,
+      7.42
+     ],
+     "rangeOnly": true
+    },
+    {
+     "label": "SH",
+     "smarts": "[SH]c",
+     "ppm": 3.4,
+     "nH": 1,
+     "exchangeable": true
+    }
+   ]
+  },
+  {
+   "compound": "3-methyl-2-butanol",
+   "smiles": "CC(C)C(C)O",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "source": "Hans Reich NMR collection (organicchemistrydata.org), hand-read, stop-13 list part G",
+   "round": 2,
+   "signals": [
+    {
+     "label": "CH-OH",
+     "smarts": "[CH](O)(C)C",
+     "ppm": 3.54,
+     "nH": 1
+    },
+    {
+     "label": "CH3 (on CHOH)",
+     "smarts": "[CH3][CH](O)C",
+     "ppm": 1.13,
+     "nH": 3
+    },
+    {
+     "label": "iPr CH",
+     "smarts": "[CH]([CH3])([CH3])C(O)C",
+     "ppm": 1.61,
+     "nH": 1
+    },
+    {
+     "label": "iPr CH3 (a)",
+     "smarts": "[CH3][CH]([CH3])C(O)C",
+     "ppm": 0.92,
+     "nH": 3
+    },
+    {
+     "label": "iPr CH3 (b)",
+     "smarts": "[CH3][CH]([CH3])C(O)C",
+     "ppm": 0.87,
+     "nH": 3
+    },
+    {
+     "label": "OH",
+     "smarts": "[OH]C",
+     "ppm": 2.83,
+     "nH": 1,
+     "exchangeable": true
+    }
+   ]
+  }
+ ],
+ "benzeneIncrements": {
+  "note": "Substituent increments for monosubstituted benzenes, delta = 7.36 + Zortho + Zmeta + Zpara (Reich, stop-13 list part H). Used ONLY to check the trend of the predicted aromatic region, not as per-peak truth.",
+  "base": 7.36,
+  "substituents": {
+   "CH3": {
+    "smiles": "Cc1ccccc1",
+    "ortho": -0.18,
+    "meta": -0.11,
+    "para": -0.21
+   },
+   "OH": {
+    "smiles": "Oc1ccccc1",
+    "ortho": -0.53,
+    "meta": -0.14,
+    "para": -0.43
+   },
+   "OCH3": {
+    "smiles": "COc1ccccc1",
+    "ortho": -0.45,
+    "meta": -0.07,
+    "para": -0.41
+   },
+   "NH2": {
+    "smiles": "Nc1ccccc1",
+    "ortho": -0.71,
+    "meta": -0.22,
+    "para": -0.62
+   },
+   "N(CH3)2": {
+    "smiles": "CN(C)c1ccccc1",
+    "ortho": -0.66,
+    "meta": -0.18,
+    "para": -0.67
+   },
+   "SH": {
+    "smiles": "Sc1ccccc1",
+    "ortho": -0.08,
+    "meta": -0.16,
+    "para": -0.22
+   },
+   "SCH3": {
+    "smiles": "CSc1ccccc1",
+    "ortho": -0.08,
+    "meta": -0.1,
+    "para": -0.24
+   }
+  }
+ }
+}

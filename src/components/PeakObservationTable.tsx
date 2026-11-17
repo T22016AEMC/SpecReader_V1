@@ -6,6 +6,14 @@ import {resolveIRScale,measureIRBandMorphology} from '../engines/scientificEngin
 const style='w-24 rounded border border-slate-700 bg-slate-950 px-1 py-1 text-xs';
 const numberOrUndefined=(s:string)=>s.trim()===''?undefined:Number.isFinite(Number(s))?Number(s):undefined;
 const shapes=[['sharp','窄峰（Narrow band）'],['broad','寬峰（Broad band）']];
+/**
+ * Display only (v1.4.2 stop 31). A unit that reads "Transmittance" (not "%") is taken as a 0–1 fraction, so the display baseline is 1. When the same data is actually on 0–100 (largest value above 1.5; a fraction
+ * that overshoots 1 a little, like 1.02, stays a fraction) the baseline is 100, otherwise 1 − 39.21 shows −38.21. The analysis (prepareIR, band processing) is not touched and does not use this.
+ */
+export function transmittanceFullScale(values:number[]):1|100 {
+ const finite=values.filter(Number.isFinite);
+ return finite.length&&Math.max(...finite)>1.5?100:1;
+}
 /** Local coordinate/intensity measurement only. No chemical inference on edit. */
 export function irObservedHeight(s:ExperimentalSpectrumData,p:SpectralPeak):number|null {
  const settings=s.irManualSettings,scale=resolveIRScale(s.yUnit,settings?.intensityScale??s.irIntensityScale);
@@ -23,7 +31,7 @@ export function irObservedHeight(s:ExperimentalSpectrumData,p:SpectralPeak):numb
  const sample=raw.length&&p.x>=Math.min(...raw.map(q=>q.x))&&p.x<=Math.max(...raw.map(q=>q.x))?raw.reduce((best,q)=>Math.abs(q.x-p.x)<Math.abs(best.x-p.x)?q:best,raw[0]):null;
  const y=sample?.y??(p.intensityKnown===false?null:p.y);if(y===null)return null;
  if(scale==='PERCENT_TRANSMITTANCE')return 100-y;
- if(scale==='TRANSMITTANCE')return 1-y;
+ if(scale==='TRANSMITTANCE')return transmittanceFullScale(raw.length?raw.map(q=>q.y):s.peaks.filter(q=>q.intensityKnown!==false).map(q=>q.y))-y;
  return scale==='ABSORBANCE'||scale==='NORMALIZED'?y:null;
 }
 function JInput({peak,label,onChange}:{peak:SpectralPeak;label:string;onChange:(values:number[])=>void}){

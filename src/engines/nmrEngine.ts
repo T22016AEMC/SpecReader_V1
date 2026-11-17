@@ -2060,6 +2060,7 @@ export class NMRAnalysisEngine {
 
     let peaks: SpectralPeak[] = [];
     let graphEnvironments: ProtonEnvironment[] = [];
+    let insufficientNotes: string[] = [];
 
     if (hasConnectivity) {
       const graphPred = NMRGraphPredictor.predict1HFromStructureGraph(structure, {
@@ -2071,6 +2072,9 @@ export class NMRAnalysisEngine {
         peaks = graphPred.peaks;
         graphEnvironments = graphPred.environments;
       }
+      // v1.4.0 stop 14 (v140.calibration2): carbons without a number (資料不足) are named in the notes; when they are all there is, the empirical fallback below is not used
+      const insufficient = (graphPred as {insufficientDataEnvironments?: {atomIndices: number[]; integration: number; labelZh: string; reasonZh: string}[]}).insufficientDataEnvironments ?? [];
+      insufficientNotes = insufficient.map(x => `${x.labelZh}：原子 ${x.atomIndices.join('/')}（${x.integration}H）${x.reasonZh}`);
     }
 
     const points = SpectrumParser.synthesizeCurveFromPeaks("1H_NMR", peaks);
@@ -2096,9 +2100,10 @@ export class NMRAnalysisEngine {
       points,
       peaks,
       validation,
+      ...(insufficientNotes.length ? { predictionNotes: insufficientNotes } : {}),
     };
 
-    if (graphEnvironments.length > 0) {
+    if (graphEnvironments.length > 0 || insufficientNotes.length > 0) {
       return { spectrum, environments: graphEnvironments };
     }
     const { environments } = this.analyzeExperimental1HNMR(spectrum, structure);

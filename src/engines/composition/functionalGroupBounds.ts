@@ -2,7 +2,8 @@ import type {IRFunctionalGroupFinding} from '../../types/spectrum';
 import type {ObservedEvidence} from '../reasoning/types';
 import {COMPOSITION_CONFIG as CFG} from './compositionConfig';
 import type {NmrEvidence} from './nmrComposition';
-import {strongIrBands} from '../constraints/requiredSubstructures';
+import {strongCarbonylBands,strongIrBands} from '../constraints/requiredSubstructures';
+import {v132BestFindingActive,v132WindowsActive} from './planningGate';
 import type {ElementCounts,OxygenEvidenceFloor} from './types';
 
 export type FeatureKey='CARBONYL'|'ESTER_ACID'|'ANHYDRIDE'|'AMIDE'|'NITRILE'|'ALKYNE'|'AROMATIC'|'NITRO'|'OXYGEN_SINGLE'|'AMINE';
@@ -43,7 +44,17 @@ export function functionalGroupFeatures(observations:ObservedEvidence[],irFindin
   const key=nitrogenAllowed||!(raw in NITROGEN_FREE)?raw:NITROGEN_FREE[raw];
   if(!key)return;const f=map.get(key)??{modalities:new Set(),ids:new Set()};f.modalities.add(modality);ids.forEach(i=>f.ids.add(i));map.set(key,f);};
  const ir=observations.filter(o=>o.modality==='IR');
+/**
+ * v1.3.2 (stop 4): ONE IR PEAK, ONE SET OF BOUNDS. inferIRBands gives a peak up to five findings (a 1740 band is an ester, a ketone, an acid and an aldehyde at once; a 2960 C–H band is a "carbonyl" and an
+ * "O–H"), and every finding used to add its own element / DBE lower bound, so a hydrocarbon was penalised three times for one C–H band. With the switch on, a peak contributes through its BEST finding only.
+ * "Best" = the highest `confidence` (85 × the band-match score of irBandMatch: distance of the peak from the band window in units of the band's uncertainty, peak shape and width, intensity, and the share of
+ * companion bands that are present). Findings with exactly the same confidence are equally good and all contribute (e.g. the ester and the ketone reading of the same strong C=O both say "carbonyl").
+ * The other findings stay in the functional-group list (irFindings is not touched); they just do not add bounds. 工程判斷，未查證: the choice of confidence as the ranking and of ties-keep-all.
+ */
+ const bestConfidence=new Map<number,number>();
+ if(v132BestFindingActive())for(const fd of irFindings)bestConfidence.set(fd.observedPeak,Math.max(bestConfidence.get(fd.observedPeak)??-1,fd.confidence??0));
  for(const finding of irFindings){
+  if(v132BestFindingActive()&&(finding.confidence??0)<(bestConfidence.get(finding.observedPeak)??0))continue;
   if(finding.matchLevel==='Absent / Excluded'||finding.status==='ABSENT'||finding.status==='INSUFFICIENT_DATA')continue;
   const text=[finding.family,finding.groupFamily,finding.functionalGroup,finding.groupName].filter(Boolean).join(' ');
   const ids=ir.filter(o=>Math.abs(o.value-finding.observedPeak)<2).map(o=>o.id);
@@ -88,8 +99,9 @@ export function oxygenEvidenceFloor(observations:ObservedEvidence[],nitrogenAllo
  const broadH1=!nitrogenAllowed?observations.filter(o=>o.modality==='1H_NMR'&&!o.optional&&(o.shape==='BROAD'||o.multiplicity==='br'||o.multiplicity==='br s')):[];
  if(broad.length)levels.push({level:1,text:`${broad.map(label).join('、')} 寬帶 → O–H`,observationIds:broad.map(o=>o.id)});
  else if(broadH1.length)levels.push({level:1,text:`寬的可交換 ¹H 訊號 → O–H（沒有 N 專屬證據，預設為 O）`,observationIds:broadH1.map(o=>o.id)});
- const co=strongIrBands(observations,F.carbonylRange,strong),c_o=strongIrBands(observations,F.coRange,strong);
- const high=strongIrBands(observations,F.anhydrideHighRange,strong),low=strongIrBands(observations,F.anhydrideLowRange,strong);
+ const W=CFG.windowsV132,carbonylRange=v132WindowsActive()?W.carbonylRange:F.carbonylRange,coRange=v132WindowsActive()?W.coRange:F.coRange;
+ const co=strongCarbonylBands(observations,carbonylRange,strong),c_o=strongIrBands(observations,coRange,strong);
+ const high=strongCarbonylBands(observations,F.anhydrideHighRange,strong),low=strongCarbonylBands(observations,F.anhydrideLowRange,strong);
  if(co.length)levels.push({level:1,text:`${co.map(label).join('、')} 強 C=O 帶`,observationIds:co.map(o=>o.id)});
  if(c_o.length)levels.push({level:1,text:`${c_o.map(label).join('、')} 強 C–O 帶`,observationIds:c_o.map(o=>o.id)});
  if(co.length&&c_o.length)levels.push({level:2,text:`${[...co,...c_o].map(label).join('、')}：強 C=O 與強 C–O 並有（酯／羧酸型）`,observationIds:[...co,...c_o].map(o=>o.id)});

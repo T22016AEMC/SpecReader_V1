@@ -7,6 +7,7 @@ import {V12_CONFIG} from '../../src/engines/constraints/v12Config';
 import {buildAtomInventory} from '../../src/engines/constraints/atomInventory';
 import {allowedHPerAtom, classifySignal, type H1Signal, type IrAldehydeContext} from '../../src/engines/constraints/shiftClasses';
 import {irAldehydeContext} from '../../src/engines/constraints/v12Evidence';
+import {openV132Gates} from '../helpers/v132Gates';
 
 // v1.2.1 B3: the =CH2 / =CH shift windows of VINYL_CH (no-formula path only) and the "conjugated C=O" IR context that relaxes them.
 // All inputs are synthetic and generic; the tests check program behaviour, not chemistry.
@@ -94,9 +95,23 @@ describe('B3 conjugated C=O context (irAldehydeContext)', () => {
     expect(irAldehydeContext(strong, false, {isImage: true, calibrationTrusted: true}).conjugatedCarbonyl).toBe(true);
     expect(irAldehydeContext([irObs(1632, 100)], false, {isImage: true, calibrationTrusted: true}).conjugatedCarbonyl).toBe(true);
   });
-  it('image IR, trusted, intensities known, no band ≥ 50 % of the strongest in the window → false', () => {
-    expect(irAldehydeContext(weak, false, {isImage: true, calibrationTrusted: true}).conjugatedCarbonyl).toBe(false);
-    expect(irAldehydeContext([irObs(1750, 100), irObs(1270, 90)], false, {isImage: true, calibrationTrusted: true}).conjugatedCarbonyl).toBe(false);   // 1750 is outside 1630–1735
+  // v1.3.2: the 30 % band at 1717 is below the old 50 % (useV132 = false, v1.3.1) but strong with the flag on (1700–1800 is judged at 0.30); a 25 % band is not strong under either.
+  it('image IR, trusted, intensities known, no band ≥ 50 % of the strongest in the window → false (useV132 = false, v1.3.1)', () => {
+    const was = V12_CONFIG.useV132; V12_CONFIG.useV132 = false;
+    try {
+      expect(irAldehydeContext(weak, false, {isImage: true, calibrationTrusted: true}).conjugatedCarbonyl).toBe(false);
+      expect(irAldehydeContext([irObs(1750, 100), irObs(1270, 90)], false, {isImage: true, calibrationTrusted: true}).conjugatedCarbonyl).toBe(false);   // 1750 is outside 1630–1735
+    } finally { V12_CONFIG.useV132 = was; }
+  });
+  it('v1.3.2 (useV132 = true): no band ≥ 30 % of the strongest in 1700–1735 (or ≥ 50 % in 1630–1700) → false; a 30 % band at 1717 → true', () => {
+    const restore = openV132Gates();   // the whole gate chain useV123..useV132, not only useV132 (vitest.flagoff.config.ts has useV123 = false)
+    try {
+      const weaker = [irObs(1717, 25), irObs(1270, 100), irObs(2980, 40)];
+      expect(irAldehydeContext(weaker, false, {isImage: true, calibrationTrusted: true}).conjugatedCarbonyl).toBe(false);
+      expect(irAldehydeContext([irObs(1650, 40), irObs(1270, 100)], false, {isImage: true, calibrationTrusted: true}).conjugatedCarbonyl).toBe(false);
+      expect(irAldehydeContext(weak, false, {isImage: true, calibrationTrusted: true}).conjugatedCarbonyl).toBe(true);
+      expect(irAldehydeContext([irObs(1750, 100), irObs(1270, 90)], false, {isImage: true, calibrationTrusted: true}).conjugatedCarbonyl).toBe(false);   // 1750 is outside 1630–1735
+    } finally { restore(); }
   });
   it('image IR whose calibration is not trusted → null', () => {
     expect(irAldehydeContext(strong, false, {isImage: true, calibrationTrusted: false}).conjugatedCarbonyl).toBeNull();

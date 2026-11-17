@@ -3,16 +3,19 @@ import {globalPeakAssignment} from './globalPeakAssignment';
 import {IREngine} from '../irEngine';
 import type {IntegratedAnalysisBundle} from '../chemicalFeatureEngine';
 import type {ExtendedSpectrumModality,ExperimentalSpectrumData,SpectralPeak,NMRSolvent} from '../../types/spectrum';
-import {ChemistryEngine} from '../chemistryEngine';
+import {ChemistryEngine,StructureParserAdapter} from '../chemistryEngine';
 import {NMRGraphPredictor} from './nmrAtomicEnvironmentModel';
 import {graphChemicalFeatures} from './graphChemicalFeatures';
 import {graphFragments} from './graphFragmentation';
 import {prepareIR,irRangeCovered} from './irSignalProcessing';
 import {ionMz,type IonAdduct} from './ionMass';
 import {V12_CONFIG} from '../constraints/v12Config';
-import {carbonylBandActive,v130CarbonylMissingActive,v130OvertoneActive,v131ParsimonyActive} from '../composition/planningGate';
+import {carbonylBandActive,v130CarbonylMissingActive,v130OvertoneActive,v131ParsimonyActive,v140H1Active,v140ParseFixActive,v140AlkeneActive,v140MatchingActive,v142NegativeEvidenceActive,v142NegRuleActive} from '../composition/planningGate';
+import {multiplicityCompatible,matchWithIntegrals} from './h1Matching';
+import {gemDimethylObservedPair,hasGemDimethylOnAlkene,splitGemDimethylEnvs} from './h1AdditiveRules';
 import {carbonylBandEntries,carbonylMissingEntries} from './carbonylClasses';
 import {isIrOvertone} from './irOvertone';
+import {negativeEvidenceEntries} from './negativeEvidence';
 
 export interface ScientificEvidence {
   id:string;sourceModality:ExtendedSpectrumModality|'FORMULA';observationIds:string[];
@@ -61,12 +64,12 @@ const gaussian=(delta:number,sigma:number)=>Math.exp(-.5*(delta/Math.max(sigma,1
  * candidate (exchangeable ones, signal overlaps and an unconfirmed 1H coverage are discounted), and the number of environments and the
  * non-exchangeable H total are compared. Engineering defaults in V12_CONFIG.scoring; the score remains an uncalibrated compatibility.
  */
-export function bidirectional1H(hObs:ScientificEvidence[],hPred:{shiftPpm:number;integration?:number|null;isExchangeable?:boolean}[],assignment:Map<number,number>,integralScale:number|null,coverageComplete:boolean):ScoreLedgerEntry[]{
+export function bidirectional1H(hObs:ScientificEvidence[],hPred:{shiftPpm:number;integration?:number|null;isExchangeable?:boolean}[],assignment:Map<number,number>,integralScale:number|null,coverageComplete:boolean,unknown?:{count:number;h:number}):ScoreLedgerEntry[]{
   const SC=V12_CONFIG.scoring,out:ScoreLedgerEntry[]=[];
   const assigned=new Set(assignment.values());
   const hOf=(p:{integration?:number|null})=>p.integration??0;
   const integralOf=(i:number)=>hObs[i].originalObservedData.relativeIntegral;
-  const total=hPred.filter(p=>!p.isExchangeable).reduce((s,p)=>s+hOf(p),0);
+  const total=hPred.filter(p=>!p.isExchangeable).reduce((s,p)=>s+hOf(p),0)+(unknown?.h??0);   // v1.4.0 stop 14: environments listed as 資料不足 have no shift but their hydrogens and count are known
   let merged=0;
   hPred.forEach((p,j)=>{
     if(assigned.has(j))return;
@@ -83,7 +86,7 @@ export function bidirectional1H(hObs:ScientificEvidence[],hPred:{shiftPpm:number
     const display=`預測有 ${Number(p.shiftPpm.toFixed(2))} ppm 的 1H 環境（${Number(hOf(p).toFixed(1))}H），實測沒有對應訊號${p.isExchangeable?'（可交換 H，扣分已減輕）':''}${coverageComplete?'':'（1H 涵蓋未確認完整，扣分減半）'}`;
     out.push({evidenceId:id,observationIds:[id],sourceModality:'1H_NMR',compatibility:0,weight:SC.unmatchedPredictedWeight*factor,contribution:0,method:display,display,limitations:['雙向評分：預測多出的環境不一定是錯，可能未標記或重疊；未校準權重']});
   });
-  const nPred=hPred.filter(p=>!p.isExchangeable).length;
+  const nPred=hPred.filter(p=>!p.isExchangeable).length+(unknown?.count??0);
   const nObs=hObs.filter((_,i)=>{const j=assignment.get(i);return j===undefined||!hPred[j].isExchangeable;}).length;
   const delta=Math.max(0,nPred-nObs-merged);
   const countId='1H:environment-count';
@@ -99,32 +102,57 @@ export function bidirectional1H(hObs:ScientificEvidence[],hPred:{shiftPpm:number
   for(const e of out)e.contribution=e.weight*(e.compatibility??0);
   return out;
 }
+/**
+ * v1.4.0 stop 6 (useV140H1 and v140.alkene): a candidate with a =C(CH3)2 group is scored under two readings of its 1H prediction - the two methyls as one 6H environment (the graph's topological equivalence, always scored) and as
+ * two 3H environments (E / Z methyls, V12_CONFIG.gemDimethylReading) - and the reading with the higher 1H score is kept. The second reading is only computed when the observed table has two equal-integral singlet-type signals
+ * in the allylic-methyl window. No score term is added: both readings go through the same scoring below. Flag off: exactly the original single reading.
+ */
 export function scoreScientificEvidence(smiles:string,bundle:IntegratedAnalysisBundle):CandidateScoreLedger {
-  const structure=ChemistryEngine.parseStructureInput(smiles),features=graphChemicalFeatures(smiles),sources=sourceSpectra(bundle);
+  const base=scoreCore(smiles,bundle,false)!;
+  if(!v140AlkeneActive()||!V12_CONFIG.gemDimethylReading.enabled)return base;
+  const graph=StructureParserAdapter.parseSmilesGraph(smiles.trim()).graph;
+  if(!graph||!hasGemDimethylOnAlkene(graph))return base;
+  const evidence=bundle.scientificEvidence??buildScientificEvidence(bundle);
+  if(!gemDimethylObservedPair(evidence.filter(e=>e.sourceModality==='1H_NMR').map(e=>e.originalObservedData)))return base;
+  const alt=scoreCore(smiles,bundle,true);
+  return alt&&(alt.modalityScores['1H_NMR']??-Infinity)>(base.modalityScores['1H_NMR']??-Infinity)?alt:base;
+}
+function scoreCore(smiles:string,bundle:IntegratedAnalysisBundle,gemSplit:boolean):CandidateScoreLedger|null {
+  // v1.4.0: the candidate IS a SMILES. As a bare string, parseStructureInput takes methanol 'CO', THF 'C1CCOC1', cyclopentane, cyclohexanol … (no branch, no '=', only letters and ring digits) for a MOLECULAR FORMULA, drops the SMILES
+  // and the 1H / 13C predictors then return no environment at all. The {smiles} form is never read as a formula.
+  const structure=ChemistryEngine.parseStructureInput(v140ParseFixActive()?{smiles}:smiles),features=graphChemicalFeatures(smiles),sources=sourceSpectra(bundle);
   const evidence=bundle.scientificEvidence??buildScientificEvidence(bundle),entries:ScoreLedgerEntry[]=[];
-  const hPred=NMRGraphPredictor.predict1HFromStructureGraph(structure,{solvent:sources['1H_NMR']?.nmrSolvent??'Unknown'}).environments;
+  const hPredResult=NMRGraphPredictor.predict1HFromStructureGraph(structure,{solvent:sources['1H_NMR']?.nmrSolvent??'Unknown'});
+  let hPred=hPredResult.environments;
+  // v1.4.0 stop 14 (v140.calibration2): carbons listed as 資料不足 (F / I polyhalomethane C-H) have no predicted number; they are never a ranking basis (see the 1H entry below)
+  const hInsufficient=(hPredResult as {insufficientDataEnvironments?:{integration:number}[]}).insufficientDataEnvironments??[];
+  if(gemSplit){const g=StructureParserAdapter.parseSmilesGraph(smiles.trim()).graph,sp=g?splitGemDimethylEnvs(hPred,g):null;if(!sp||!sp.split)return null;hPred=sp.envs;}
   const cPred=NMRGraphPredictor.predict13CFromStructureGraph(structure,{solvent:sources['13C_NMR']?.nmrSolvent??'Unknown'}).environments;
 
-  const hObs=evidence.filter(e=>e.sourceModality==='1H_NMR'),cObs=evidence.filter(e=>e.sourceModality==='13C_NMR');
+  const hObs=evidence.filter(e=>e.sourceModality==='1H_NMR'),cObs=evidence.filter(e=>e.sourceModality==='13C_NMR'),matchOn=v140MatchingActive();
   const hMatrix=hObs.map(ev=>hPred.map(p=>{
     let v=gaussian((ev.originalObservedData.position??0)-p.shiftPpm,(p.uncertaintyPpm??.3)+.2);
     const mult=ev.originalObservedData.multiplicity;
-    if(mult&&p.multiplicity&&mult!==p.multiplicity&&!['m','unresolved','br s'].includes(mult))v*=.5;
+    // v1.4.0 stop 8 (v140.matching): compare by multiplicity family (h1Matching.multiplicityCompatible); flag off: the exact-string rule below
+    if(mult&&p.multiplicity&&(matchOn?!multiplicityCompatible(mult,p.multiplicity):mult!==p.multiplicity&&!['m','unresolved','br s'].includes(mult)))v*=.5;
     const observedJ=ev.originalObservedData.jValues??[],predictedJ=p.couplings?.map(c=>c.J)??[];
     if(observedJ.length&&predictedJ.length)v*=.7+.3*observedJ.reduce((sum,j)=>sum+Math.max(...predictedJ.map(k=>gaussian(j-k,3))),0)/observedJ.length;
     return v;
   }));
   const cObsTotal=cObs.reduce((sum,e)=>sum+(e.originalObservedData.relativeIntegral??0),0),cPredTotal=cPred.reduce((sum,e)=>sum+(e.equivalentCarbonCount??1),0);
   const cMatrix=cObs.map(ev=>cPred.map(p=>{let v=gaussian((ev.originalObservedData.position??0)-p.shiftPpm,(p.uncertaintyPpm??8)+3);if(sources['13C_NMR']?.quantitativeCarbonExperiment&&cObsTotal>0&&ev.originalObservedData.relativeIntegral!=null)v*=gaussian(ev.originalObservedData.relativeIntegral/cObsTotal-(p.equivalentCarbonCount??1)/cPredTotal,.15);return v;}));
-  let hAssignment=globalPeakAssignment(hMatrix);
+  let hAssignment=matchOn?new Map<number,number>():globalPeakAssignment(hMatrix);
   // Relative integrals constrain ratios only among matched observations. Extra
   // predicted environments may simply be unmarked; they are never the denominator.
   const relativeScale=(assignment:Map<number,number>)=>{
     const ratios=[...assignment].flatMap(([i,j])=>{const value=hObs[i].originalObservedData.relativeIntegral,p=hPred[j];return value!=null&&value>0&&!p.isExchangeable&&(p.integration??0)>0?[value/p.integration!]:[];}).sort((a,b)=>a-b);
     return ratios.length>=2?ratios[Math.floor(ratios.length/2)]:null;
   };
-  const integralScale=relativeScale(hAssignment);
-  if(integralScale!==null){
+  // v1.4.0 stop 8: pairing and scale together (environments inside one observed signal counted together; a swapped pairing of near-identical predictions found by trying candidate scales)
+  let integralScale:number|null;
+  if(matchOn){const mi=matchWithIntegrals(hMatrix,hObs.map(e=>e.originalObservedData.relativeIntegral),hPred);integralScale=mi.scale;hAssignment=mi.assignment;mi.matrix.forEach((row,i)=>row.forEach((v,j)=>{hMatrix[i][j]=v;}));}
+  else integralScale=relativeScale(hAssignment);
+  if(!matchOn&&integralScale!==null){
     for(let i=0;i<hObs.length;i++)for(let j=0;j<hPred.length;j++){
       const value=hObs[i].originalObservedData.relativeIntegral,p=hPred[j];
       if(value!=null&&value>0&&!p.isExchangeable&&(p.integration??0)>0)hMatrix[i][j]*=gaussian(Math.log(value/(integralScale*p.integration!)),.4);
@@ -133,7 +161,7 @@ export function scoreScientificEvidence(smiles:string,bundle:IntegratedAnalysisB
   }
   const cAssignment=globalPeakAssignment(cMatrix);
   const irPred=IREngine.predictIRFromStructure(structure).spectrum.peaks;
-  const candidateIRBands=irCandidateBands(smiles);
+  const candidateIRBands=irCandidateBands(smiles,true);
   const irProcessed=sources.IR?prepareIR(sources.IR):null;
   const precursor=bundle.msmsAnalysis?.physicsModel.precursorIon;
   const msmsFragments=graphFragments(smiles,adduct(sources['MS/MS']),sources['MS/MS']?.msParams?.chargeState??1);
@@ -154,6 +182,8 @@ export function scoreScientificEvidence(smiles:string,bundle:IntegratedAnalysisB
       const row=hObs.indexOf(ev),best=hAssignment.get(row);
       compatibility=best===undefined?0:hMatrix[row][best];weight=best!==undefined&&hPred[best].isExchangeable?.3:.8;
       method='全域一對一位移／多重性／J／已配對局部積分比例（未標記預測訊號不扣分）';limitations.push('經驗一階模型；重疊及二階效應未完整求解');
+      // an unmatched observed signal inside the window of a carbon the candidate cannot give a number for: no evidence for or against (compatibility null, weight 0 = the ledger's 資料不足 entry)
+      if(best===undefined&&hInsufficient.length&&x>=V12_CONFIG.v140Calibration2.insufficientWindowPpm[0]&&x<=V12_CONFIG.v140Calibration2.insufficientWindowPpm[1]){compatibility=null;weight=0;method='資料不足；無獨立分數（候選有同碳多鹵 C-H，含 F 或 I，無預測位移）';limitations.push('F／I 多鹵甲烷只有各 2 個真值，不校準也不輸出預測值；不當排名依據');}
     } else if(x!==undefined && ev.sourceModality==='13C_NMR') {
       const row=cObs.indexOf(ev),best=cAssignment.get(row);
       compatibility=best===undefined?0:cMatrix[row][best];weight=.8;method='全域碳環境匹配（含未匹配訊號）';limitations.push('經驗位移與等價碳模型，非高精度量子或訓練模型');
@@ -183,12 +213,17 @@ export function scoreScientificEvidence(smiles:string,bundle:IntegratedAnalysisB
     }else if(ev.sourceModality!=='FORMULA'&&ev.sourceModality!=='IR'){const input=sources[ev.sourceModality];if(input?.digitizedFromImage)weight*=.5;if(input?.dataQuality==='LOW')weight*=.5;}
     entries.push({evidenceId:ev.id,observationIds:ev.observationIds,sourceModality:ev.sourceModality,compatibility,weight,contribution:weight*(compatibility??0),method,limitations});
   }
-  if(V12_CONFIG.useV12Constraints&&hObs.length&&hPred.length)entries.push(...bidirectional1H(hObs,hPred,hAssignment,integralScale,sources['1H_NMR']?.observationCoverage==='CONFIRMED_COMPLETE'));
+  if(V12_CONFIG.useV12Constraints&&hObs.length&&hPred.length)entries.push(...bidirectional1H(hObs,hPred,hAssignment,integralScale,sources['1H_NMR']?.observationCoverage==='CONFIRMED_COMPLETE',hInsufficient.length?{count:hInsufficient.length,h:hInsufficient.reduce((s,e)=>s+e.integration,0)}:undefined));
   if(sources.IR&&irProcessed){
     // v1.3.0 (G4): the missing-carbonyl item of every carbonyl class; its weight is a share of the sum of this candidate's other IR weights (taken before any deduction item is added).
     const missingCarbonyl=v130CarbonylMissingActive()?carbonylMissingEntries(smiles,sources.IR,irProcessed,entries.filter(e=>e.sourceModality==='IR').reduce((t,e)=>t+e.weight,0)):[];
+    // v1.4.2 (ir.negativeEvidence): the sum of this candidate's other IR weights, taken before any deduction item is added (the same moment as the missing-carbonyl item above)
+    const negIrWeight=v142NegativeEvidenceActive()?entries.filter(e=>e.sourceModality==='IR').reduce((t,e)=>t+e.weight,0):0;
     for(const [lo,hi] of [[1630,1850],[2100,2300]]){
       if(lo===1630&&missingCarbonyl.length)continue; // the same fact (no carbonyl band) is already one item
+      // v1.4.2: with ir.negativeEvidence on, the nitrile / alkyne window is covered by the new nitrile item (same fact, one item). NOTE: this window NEVER fires today (the predicted nitrile band is y = 55, the alkyne band 45, both below the y >= 70 condition), so this skip is a guard for the day someone makes the nitrile band strong.
+      // stop 30: tied to the nitrile rule itself (the item that states the same fact); with the total sub-flag this is the stop-25 condition
+      if(lo===2100&&v142NegRuleActive('nitrile'))continue;
       const expected=irPred.filter(p=>p.x>=lo&&p.x<=hi&&p.y>=70);
       if(!expected.length||!irRangeCovered(sources.IR,lo,hi)||irProcessed.peaks.some(p=>p.x>=lo&&p.x<=hi))continue;
       const id=`IR:coverage:${lo}-${hi}`;
@@ -198,10 +233,12 @@ export function scoreScientificEvidence(smiles:string,bundle:IntegratedAnalysisB
     // v1.2.1 (B4): image IR with a trusted calibration and a trace over the carbonyl windows; the candidate is scored down, never rejected
     if(v130CarbonylMissingActive())entries.push(...missingCarbonyl);
     else if(carbonylBandActive())entries.push(...carbonylBandEntries(smiles,sources.IR,irProcessed));
+    // v1.4.2 (ir.negativeEvidence, default off): missing nitrile / C-nitro / terminal alkyne C-H band, behind the data gate; scored down, never rejected
+    if(v142NegativeEvidenceActive())entries.push(...negativeEvidenceEntries(smiles,sources.IR,irProcessed,negIrWeight));
   }
   const modalityScores:CandidateScoreLedger['modalityScores']={},modalityWeights:CandidateScoreLedger['modalityWeights']={};
   let totalWeight=0,totalContribution=0;
   for(const mod of ['IR','1H_NMR','13C_NMR','MS','MS/MS','ToF-SIMS'] as const){const terms=entries.filter(e=>e.sourceModality===mod&&e.weight>0);const total=terms.reduce((s,e)=>s+e.weight,0);modalityScores[mod]=total?100*terms.reduce((s,e)=>s+e.contribution,0)/total:null;const reliability=terms.length?total/terms.length:0;modalityWeights[mod]=reliability;if(modalityScores[mod]!=null){totalWeight+=reliability;totalContribution+=modalityScores[mod]!*reliability;}}
-  return {...(v131ParsimonyActive()?{hydrogensPerUnit:integralScale?1/integralScale:null}:{}),entries,modalityScores,modalityWeights,totalScore:totalWeight?totalContribution/totalWeight:0,scoreMeaning:'UNCALIBRATED_COMPATIBILITY',formulaHardCompatible:!bundle.userSuppliedFormula||bundle.userSuppliedFormula===structure.molecularFormula,limitations:['候選集合非完整異構物搜尋；全域峰配對每側最多 128 個環境；排名不能證明唯一結構','評分是未校準的模型相容度，並非結構正確機率']};
+  return {...(v131ParsimonyActive()?{hydrogensPerUnit:integralScale?1/integralScale:null}:{}),entries,modalityScores,modalityWeights,totalScore:totalWeight?totalContribution/totalWeight:0,scoreMeaning:'UNCALIBRATED_COMPATIBILITY',formulaHardCompatible:!bundle.userSuppliedFormula||bundle.userSuppliedFormula===structure.molecularFormula,limitations:[...(gemSplit?['1H：=C(CH3)2 的兩個甲基讀成兩個 3H 環境（E／Z 甲基不等價；v1.4.0）']:[]),'候選集合非完整異構物搜尋；全域峰配對每側最多 128 個環境；排名不能證明唯一結構','評分是未校準的模型相容度，並非結構正確機率']};
 }
 

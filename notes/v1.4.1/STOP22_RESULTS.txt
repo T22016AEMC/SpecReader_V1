@@ -1,0 +1,120 @@
+=== 2.2 aromatic S-H
+benzenethiol S-H: truth | predicted before | after | error before | error after
+3.29 | 1.55 | 3.35 | -1.74 | +0.06
+3.40 | 1.55 | 3.35 | -1.85 | -0.05
+center 3.35 = middle of the textbook range 3.3-3.4 (planner); tolerance 0.5; NOT calibrated; a single compound, validation only
+
+=== 2.3 per class: before / after
+class | compounds | before | after (engine, in-sample) | leave-one-out | decision
+CYCLOBUTANE_CH | 1 | 0.56 | 0.56 | — | insufficient data (1 independent compound)
+CYCLOBUTANE_CH2 | 6 | 0.54 | 0.29 | 0.35 | pooled shift: leave-one-out 0.54 -> 0.35 (refinement not used: the pooled shift passed)
+CYCLOPROPANE_CH2 | 14 | 0.61 | 0.28 | 0.30 | pooled shift: leave-one-out 0.61 -> 0.30 (refinement not used: the pooled shift passed)
+CYCLOPROPANE_METHINE | 13 | 0.98 | 0.25 | 0.27 | pooled shift: leave-one-out 0.98 -> 0.27 (refinement not used: the pooled shift passed)
+
+=== 2.3 validation-only signals (assignment read from the figure)
+compound | signal | truth | before | after (error pred - truth)
+cyclopropylmethanol | ring CH | 1.08 | +0.79 | -0.19
+cyclopropylmethanol | CH2OH | 3.25 | +0.24 | +0.24
+cyclopropylmethanol | ring CH2 (mean of cis 0.05 / trans 0.21) | 0.13 | +1.12 | +0.53
+(chloromethyl)cyclopropane | ring CH | 1.23 | +0.32 | -0.66
+(chloromethyl)cyclopropane | CH2Cl | 3.44 | -0.04 | -0.04
+(chloromethyl)cyclopropane | ring CH2 (mean of cis 0.35 / trans 0.67) | 0.51 | +0.74 | +0.15
+(bromomethyl)cyclopropane | ring CH | 1.30 | +0.25 | -0.73
+(bromomethyl)cyclopropane | CH2Br | 3.33 | -0.13 | -0.13
+(bromomethyl)cyclopropane | ring CH2 (mean of cis 0.36 / trans 0.76) | 0.56 | +0.69 | +0.10
+
+=== 2.3 leave-one-out detail
+CYCLOBUTANE_CH: n=1 before 0.56; pooled delta +0.56 leave-one-out — (insufficient data); none
+  per compound before/left-out: 3-bromocyclobutanone 0.56/—
+CYCLOBUTANE_CH2: n=6 before 0.54; pooled delta +0.54 leave-one-out 0.35 (calibrate); pooled
+  per compound before/left-out: cyclobutane 0.71/0.20; cyclobutanone 0.34/0.25; cyclobutane-1,2-dione 0.19/0.42; 3,3-diphenylcyclobutanone 0.75/0.25; benzocyclobutene 0.22/0.39; 3-bromocyclobutanone 1.06/0.61
+  refinement (not used) CYCLOBUTANE_CH2_NO_RING_CARBONYL: n=2 delta +0.47 before 0.47 leave-one-out 0.49 (insufficient data)
+  refinement (not used) CYCLOBUTANE_CH2_RING_CARBONYL: n=4 delta +0.58 before 0.58 leave-one-out 0.43 (calibrate)
+  refinement class-level leave-one-out 0.44 (pooled 0.35)
+CYCLOPROPANE_CH2: n=14 before 0.61; pooled delta -0.59 leave-one-out 0.30 (calibrate); pooled
+  per compound before/left-out: cyclopropane 1.04/0.48; cyclopropanecarboxylic acid 0.51/0.09; cyclopropanecarboxaldehyde 0.46/0.14; cyclopropyl methyl ketone 0.62/0.03; cyclopropanecarbonitrile 0.25/0.37; vinylcyclopropane 0.77/0.19; cyclopropylbenzene 0.73/0.15; chlorocyclopropane 0.43/0.18; bromocyclopropane 0.34/0.27; iodocyclopropane 0.34/0.27; cyclopropanol 1.13/0.58; cyclopropylamine 0.97/0.41; nitrocyclopropane 0.11/0.76; cyclopropyltrimethylsilane 0.82/0.25
+  refinement (not used) CYCLOPROPANE_CH2_HETERO: n=6 delta -0.52 before 0.56 leave-one-out 0.43 (calibrate)
+  refinement (not used) CYCLOPROPANE_CH2_OTHER: n=8 delta -0.65 before 0.65 leave-one-out 0.22 (calibrate)
+  refinement class-level leave-one-out 0.31 (pooled 0.30)
+CYCLOPROPANE_METHINE: n=13 before 0.98; pooled delta -0.98 leave-one-out 0.27 (calibrate); pooled
+  per compound before/left-out: cyclopropanecarboxylic acid 1.20/0.24; cyclopropanecarboxaldehyde 1.08/0.11; cyclopropyl methyl ketone 1.04/0.06; cyclopropanecarbonitrile 1.41/0.46; vinylcyclopropane 1.15/0.18; cyclopropylbenzene 1.14/0.17; chlorocyclopropane 0.77/0.23; bromocyclopropane 0.71/0.29; iodocyclopropane 1.03/0.05; cyclopropanol 0.19/0.86; cyclopropylamine 0.86/0.13; nitrocyclopropane 0.74/0.26; cyclopropyltrimethylsilane 1.44/0.50
+  refinement (not used) CYCLOPROPANE_METHINE_HETERO: n=6 delta -0.72 before 0.72 leave-one-out 0.21 (calibrate)
+  refinement (not used) CYCLOPROPANE_METHINE_OTHER: n=7 delta -1.21 before 1.21 leave-one-out 0.14 (calibrate)
+  refinement class-level leave-one-out 0.18 (pooled 0.27)
+
+=== items worse by > 0.15 ppm (calibration data)
+cyclopropanol | Hg (ring CH bearing R) | truth 3.36 | before +0.19 | after -0.79
+nitrocyclopropane | ring CH2 (mean of Hc 1.6 / Ht 1.13) | truth 1.36 | before -0.11 | after -0.70
+cyclobutane-1,2-dione | CH2 | truth 2.98 | before -0.19 | after +0.35
+
+=== old categories (417-signal truth set of stops 10-13)
+category | n signals | before | after | change
+CHO_aldehyde | 7 | 0.08 | 0.08 | +0.00
+CHO_formamide | 1 | 0.00 | 0.00 | +0.00
+CHO_formate | 3 | 0.03 | 0.03 | +0.00
+N_CH2_amide | 3 | 0.13 | 0.13 | +0.00
+N_CH2_amine | 5 | 0.15 | 0.15 | +0.00
+N_CH3_amide | 6 | 0.10 | 0.10 | +0.00
+N_CH3_amine | 4 | 0.16 | 0.16 | +0.00
+N_CH3_nitro | 1 | 0.05 | 0.05 | +0.00
+N_CH3_other | 2 | 0.77 | 0.77 | +0.00
+N_CH_amine | 2 | 0.03 | 0.03 | +0.00
+O_CH2_alcohol | 7 | 0.08 | 0.08 | +0.00
+O_CH2_ester | 7 | 0.18 | 0.18 | +0.00
+O_CH2_ether | 12 | 0.25 | 0.25 | +0.00
+O_CH3_alcohol | 2 | 0.06 | 0.06 | +0.00
+O_CH3_arylether | 2 | 0.02 | 0.02 | +0.00
+O_CH3_ester | 6 | 0.05 | 0.05 | +0.00
+O_CH3_ether | 7 | 0.05 | 0.05 | +0.00
+O_CH_alcohol | 3 | 0.17 | 0.17 | +0.00
+O_CH_ester | 3 | 0.12 | 0.12 | +0.00
+O_CH_ether | 3 | 0.33 | 0.33 | +0.00
+S_CH2_arylthioether | 2 | 0.02 | 0.02 | +0.00
+S_CH2_thioether | 2 | 0.50 | 0.50 | +0.00
+S_CH2_thiol | 2 | 0.17 | 0.17 | +0.00
+S_CH3_arylthioether | 2 | 0.01 | 0.01 | +0.00
+S_CH3_sulfoxide | 2 | 0.41 | 0.41 | +0.00
+S_CH3_thioether | 3 | 0.23 | 0.23 | +0.00
+S_CH3_thiol | 1 | 0.32 | 0.32 | +0.00
+S_CH_arylthioether | 1 | 1.35 | 1.35 | +0.00
+S_CH_thiol | 1 | 0.17 | 0.17 | +0.00
+Si_CH3 | 1 | 0.03 | 0.03 | +0.00
+acetal_CH | 3 | 0.35 | 0.35 | +0.00
+acetal_CH2 | 2 | 0.17 | 0.17 | +0.00
+alkyl_CH | 2 | 0.80 | 0.80 | +0.00
+alkyl_CH2 | 28 | 0.20 | 0.20 | +0.00
+alkyl_CH3 | 70 | 0.12 | 0.12 | +0.00
+alkyne_CH | 9 | 0.11 | 0.11 | +0.00
+allylic_CH2 | 1 | 0.31 | 0.31 | +0.00
+allylic_CH3 | 3 | 0.16 | 0.16 | +0.00
+alphaCO_CH | 4 | 0.34 | 0.34 | +0.00
+alphaCO_CH2 | 15 | 0.23 | 0.23 | +0.00
+alphaCO_CH3 | 15 | 0.04 | 0.04 | +0.00
+aromatic_benzene_CH | 18 | 0.11 | 0.11 | +0.00
+aromatic_hetero_CH | 16 | 0.36 | 0.36 | +0.00
+benzylic_CH2 | 1 | 0.26 | 0.26 | +0.00
+benzylic_CH3 | 4 | 0.07 | 0.07 | +0.00
+cyclobutane_CH | 2 | 0.78 | 0.51 | -0.27
+cyclopropane_CH | 1 | 1.03 | 0.44 | -0.59
+halo_CH | 4 | 0.24 | 0.24 | +0.00
+halo_CH2 | 18 | 0.24 | 0.24 | +0.00
+halo_CH3 | 8 | 0.17 | 0.17 | +0.00
+polyhalo_CH | 4 | 0.30 | 0.30 | +0.00
+polyhalo_CH2 | 3 | 0.08 | 0.08 | +0.00
+propargylic_CH | 1 | 0.07 | 0.07 | +0.00
+propargylic_CH2 | 1 | 0.07 | 0.07 | +0.00
+propargylic_CH3 | 3 | 0.04 | 0.04 | +0.00
+vinyl_CH | 18 | 0.12 | 0.12 | +0.00
+vinyl_CH2 | 38 | 0.12 | 0.12 | +0.00
+ALL old signals | 395 | 0.17 | 0.17 | -0.00
+categories worse by > 0.02: none
+
+=== 31 single-compound 1H scores (changed ones only)
+compound | 1H score round3 off | on | change
+unchanged: 31 of 31; worse by > 2 points: none
+
+=== 55-structure panel (1H score against the structure own round3-off prediction)
+structure | SMILES | 1H score round3 off | on | change
+benzocyclobutene | C1Cc2ccccc12 | 77.8 | 62.3 | -15.46
+structures changed: 1; score lower: benzocyclobutene
+

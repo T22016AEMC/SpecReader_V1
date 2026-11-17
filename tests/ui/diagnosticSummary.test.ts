@@ -10,6 +10,9 @@ import {s1Analysis} from './s1Analysis';
 import {fixtureSpectra, loadFixture} from '../helpers/v121Golden';
 import {filterIrEvidence} from '../../src/ui/irEvidenceFilter';
 import type {FunctionalGroupRow, IrFindingRow} from '../../src/ui/irEvidenceFilter';
+import {usePreV142Defaults} from '../helpers/v142PreDefaults';
+// v1.4.2 stop 36 (E): this file pins results recorded under the defaults before 1.4.2; the new rule sets (on by default since 1.4.2) are switched to their old values here. No expected value changed.
+usePreV142Defaults();
 
 // Diagnostic summary and full formula table (v1.2.2 DESIGN_REPORT B1.7) from the real analysis of the SYNTHETIC fixture S1.
 const GENERATED_AT = '2026-11-01 12:00';

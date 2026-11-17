@@ -17,3 +17,6 @@ bun.lock
 
 data-cache/
 public/THIRD_PARTY_NOTICES.txt
+
+# v1.4.2 stop 35: files that must not be in the public repository (source terms); tests that need them skip when absent
+tests/fixtures/local-only/

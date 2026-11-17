@@ -4,6 +4,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  median-quickselect: link:./vendor/median-select
+
 importers:
 
   .:
@@ -1536,9 +1539,6 @@ packages:
   media-typer@0.3.0:
     resolution: {integrity: sha512-dq+qelQ9akHpcOl/gUVRTxVIOkAJ1wR3QAvb4RsVjS8oVoFjDGTc679wJYmUmknUF5HwMLOgb5O+a3KxfWapPQ==}
     engines: {node: '>= 0.6'}
-
-  median-quickselect@1.0.1:
-    resolution: {integrity: sha512-/QL9ptNuLsdA68qO+2o10TKCyu621zwwTFdLvtu8rzRNKsn8zvuGoq/vDxECPyELFG8wu+BpyoMR9BnsJqfVZQ==}
 
   merge-descriptors@1.0.3:
     resolution: {integrity: sha512-gaNvAS7TZ897/rVaZ0nMtAyxNyi/pdbjbAwUpFQpN70GqnVfOiXpeUUMKRBmzXaSQ8DdTX4/0ms62r2K+hE6mQ==}
@@ -3183,8 +3183,6 @@ snapshots:
 
   media-typer@0.3.0: {}
 
-  median-quickselect@1.0.1: {}
-
   merge-descriptors@1.0.3: {}
 
   methods@1.1.2: {}
@@ -3231,7 +3229,7 @@ snapshots:
   ml-array-median@1.1.6:
     dependencies:
       is-any-array: 2.0.1
-      median-quickselect: 1.0.1
+      median-quickselect: link:vendor/median-select
 
   ml-array-min@2.0.0:
     dependencies:

@@ -1,7 +1,7 @@
 import {COMPOSITION_CONFIG} from '../composition/compositionConfig';
 import {simplestIntegerRatio} from '../composition/nmrComposition';
 import {classifySignal, NO_IR, type H1Signal, type IrAldehydeContext} from './shiftClasses';
-import {v131ReadingLineActive} from '../composition/planningGate';
+import {v131ReadingLineActive, v140AlkeneActive, v140CoverageActive} from '../composition/planningGate';
 import {V12_CONFIG, type Hybrid, type RingTemplateDef, type ShiftClassId} from './v12Config';
 
 export type {H1Signal, IrAldehydeContext} from './shiftClasses';
@@ -18,7 +18,7 @@ export interface InventoryGroup {
   /** Atoms of the group; for ARO_CH the aromatic CH atoms, which live in the ring templates. */
   atomCount: number;
   hPerAtom: number;
-  element: 'C' | 'O' | 'N';
+  element: 'C' | 'O' | 'N' | 'S';
   hybrid: Hybrid;
   exchangeable: boolean;
   aromatic: boolean;
@@ -50,7 +50,7 @@ export interface InventoryAlternative {
   id: string;
   k: number;
   extraExchangeable: number;
-  extraElement: 'O' | 'N' | null;
+  extraElement: 'O' | 'N' | 'S' | null;
   groups: InventoryGroup[];
   rings: AromaticRingPlan;
   /** Heavy atoms of the formula that are in no group and no ring: H = 0. */
@@ -197,7 +197,7 @@ export function admissibleRatios(values: number[]): number[][] {
 // ------------------------------------------------------------------------------------------------ the inventory
 interface Option {
   classIds: ShiftClassId[];
-  element: 'C' | 'O' | 'N';
+  element: 'C' | 'O' | 'N' | 'S';
   hPerAtom: number;
   atomCount: number;
   aromatic: boolean;
@@ -215,7 +215,36 @@ const isRelaxed = (s: H1Signal): boolean =>
   (V12_CONFIG.equivalenceRelaxedWhenBroad && s.broad) ||
   (s.multiplicity === null ? V12_CONFIG.equivalenceRelaxedWhenMultiplicityUnknown : V12_CONFIG.equivalenceRelaxedMultiplicities.includes(s.multiplicity));
 
+/**
+ * v1.4.0 (useV140H1 and v140.alkene): besides the reading of every signal on its own, two signals that can be the two hydrogens of one terminal =CH2 (see V12_CONFIG.geminalVinylPair) are read as ONE =CH2 carbon:
+ * the inventory is built once more with the pair merged into a single signal (integral sum, mean shift) and its alternatives are appended (ids prefixed "gp:", note GEMINAL_VINYL_PAIR). Flag off = the function below.
+ */
 export function buildAtomInventory(input: AtomInventoryInput): AtomInventoryResult {
+  const base = buildAtomInventoryCore(input);
+  if (!v140AlkeneActive()) return base;
+  const G = V12_CONFIG.geminalVinylPair, sig = input.signals.filter(s => !s.optional);
+  const eligible = (s: H1Signal) => !s.broad && !s.exchangeable && s.relativeIntegral !== null && s.relativeIntegral > 0 && s.shiftPpm >= G.windowPpm[0] && s.shiftPpm <= G.windowPpm[1] && s.multiplicity !== null && G.multiplicities.includes(s.multiplicity);
+  const pairs: [H1Signal, H1Signal][] = [], used = new Set<string>();
+  const cand: [number, H1Signal, H1Signal][] = [];
+  for (let i = 0; i < sig.length; i++) for (let j = i + 1; j < sig.length; j++) {
+    const a = sig[i], b = sig[j];
+    if (eligible(a) && eligible(b) && Math.abs(a.shiftPpm - b.shiftPpm) <= G.maxDeltaPpm && Math.abs(a.relativeIntegral! - b.relativeIntegral!) <= 0.15 * Math.max(a.relativeIntegral!, b.relativeIntegral!)) cand.push([Math.abs(a.shiftPpm - b.shiftPpm), a, b]);
+  }
+  for (const [, a, b] of cand.sort((x, y) => x[0] - y[0])) if (!used.has(a.observationId) && !used.has(b.observationId)) { pairs.push([a, b]); used.add(a.observationId); used.add(b.observationId); }
+  if (!pairs.length) return base;
+  const drop = new Set(pairs.map(([, b]) => b.observationId));
+  const merged: H1Signal[] = input.signals.filter(s => !drop.has(s.observationId)).map(s => {
+    const p = pairs.find(([a]) => a.observationId === s.observationId);
+    return p ? {...s, shiftPpm: Number(((p[0].shiftPpm + p[1].shiftPpm) / 2).toFixed(3)), relativeIntegral: p[0].relativeIntegral! + p[1].relativeIntegral!, multiplicity: 'm'} : s;
+  });
+  const alt = buildAtomInventoryCore({...input, signals: merged});
+  if (alt.status !== 'BUILT' || !alt.alternatives.length) return base;
+  const note = `GEMINAL_VINYL_PAIR：${pairs.map(([a, b]) => `${a.observationId}＋${b.observationId}`).join('、')} 讀成同一個 =CH2 碳（兩個 1H）`;
+  const extra = alt.alternatives.map(x => ({...x, id: `gp:${x.id}`, notes: [...x.notes, note]}));
+  return {...base, status: 'BUILT', reason: null, alternatives: [...base.alternatives, ...extra], kCombinations: base.kCombinations.length ? base.kCombinations : alt.kCombinations, ratioSum: base.ratioSum ?? alt.ratioSum, signals: base.signals.length ? base.signals : alt.signals, truncated: base.truncated || alt.truncated, incompleteReasons: [...new Set([...base.incompleteReasons, ...alt.incompleteReasons])], voided: base.voided};
+}
+
+function buildAtomInventoryCore(input: AtomInventoryInput): AtomInventoryResult {
   const cfg = V12_CONFIG;
   const base: AtomInventoryResult = {status: 'NOT_AVAILABLE', reason: null, alternatives: [], truncated: false, incompleteReasons: [], kCombinations: [], signals: [], ratioSum: null, voided: [], aromaticLimited: [], coverageComplete: input.coverageComplete};
   const signals = input.signals.filter(s => !s.optional);
@@ -269,10 +298,11 @@ export function buildAtomInventory(input: AtomInventoryInput): AtomInventoryResu
   const classOrder = (id: ShiftClassId) => { const i = cfg.shiftClasses.findIndex(c => c.id === id); return i < 0 ? cfg.shiftClasses.length + cfg.esterMethine.classes.findIndex(c => c.id === id) : i; };
   const hPref = (m: number) => { const i = cfg.hPerAtomPreference.indexOf(m); return i < 0 ? cfg.hPerAtomPreference.length : i; };
 
-  const exchangeElements = (): ('O' | 'N')[] => {
-    const out: ('O' | 'N')[] = [];
+  const exchangeElements = (): ('O' | 'N' | 'S')[] => {
+    const out: ('O' | 'N' | 'S')[] = [];
     if ((input.formula.O ?? 0) > 0) out.push('O');
     if ((input.formula.N ?? 0) > 0 && (nitrogenAllowed || !out.length)) out.push('N');
+    if (v140CoverageActive() && !out.length && (input.formula.S ?? 0) > 0) out.push('S');   // v1.4.0 stop 10: thiol S-H only when there is no O and no N
     return out;
   };
 
@@ -286,13 +316,13 @@ export function buildAtomInventory(input: AtomInventoryInput): AtomInventoryResu
       const merged = new Map<string, Option>();
       for (const m of classified[i].matches) {
         const def = m.def;
-        if (def.id === 'ARO_CH') {
+        if (def.id === 'ARO_CH' || def.id === 'ARO_CH_NALPHA') {
           const key = 'C|1|ar';
           const o = merged.get(key);
           if (o) o.classIds.push(def.id); else merged.set(key, {classIds: [def.id], element: 'C', hPerAtom: 1, atomCount: n, aromatic: true, hybrid: 'AR', exchangeable: false, alkene: false, rank: 0});
           continue;
         }
-        const elements: ('C' | 'O' | 'N')[] = def.exchangeable ? exchangeElements() : ['C'];
+        const elements: ('C' | 'O' | 'N' | 'S')[] = def.exchangeable ? exchangeElements() : ['C'];
         for (const element of elements) for (const h of m.hPerAtom ?? def.hPerAtom) {
           if (n % h !== 0) continue;
           const key = `${element}|${h}|${def.exchangeable ? 'x' : 'c'}`;
@@ -331,7 +361,7 @@ export function buildAtomInventory(input: AtomInventoryInput): AtomInventoryResu
       const add = (el: string, n: number) => { need[el] = (need[el] ?? 0) + n; };
       let A = 0;
       combo.forEach(o => { if (o.aromatic) A += o.atomCount; else add(o.element, o.atomCount); });
-      let extraElement: 'O' | 'N' | null = null;
+      let extraElement: 'O' | 'N' | 'S' | null = null;
       if (e > 0) {
         const els = exchangeElements();
         const usable = els.find(el => (input.formula[el] ?? 0) - (need[el] ?? 0) >= e);

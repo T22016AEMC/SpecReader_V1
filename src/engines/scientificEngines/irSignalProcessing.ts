@@ -8,7 +8,8 @@ import {V12_CONFIG} from '../constraints/v12Config';
 export type IRIntensityScale = 'ABSORBANCE' | 'TRANSMITTANCE' | 'PERCENT_TRANSMITTANCE' | 'NORMALIZED' | 'UNKNOWN';
 export function resolveIRScale(unit: string, explicit?: IRIntensityScale): IRIntensityScale {
   if (explicit) return explicit;
-  if (/absorb|吸光|吸收度/i.test(unit)) return 'ABSORBANCE';
+  // v1.4.2 stop 30: "ABSORPTION" / "absorptance" (no "absorb") also point UP. As UNKNOWN they fell back to the median-based direction guess, which turns a spectrum with a high plateau upside down (wrong peaks).
+  if (/absorb|absorp|吸光|吸收度/i.test(unit)) return 'ABSORBANCE';
   if (/transmitt|透過|穿透|%t|t%/i.test(unit)) return /%|percent/i.test(unit) ? 'PERCENT_TRANSMITTANCE' : 'TRANSMITTANCE';
   return /normal|relative|相對|正規/i.test(unit) ? 'NORMALIZED' : 'UNKNOWN';
 }
@@ -193,8 +194,10 @@ export function prepareIR(s: ExperimentalSpectrumData): ExperimentalSpectrumData
     const y=Number.isFinite(p.y)?down?reference-p.y:p.y:null; return y!==null && Number.isFinite(p.x) ? [{...p,y}] : [];
   });
   const max=Math.max(...converted.map(p=>p.y),0);
-  const manual=converted.filter(p=>p.detectionSource==='MANUAL'||p.detectionSource==='USER_MARKED'||p.manualPeak||p.manualEdited||p.userModified);
-  const peaks=(processed ? [...processed.peaks.filter(p=>!manual.some(m=>Math.abs(m.x-p.x)<Math.max(2,m.width??2))),...manual.map(p=>{
+  // v1.3.2: for an IMAGE IR the analysis input is exactly the peak list on the page (what the user sees, minus what the user deleted). The traced curve only gives each listed peak its height and shape; peaks that the curve
+  // would detect by itself are NOT added behind the list (before 1.3.2 they were, so a deleted auto-peak kept being analysed). Numeric IR keeps its detected peaks.
+  const manual=isImage?converted:converted.filter(p=>p.detectionSource==='MANUAL'||p.detectionSource==='USER_MARKED'||p.manualPeak||p.manualEdited||p.userModified);
+  const peaks=(processed ? [...(isImage?[]:processed.peaks.filter(p=>!manual.some(m=>Math.abs(m.x-p.x)<Math.max(2,m.width??2)))),...manual.map(p=>{
     const measured=processed.peaks.find(q=>Math.abs(q.x-p.x)<Math.max(3,p.width??3));
     const nearby=processed.points.reduce((best,q)=>Math.abs(q.x-p.x)<Math.abs(best.x-p.x)?q:best,processed.points[0]);
     const morphology=measureIRBandMorphology(s,p);

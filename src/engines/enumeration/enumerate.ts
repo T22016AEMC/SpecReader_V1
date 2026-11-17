@@ -1,7 +1,7 @@
 import {canonicalizeMolecule, compileLeafQueries, rdkitStatus, type LeafQueries} from '../scientificEngines/rdkitAdapter';
 import {plausibilityViolations} from '../scientificEngines/structurePlausibility';
 import {ENUMERATION_CONFIG as CFG, type StrainProfile, type StrainProfileId} from './enumerationConfig';
-import {forbiddenFragmentsActive} from '../composition/planningGate';
+import {forbiddenFragmentsActive, v140CoverageActive} from '../composition/planningGate';
 import {FORBIDDEN_FRAGMENTS} from '../constraints/forbiddenFragments';
 import {analyseLeaf, emptyLeafCost} from './leafChecks';
 import {buildMolBlock} from './molBlock';
@@ -39,10 +39,11 @@ export async function enumerateStructures(req: EnumerationRequest): Promise<Enum
   const alternatives: FragmentAlternativeSet[] = req.alternatives?.length ? req.alternatives : [{id: 'FREE', fragments: []}];
   const plaus = req.forbid?.plausibility;
   const strain = resolveStrain(req.forbid?.strain);
-  const nOxygenAllowed = plaus ? plaus.nitrogenEvidence && (plaus.irNO || plaus.irNOxide) : true;
+  // v1.4.0 stop 10 (v140.coverage): both nitro IR bands also allow the N–O bonds of a (fixed, charged) nitro fragment
+  const nOxygenAllowed = plaus ? (plaus.nitrogenEvidence && (plaus.irNO || plaus.irNOxide)) || (v140CoverageActive() && Boolean(plaus.irNitro)) : true;
   const rules = {noPeroxide: plaus ? !plaus.userFormula : false, noNitrogenOxygen: plaus ? !nOxygenAllowed : false};
 
-  const found = new Map<string, string[]>();
+  const found = new Map<string, string[]>(req.known ? [...req.known].map(([s, ids]): [string, string[]] => [s, [...ids]]) : []);
   const rejectedSeen = new Set<string>();
   const reasons = new Set<IncompleteReason>();
   let visited = 0, leaves = 0, lastYield = now(), lastProgress = 0;

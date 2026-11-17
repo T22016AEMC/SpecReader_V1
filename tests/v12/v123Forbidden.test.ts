@@ -4,6 +4,9 @@ import {activeForbiddenFragments, FORBIDDEN_FRAGMENTS, forbiddenById, V123_FORBI
 import {v131ForbiddenAlkynolActive} from '../../src/engines/composition/planningGate';
 import {initializeRDKit, matchingSMARTS} from '../../src/engines/scientificEngines/rdkitAdapter';
 import {NO_PLAUSIBILITY_EVIDENCE, plausibilityViolations} from '../../src/engines/scientificEngines/structurePlausibility';
+import {usePreV142Defaults} from '../helpers/v142PreDefaults';
+// v1.4.2 stop 36 (E): this file pins results recorded under the defaults before 1.4.2; the new rule sets (on by default since 1.4.2) are switched to their old values here. No expected value changed.
+usePreV142Defaults();
 
 // v1.2.3 (A6): the nine forbidden fragments. SYNTHETIC molecules only. 9 must be hit and 60 must not (the regression set of the design report); N(O)O, N–O–N and N(O)N(O) cannot be unlocked by IR.
 beforeAll(() => initializeRDKit(), 60000);

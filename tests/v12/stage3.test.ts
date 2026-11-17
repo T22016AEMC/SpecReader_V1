@@ -16,6 +16,9 @@ import type {ImageSpectrumCalibration} from '../../src/types/spectrum';
 import {BANDS, refPoint, syntheticSegmentedIRImage} from '../irAxisFixture';
 import {mk} from '../helpers/p1bScenarios';
 import {STEP_ONLY_TIME_MS} from '../helpers/v121Golden';
+import {usePreV142Defaults} from '../helpers/v142PreDefaults';
+// v1.4.2 stop 36 (E): this file pins results recorded under the defaults before 1.4.2; the new rule sets (on by default since 1.4.2) are switched to their old values here. No expected value changed.
+usePreV142Defaults();
 
 // Stage 3 (W4 two-way scoring, W5 plausibility, W6 IR intensity, W7 candidate merging). SYNTHETIC peak lists / images only; the tests check
 // program behaviour (score direction, flags, equalities). No ranking of any real compound is asserted and nothing here says what is "accurate".
@@ -237,7 +240,8 @@ describe('W6 IR intensity', () => {
     expect(source).not.toMatch(/pk\.pixelY\s*\?\?\s*ann\?\.pixelY/);
   });
   it('characterizeSpectrumSignals (the function that computes normalizedIntensity; measureSpectrumSignals is a pass-through): flag off keeps the v1.1.8 order (same as y); flag on is "stronger = larger" (absorption depth)', () => {
-    const s = piece(syntheticSegmentedIRImage([]));
+    // v1.3.2: calibration no longer marks peaks by itself; the page-1 button "自動尋峰" does, so the test asks for the peaks detected on the traced curve.
+    const s = SpectrumParser.reRunAutoPeakDetection(piece(syntheticSegmentedIRImage([])));
     flag(false);
     const off = SignalCharacterizationEngine.characterizeSpectrumSignals(s).peaks.filter(p => p.id.startsWith('ir-auto-px'));
     flag(true);
@@ -267,7 +271,8 @@ describe('W6 IR intensity', () => {
   it('evidence, N evidence and plausibility evidence come from prepareIR and do not change with the flag', () => {
     const make = (on: boolean) => {
       flag(on);
-      const base = piece(syntheticSegmentedIRImage([]));
+      // v1.3.2: the analysis input is the page list, so the traced-curve peaks are asked for (button) to keep this test about many IR bands
+      const base = SpectrumParser.reRunAutoPeakDetection(piece(syntheticSegmentedIRImage([])));
       const c = base.imageCalibration!;
       let s = base;
       for (const cm of [3050, 1600, 1240]) {

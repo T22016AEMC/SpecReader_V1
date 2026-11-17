@@ -2,6 +2,7 @@ import {StructureParserAdapter} from '../chemistryEngine';
 import type {ObservedEvidence} from '../reasoning/types';
 import {PLAUSIBILITY_CONFIG as CFG} from './plausibilityConfig';
 import {V12_CONFIG} from '../constraints/v12Config';
+import {v140CoverageActive} from '../composition/planningGate';
 import {activeForbiddenFragments} from '../constraints/forbiddenFragments';
 import {matchingSMARTS} from './rdkitAdapter';
 
@@ -26,7 +27,8 @@ import {matchingSMARTS} from './rdkitAdapter';
  *             not affected)                                                                    → rejected.
  */
 export type PlausibilityRule='PEROXIDE'|'N_O_N'|'N_DI_OH'|'N_O_LINK'|'CUMULATED_N'|'GEM_DIOL'|'ENOL'|'KETENE'|'AMINAL'|'HEMIACETAL_ACYCLIC'|'ORTHOESTER_ACYCLIC'|`FORBIDDEN_${string}`;
-export interface PlausibilityEvidence {userFormula:boolean;nitrogenEvidence:boolean;irNO:boolean;irNOxide:boolean;irCumulatedN:boolean;irKetene:boolean}
+/** irNitro (v1.4.0 stop 10, v140.coverage): the IR shows BOTH nitro bands (asymmetric and symmetric N=O stretch): a charged nitro group R-[N+](=O)[O-] is then not a forbidden N-O link. */
+export interface PlausibilityEvidence {userFormula:boolean;nitrogenEvidence:boolean;irNO:boolean;irNOxide:boolean;irCumulatedN:boolean;irKetene:boolean;irNitro?:boolean}
 export interface PlausibilityViolation {rule:PlausibilityRule;text:string}
 export const NO_PLAUSIBILITY_EVIDENCE:PlausibilityEvidence={userFormula:false,nitrogenEvidence:false,irNO:false,irNOxide:false,irCumulatedN:false,irKetene:false};
 
@@ -35,7 +37,8 @@ export function buildPlausibilityEvidence(args:{observations:ObservedEvidence[];
  const maxI=Math.max(0,...ir.map(o=>o.relativeIntensity??0));
  const present=([lo,hi]:readonly [number,number])=>ir.some(o=>o.value>=lo&&o.value<=hi);
  const strong=([lo,hi]:readonly [number,number])=>ir.some(o=>o.value>=lo&&o.value<=hi&&o.relativeIntensity!==null&&maxI>0&&o.relativeIntensity/maxI>=CFG.strongRelativeIntensity);
- return {userFormula:Boolean(args.userFormula),nitrogenEvidence:args.nitrogenEvidence,irNO:present(CFG.irNOStretchRange),irNOxide:present(CFG.irNOxideRange),irCumulatedN:strong(CFG.irCumulatedNRange),irKetene:strong(CFG.irKeteneRange)};
+ const N=V12_CONFIG.v140Coverage.irNitro;
+ return {userFormula:Boolean(args.userFormula),nitrogenEvidence:args.nitrogenEvidence,irNO:present(CFG.irNOStretchRange),irNOxide:present(CFG.irNOxideRange),irCumulatedN:strong(CFG.irCumulatedNRange),irKetene:strong(CFG.irKeteneRange),...(v140CoverageActive()?{irNitro:present(N.asymmetricRangeCm1)&&present(N.symmetricRangeCm1)}:{})};
 }
 
 type Atom={element:string;isAromatic:boolean;totalHydrogens:number;formalCharge:number;neighbors:{toAtom:number;order:number;isAromatic:boolean}[]};
@@ -75,7 +78,7 @@ export function plausibilityViolations(smiles:string,ev:PlausibilityEvidence):Pl
   if(a.element==='N'){
    const oh=ns.filter(n=>freeOH(n.toAtom)).length;
    if(oh>=2&&!nOxygenAllowed)add('N_DI_OH',`N 上連 ${oh} 個 OH（含 N–N(OH)₂）：需要 N 專屬證據與 IR N–O 帶`);
-   else if(ns.some(n=>el(n.toAtom)==='O')&&!nOxygenAllowed)add('N_O_LINK','N–O 鍵（羥胺／肟／N-氧化物）：需要 N 專屬證據與 IR N–O（900–1000）或 N-氧化物（1200–1300）帶');
+   else if(ns.some(n=>el(n.toAtom)==='O')&&!nOxygenAllowed&&!(v140CoverageActive()&&ev.irNitro&&a.formalCharge===1&&ns.length===3&&ns.filter(n=>el(n.toAtom)==='O').length===2))add('N_O_LINK','N–O 鍵（羥胺／肟／N-氧化物）：需要 N 專屬證據與 IR N–O（900–1000）或 N-氧化物（1200–1300）帶');
    if(ns.filter(n=>n.order===2).length>=2&&!ev.irCumulatedN)add('CUMULATED_N','疊氮／重氮的累積 N 雙鍵：需要 IR 2100–2160 強帶');
   }
   if(a.element==='C'){

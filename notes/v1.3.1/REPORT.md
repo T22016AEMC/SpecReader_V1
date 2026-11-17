@@ -59,3 +59,10 @@
 - 既有旗標關設定：`vitest.flagoff130.config.ts`、`vitest.flagoff.config.ts` 各跑相關 6 檔（v131Alkynol、v131ParsimonyUnit、v131ReadingLine、v131Baseline、v123Forbidden、diagnosticSummary）：各 63 個全過。
 - E2E（Playwright，視窗 1280×720，暫用設定檔覆寫 viewport，未提交）：36 個全過。
 - 測試標記檢查：基線 65、現 96、missing 0（新增 `candidate-parsimony-note`，無重複）。
+
+## 8. 發佈
+
+- PR #13，merge commit `029a1c1de40c7e4ca0a1fc88b529094bae59814d`（merge commit，未 squash／rebase；含 da061ec）。本機 main 已 ff 同步。
+- Render 約 1 分鐘內自動部署；`/api/health` 回報 `version 1.3.1`、revision `029a1c1`。
+- 正式站短檢查（1280×720，合成對甲苯酚 ¹H：7.05 d 2H、6.73 d 2H、4.70 br s 1H、2.28 s 3H，分子式 C7H8O，未用任何真實圖譜）：頁面載入、版本標示 v1.3.1、分析完成、第 1 名為對甲苯酚（相容度 95）、診斷頁摘要出現「¹H 峰表與程式的讀法」且每個訊號列出全部可讀類別（例如 7.05 ppm：芳香 CH、烯基 CH；4.70 ppm：烯基 CH、接 O 的碳 H）；pageerror 0。
+- zip：`releases/SpecReader_v1.3.1.zip`（git archive，不含 notes/，469 個檔）。

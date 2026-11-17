@@ -15,7 +15,7 @@ export interface ForbiddenFragment {
   stage: 'LEAF';
 }
 
-import {forbiddenFragmentsActive, v123ForbiddenNActive, v131ForbiddenAlkynolActive} from '../composition/planningGate';
+import {forbiddenFragmentsActive, v123ForbiddenNActive, v131ForbiddenAlkynolActive, v140PlausibilityActive} from '../composition/planningGate';
 
 export const FORBIDDEN_SOURCE = '工程判斷，未查證';
 
@@ -67,10 +67,24 @@ export const V131_FORBIDDEN_FRAGMENTS: ForbiddenFragment[] = [
   {id: 'ALKYNOL', smarts: '[CX2]#[CX2][OX2H1]', label: '炔醇 C≡C–OH', reason: '不穩定，互變成烯酮／烯酮化物，IR 帶也不能放行', source: '工程判斷：炔醇不穩定，互變成烯酮／烯酮化物', stage: 'LEAF'},
 ];
 
-/** The list the leaf, the downstream plausibility gate and the legacy supplement apply: the v1.2.1 list, the v1.2.3 list and the v1.3.1 list, each while its own gate is open. */
-export const activeForbiddenFragments = (): ForbiddenFragment[] => [...(forbiddenFragmentsActive() ? FORBIDDEN_FRAGMENTS : []), ...(v123ForbiddenNActive() ? V123_FORBIDDEN_FRAGMENTS : []), ...(v131ForbiddenAlkynolActive() ? V131_FORBIDDEN_FRAGMENTS : [])];
+/**
+ * v1.4.0 stop 9 (useV140H1 and v140.plausibility, default off): four ring-strain fragments found by the stop-7 audit among the non-target top-10 candidates. Each was checked against a panel of public, known compounds
+ * (tests/v14/v140Plausibility.test.ts: 40+ structures incl. ethylene oxide, propylene oxide, styrene oxide, cyclohexene oxide, glycidol, oxetane, 3-oxetanone, beta-propiolactone, gamma-butyrolactone, delta-valerolactone, glucose
+ * (pyranose and furanose), ribose, furan, 2,3-dihydrofuran, 3,4-dihydropyran, 2-methylfuran, 2-methoxytetrahydropyran, acetals, ketals, cyclic hemiacetals) and none of them is hit.
+ * NOT forbidden on purpose (real structures): cyclic hemiketals / hemiacetals (sugars), plain oxetanes, plain epoxides, enol ethers, 4-ring C=C without O (cyclobutene).
+ * Known catches that are real but reactive reagents (not in the panel, accepted): diketene (alkylidene oxetanone) by ALKYLIDENE_OXIRANE_OXETANE; 1,2-anhydro sugars (Brigl's anhydride) by OXYGEN_ON_EPOXIDE_CARBON. SOURCE: 工程判斷，未查證.
+ */
+export const V140_FORBIDDEN_FRAGMENTS: ForbiddenFragment[] = [
+  {id: 'OXETE_RING_ALKENE', smarts: '[OX2;r4;$([OX2]1[#6]=[#6]*1)]', label: '含 O 的四員環內 C=C（氧雜環丁烯型）', reason: '四員環加環內雙鍵，張力過大，不是穩定的一般結構', source: FORBIDDEN_SOURCE, stage: 'LEAF'},
+  {id: 'ALKYLIDENE_OXIRANE_OXETANE', smarts: '[#6;$([#6]1[OX2][#6]1),$([#6]1[OX2][#6][#6]1)]=!@[#6]', label: '烷叉環氧或 2-烷叉氧雜環丁烷（環碳接環 O 且有環外 C=C）', reason: '烯丙二烯氧化物型，張力與反應性過大，不是穩定的一般結構', source: FORBIDDEN_SOURCE, stage: 'LEAF'},
+  {id: 'ALPHA_LACTONE', smarts: '[#6;$([#6]1[OX2][#6]1)]=[OX1]', label: 'α-內酯（三員環內酯）', reason: '無法分離的反應中間體', source: FORBIDDEN_SOURCE, stage: 'LEAF'},
+  {id: 'OXYGEN_ON_EPOXIDE_CARBON', smarts: '[CX4;$([CX4]1[OX2][#6]1)]-[OX2;!r3]', label: '環氧碳上另帶 O 取代基（烷氧基或醯氧基環氧）', reason: '不是可分離的穩定結構（OH 的情形已由 OH_ON_EPOXIDE_CARBON 禁止）', source: FORBIDDEN_SOURCE, stage: 'LEAF'},
+];
+
+/** The list the leaf, the downstream plausibility gate and the legacy supplement apply: the v1.2.1 list, the v1.2.3 list, the v1.3.1 list and the v1.4.0 list, each while its own gate is open. */
+export const activeForbiddenFragments = (): ForbiddenFragment[] => [...(forbiddenFragmentsActive() ? FORBIDDEN_FRAGMENTS : []), ...(v123ForbiddenNActive() ? V123_FORBIDDEN_FRAGMENTS : []), ...(v131ForbiddenAlkynolActive() ? V131_FORBIDDEN_FRAGMENTS : []), ...(v140PlausibilityActive() ? V140_FORBIDDEN_FRAGMENTS : [])];
 
 /** The pipeline passes the v1.2.3 list to the leaf explicitly (the enumerator's own default stays the v1.2.1 list, so the enumerator-level tests are unchanged); {} while the v1.2.3 list is off. */
-export const v123LeafFragments = (): {fragments?: ForbiddenFragment[]} => (v123ForbiddenNActive() || v131ForbiddenAlkynolActive() ? {fragments: activeForbiddenFragments()} : {});
+export const v123LeafFragments = (): {fragments?: ForbiddenFragment[]} => (v123ForbiddenNActive() || v131ForbiddenAlkynolActive() || v140PlausibilityActive() ? {fragments: activeForbiddenFragments()} : {});
 
-export const forbiddenById = (id: string): ForbiddenFragment | undefined => FORBIDDEN_FRAGMENTS.find(f => f.id === id) ?? V123_FORBIDDEN_FRAGMENTS.find(f => f.id === id) ?? V131_FORBIDDEN_FRAGMENTS.find(f => f.id === id);
+export const forbiddenById = (id: string): ForbiddenFragment | undefined => FORBIDDEN_FRAGMENTS.find(f => f.id === id) ?? V123_FORBIDDEN_FRAGMENTS.find(f => f.id === id) ?? V131_FORBIDDEN_FRAGMENTS.find(f => f.id === id) ?? V140_FORBIDDEN_FRAGMENTS.find(f => f.id === id);

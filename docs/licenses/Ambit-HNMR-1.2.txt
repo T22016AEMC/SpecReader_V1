@@ -1,0 +1,24 @@
+Ambit-HNMR v1.2 - 1H additive-increment knowledge base (third-party data)
+
+Credit
+  1H additive-increment knowledge base from Ambit-HNMR v1.2 (Kochev, Tsoneva, Frenkeva, Jeliazkova), https://doi.org/10.5281/zenodo.4629851, licensed under CC-BY 4.0 (https://creativecommons.org/licenses/by/4.0/).
+
+Source
+  Title:    Ambit-HNMR: an open source tool for prediction of 1H-NMR chemical shifts
+  Version:  1.2 (published February 5, 2021)
+  Authors:  Nikolay Kochev, Slava Tsoneva, Maria Frenkeva, Nina Jeliazkova
+  Record:   https://zenodo.org/records/4629851
+  DOI:      https://doi.org/10.5281/zenodo.4629851
+  File:     hnmr-knowledgebase.txt (11,943 bytes, MD5 98ec944631458e1f3c14c4c29f13074a, identical to the file of the Zenodo record)
+  Retrieved: 2026-11-08 (only this one file was taken; the Java tool and the other files of the record were not)
+
+License
+  Creative Commons Attribution 4.0 International (CC-BY-4.0), license text: https://creativecommons.org/licenses/by/4.0/
+  As printed on the Zenodo record:
+  "allows re-distribution and re-use of a licensed work on the condition that the creator is appropriately credited".
+
+Changes made by SpecReader
+  - The knowledge-base file is not edited. For use in the program it is embedded unchanged as a text string (the byte-order mark removed, line ends LF; no value changed).
+  - SpecReader does not run the SMARTS patterns of the file. It reads the numbers by substituent name (blocks ALKANES/CH3, CH2, CH and ALKENES) and applies them to the atoms of its own molecular graph.
+  - On top of these numbers SpecReader adds its own correction terms for some oxygen environments, and reads some substituents of an alkene (heteroaryl, CX3, CHX2) as the closest tabulated row.
+  - The resulting 1H shift predictions are SpecReader's own and are not output of Ambit-HNMR.

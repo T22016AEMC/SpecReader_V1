@@ -144,6 +144,8 @@ export const REASON_LABEL: Record<IncompleteReason, string> = {
   ROUND1_NO_TEMPLATE_READING: '第一輪沒有可容納此分子式的模板讀法（沒有退回彈性原子讀法或舊搜尋）',
   ROUND2_STEP_CAP: '第二輪（含烯基）：含 N 但沒有 N 專屬證據的分子式只能用第二輪步數池的一部分（池 ÷ 第二輪分子式上限）；這個分子式用完它的份額，沒有搜完（這個上限不是整體預算）',
   ROUND2_EXPLORE_CAP: '第二輪（含烯基）是探索性的：這個 k 沒有第一輪已有候選的分子式，所以只給固定的步數上限（這個上限不是整體預算）',
+  // v1.4.2 stop 34
+  ROUND1_DEFERRED_STEP_CAP: '第一輪（烯基例外）：烯基讀法跑完之後，另外再跑的「酯／縮醛 O–CH」延後讀法（IR 沒有確認有無羰基時才有）用完它自己的步數上限，沒有搜完；烯基讀法不受影響（這個上限不是整體預算）',
 };
 const NITROGEN_LABEL: Record<string, string> = {EVIDENCE: '有 N 專屬證據', EVEN_ION_ONLY: '只有偶電子離子（不足）', NONE: '沒有 N 專屬證據'};
 export const NOT_SEARCHED_LABEL: Record<string, string> = {
@@ -215,6 +217,8 @@ function searchCell(h: CompositionInferenceResult['hypotheses'][number], run: Co
 
 export const SHIFT_CLASS_LABEL: Record<string, string> = {
   ARO_CH: '芳香 CH', VINYL_CH: '烯基 CH', ALDEHYDE: '醛基 H', O_CH: '接 O 的碳 H', N_CH: '接 N 的碳 H', ALPHA_CH: '鄰羰基／芳環／炔的碳 H', ALKYL_CH: '烷基 H', EXCHANGEABLE: '可交換 H（OH／NH）',
+  /** v1.4.0 stop 10 (v140.coverage): the classes that exist only while the flag is on. */
+  HALO_CH: '鹵素旁的碳 H', POLYHALO_CH: '同碳多鹵的碳 H', SI_CH3: '矽甲基 H', SHIELDED_CH: '高場 sp3 H（環丙烷、甲烷）', ARO_CH_NALPHA: '吡啶型 α 芳香 H', S_CH: '接 S 的碳 H', NITRO_CH: '硝基烷的碳 H',
 };
 /** v1.3.1 (C): the labels of the diagnostic summary's reading line; the two v1.2.3 classes have no entry in SHIFT_CLASS_LABEL. */
 export const READING_CLASS_LABEL: Record<string, string> = {...SHIFT_CLASS_LABEL, ESTER_O_CH: '酯氧次甲基（RC(=O)O–CH）', ACETAL_O_CH: '縮醛／原酸酯 O–CH–O'};

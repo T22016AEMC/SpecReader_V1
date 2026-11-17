@@ -5,6 +5,9 @@ import {V12_CONFIG} from '../../src/engines/constraints/v12Config';
 import {initializeRDKit} from '../../src/engines/scientificEngines/rdkitAdapter';
 import {measureV130, V130_CASES} from '../helpers/v130Samples';
 import type {V130Measure} from '../helpers/v130Samples';
+import {usePreV142Defaults} from '../helpers/v142PreDefaults';
+// v1.4.2 stop 36 (E): this file pins results recorded under the defaults before 1.4.2; the new rule sets (on by default since 1.4.2) are switched to their old values here. No expected value changed.
+usePreV142Defaults();
 
 // v1.3.0 stop 1 acceptance (flag useV130 ON): the rank of the target of every synthetic sample against the v1.2.3 baseline (tests/goldens/v130.baseline.json, flag off). Step budget only, dense IR baseline.
 // Rules: no sample gets worse; the carboxylic acid without any carbonyl band (C16H16O3 type) no longer ranks before p-cresol (it ranked first); everything else as recorded.

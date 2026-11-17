@@ -1,4 +1,5 @@
 import {V12_CONFIG, type ShiftClassDef, type ShiftClassId} from './v12Config';
+import {v140CoverageActive} from '../composition/planningGate';
 
 /** One 1H signal as the inventory sees it. */
 export interface H1Signal {
@@ -92,7 +93,8 @@ export function exchangeableSingletRange(solvent: string): [number, number] {
 export function classifySignal(signal: H1Signal, ctx: ClassifyContext): ClassifyResult {
   const notes: string[] = [];
   const exch = classDef('EXCHANGEABLE');
-  const hasExchangeableElement = ctx.formulaElements.has('O') || ctx.formulaElements.has('N');
+  // v1.4.0 stop 10 (v140.coverage): a thiol S-H is readable when S is the only heteroatom that can carry an exchangeable H (no O, no N)
+  const hasExchangeableElement = ctx.formulaElements.has('O') || ctx.formulaElements.has('N') || (v140CoverageActive() && ctx.formulaElements.has('S'));
   if (signal.exchangeable) {
     if (!hasExchangeableElement) notes.push(`${signal.observationId}：已標記為可交換，但分子式沒有 O／N`);
     return {matches: hasExchangeableElement ? [{classId: 'EXCHANGEABLE', def: exch, reason: '使用者或既有分類已標記為可交換'}] : [], notes};
@@ -114,6 +116,16 @@ export function classifySignal(signal: H1Signal, ctx: ClassifyContext): Classify
       ? {classId: def.id, def, reason: `位移 ${v} ppm 在 ${def.id} 的視窗內（每原子 H 數 ${allowed.h.join('、')}${allowed.relaxed ? '；放寬窗依 IR 共軛 C=O' : ''}）`, hPerAtom: allowed.h, ...(allowed.relaxed ? {relaxed: true} : {})}
       : {classId: def.id, def, reason: `位移 ${v} ppm 在 ${def.id} 範圍 ${def.rangePpm.join('–')}`});
   }
+  // v1.4.0 stop 10 (useV140H1 and v140.coverage): classes for the windows no class of the table read (V12_CONFIG.v140Coverage). A class that needs an element applies only when the formula has it.
+  if (v140CoverageActive()) {
+    const el = ctx.formulaElements;
+    const has = (r?: string) => !r || (r === 'HAL' ? ['F', 'Cl', 'Br', 'I'].some(x => el.has(x)) : r === 'N' ? el.has('N') && ctx.nitrogenAllowed : r === 'NO' ? el.has('N') && el.has('O') : el.has(r));
+    for (const def of V12_CONFIG.v140Coverage.classes) {
+      if (!inRange(v, def.rangePpm)) continue;
+      if (!has(def.requires)) { notes.push(`${signal.observationId}：${def.id} 需要 ${def.requires}，分子式（或證據）沒有`); continue; }
+      matches.push({classId: def.id, def, reason: `位移 ${v} ppm 在 ${def.id} 範圍 ${def.rangePpm.join('–')}`});
+    }
+  }
   // v1.2.3 (stop 3): ester / acetal O–CH (see V12_CONFIG.esterMethine for the sources and the gate).
   if (ctx.esterMethine && (ctx.oxygenCount ?? 0) >= V12_CONFIG.esterMethine.minOxygen && ctx.ir.esterCarbonyl !== 'ABSENT') {
     for (const c of V12_CONFIG.esterMethine.classes) {
@@ -128,7 +140,8 @@ export function classifySignal(signal: H1Signal, ctx: ClassifyContext): Classify
   if (hasExchangeableElement) {
     const ex = V12_CONFIG.exchangeable;
     let reason: string | null = null;
-    if (signal.broad && inRange(v, ex.broadRangePpm)) reason = `寬峰且位移在 ${ex.broadRangePpm.join('–')} ppm`;
+    const broadRange: [number, number] = v140CoverageActive() ? [Math.min(ex.broadRangePpm[0], V12_CONFIG.v140Coverage.exchangeableBroadLowPpm), ex.broadRangePpm[1]] : ex.broadRangePpm;
+    if (signal.broad && inRange(v, broadRange)) reason = `寬峰且位移在 ${broadRange.join('–')} ppm`;
     else if (v > ex.alwaysAbovePpm) reason = `位移大於 ${ex.alwaysAbovePpm} ppm`;
     else if (signal.multiplicity === 's' && inRange(v, exchangeableSingletRange(ctx.solvent))) reason = `單峰在 ${ctx.solvent || '未知溶劑'} 的 OH 範圍 ${exchangeableSingletRange(ctx.solvent).join('–')} ppm`;
     if (reason) matches.push({classId: 'EXCHANGEABLE', def: exch, reason});

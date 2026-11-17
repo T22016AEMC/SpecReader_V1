@@ -3,6 +3,9 @@ import {bandShapeTag, mergeFunctionalGroups, summarizeCandidateEvidence, summary
 import type {FunctionalGroupRow, IrFindingRow} from '../../src/ui/irEvidenceFilter';
 import type {ObservationLike} from '../../src/ui/obsLabel';
 import {s1Analysis} from './s1Analysis';
+import {usePreV142Defaults} from '../helpers/v142PreDefaults';
+// v1.4.2 stop 36 (E): this file pins results recorded under the defaults before 1.4.2; the new rule sets (on by default since 1.4.2) are switched to their old values here. No expected value changed.
+usePreV142Defaults();
 
 // Evidence merging (v1.2.2 DESIGN_REPORT B1.6) on the real analysis of the synthetic S1 fixture, plus hand-made edge cases.
 let rows: FunctionalGroupRow[] = [];

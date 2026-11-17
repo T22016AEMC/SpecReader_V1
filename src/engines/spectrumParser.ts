@@ -1061,6 +1061,7 @@ export class SpectrumParser {
       const decoded=decodeJcamp(rawText);
       const parsed=this.parseNumericTable(modality,fileName,[[decoded.xUnit,decoded.yUnit],...decoded.points.map(p=>[p.x,p.y])],{sourceFormat:'JCAMP-DX',msParams,selectedColumns:{xColumnIndex:0,yColumnIndex:1}});
       parsed.xUnit=decoded.xUnit;parsed.yUnit=decoded.yUnit;
+      if(decoded.xUnitOriginal)parsed.irProcessingWarnings=[...(parsed.irProcessingWarnings??[]),`JCAMP 的 x 軸單位是 ${decoded.xUnitOriginal}；已在讀檔時換算成波數 cm⁻¹（${/nano/i.test(decoded.xUnitOriginal)?'1e7':'10000'} / x）。換算後的點在 cm⁻¹ 上不等距。`];
       if(modality==='IR') {
         parsed.irIntensityScale=resolveIRScale(decoded.yUnit);
         parsed.peaks=processIRSeries(decoded.points,parsed.irIntensityScale).peaks.map(p=>({...p,y:decoded.points.find(r=>r.x===p.x)?.y??p.y}));
@@ -2042,10 +2043,15 @@ export class SpectrumParser {
       // and the numeric-file path all use the curve's own value, so the re-detected peaks take the curve value at their x (as the numeric
       // path does with rawPoints) and keep their pixel position, so a later calibration change can convert them again from pixels.
       const curveAt=new Map(tracedPoints.map((q,i)=>[q.x,{y:q.y,px:pixelCurve[i].x,py:pixelCurve[i].y}]));
-      updatedPeaks.push(...traced.peaks.filter(p=>!updatedPeaks.some(q=>Math.abs(p.x-q.x)<3)).map(p=>{
-        const c=curveAt.get(p.x);
-        return c?{...p,id:`ir-auto-px${c.px}`,y:c.y,pixelX:c.px,pixelY:c.py,isCalibrated:true}:{...p,isCalibrated:true};
-      }));
+      // v1.3.2: no automatic marking on load / calibration. The curve is searched for peaks only when the user asked (irAutoPeaksRequested), and a peak the user deleted (deletedPeakIds; the id follows the
+      // pixel, so it is stable across calibrations) does not come back.
+      if(spectrum.irAutoPeaksRequested){
+        const deleted=new Set(spectrum.deletedPeakIds||[]);
+        updatedPeaks.push(...traced.peaks.filter(p=>!updatedPeaks.some(q=>Math.abs(p.x-q.x)<3)).map(p=>{
+          const c=curveAt.get(p.x);
+          return c?{...p,id:`ir-auto-px${c.px}`,y:c.y,pixelX:c.px,pixelY:c.py,isCalibrated:true}:{...p,isCalibrated:true};
+        }).filter(p=>!deleted.has(p.id)));
+      }
     }
     // 原始圖片是唯一的圖片視覺來源，絕不將圖片訊號合成為 400/450 點假曲線
     const digitizedApproximation: DigitizedSpectrumData = {
@@ -3190,6 +3196,11 @@ export class SpectrumParser {
             : prevPk?.confidence,
         };
       });
+      // v1.3.2: peaks the user asked the curve search for (ids `ir-auto-px<pixel>`, not backed by an annotation) stay in the list when a mark is added; a mark within 3 cm-1 replaces its neighbour (as in a re-calibration).
+      if (spectrum.modality === "IR" && spectrum.irAutoPeaksRequested) {
+        const annotated = new Set(nextAnns.map((a) => a.id));
+        nextPeaks.push(...(spectrum.peaks || []).filter((p) => p.id.startsWith("ir-auto-px") && !annotated.has(p.id) && !nextPeaks.some((q) => Math.abs(q.x - p.x) < 3)));
+      }
 
       const validation = DataValidator.validateSpectrum(
         spectrum.modality,
@@ -3401,6 +3412,7 @@ export class SpectrumParser {
       signalAnnotations: [],
       imageAnnotations: [],
       imageSignalAnnotations: [],
+      irAutoPeaksRequested: false,
       validation,
     };
   }
@@ -3562,6 +3574,15 @@ export class SpectrumParser {
     }
 
     if (isImage) {
+      // v1.3.2: an image IR is searched on its traced curve with the current calibration (nothing is searched before this is asked for, and not before the user has calibrated the axis:
+      // peaks of a default axis would carry made-up wavenumbers).
+      if (spectrum.modality === "IR" && spectrum.irPixelCurve?.length && this.isUserCalibratedSource(spectrum.imageCalibration?.source)) {
+        return this.recomputeImageSignalsWithCalibration(
+          { ...spectrum, irAutoPeaksRequested: true },
+          spectrum.imageCalibration || this.buildImageCalibration(spectrum.modality, spectrum.imageDimensions || { width: 800, height: 450 }),
+          spectrum.imageDimensions || { width: 800, height: 450 }
+        );
+      }
       const cal =
         spectrum.imageCalibration ||
         this.buildImageCalibration(

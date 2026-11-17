@@ -3,8 +3,8 @@
   "date": "2026-10-14",
   "codeCommit": "ccef958511b089930e450a93581857ff565874ba",
   "deployment": {
-    "serviceId": "srv-db6udpgu01pc73bl1tog",
-    "deployId": "dep-db7nqd0473hc73e1lqu0",
+    "serviceId": "<Render service ID: not published; see the Render dashboard>",
+    "deployId": "<Render deploy ID: not published>",
     "status": "live",
     "finishedAt": "2026-10-14T13:02:24.898979Z",
     "url": "https://specreader-v1.onrender.com",

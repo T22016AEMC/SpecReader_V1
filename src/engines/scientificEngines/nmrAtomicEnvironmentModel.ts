@@ -1,3 +1,11 @@
+import {v140AlkeneActive, v140Calibration2Active, v140CoverageActive, v140OxygenActive, v140Round3Active, v140SolventActive} from '../composition/planningGate';
+import {V12_CONFIG} from '../constraints/v12Config';
+import {applySolventClasses} from './h1SolventRules';
+import {applyAdditiveH1} from './h1AdditiveRules';
+import {applyCoverageH1} from './h1CoverageRules';
+import {applyCalibration2H1} from './h1Calibration2';
+import {applyRound3H1} from './h1Round3';
+import {applyNmrshiftdb2H1} from './h1Nmrshiftdb2';
 import {enrichAtomicPrediction} from './atomicChemicalEnvironment';
 import {
   CarbonEnvironment,
@@ -25,6 +33,18 @@ import {
 // ============================================================================
 
 export const NMR_LITERATURE_REGISTRY: Record<string, NMRLiteratureReference> = {
+  AMBIT_HNMR_2021: {
+    id: "AMBIT_HNMR_2021",
+    authors: "Kochev, N.; Tsoneva, S.; Frenkeva, M.; Jeliazkova, N.",
+    title: "Ambit-HNMR: an open source tool for prediction of 1H-NMR chemical shifts (knowledge base v1.2, CC-BY-4.0)",
+    journal: "Zenodo (software and knowledge base)",
+    year: 2021,
+    doi: "10.5281/zenodo.4629851",
+    dataNature: "EMPIRICAL_INCREMENT_MODEL",
+    applicableConditions:
+      "Pretsch-type additive increments (alkane alpha/beta, alkene gem/cis/trans) read by substituent name from third_party/ambit-hnmr; used under v1.4.0 flag useV140H1 only.",
+    version: "1.2",
+  },
   JONAS_2022_MRC: {
     id: "JONAS_2022_MRC",
     authors: "Jonas, E.; Kuhn, S.; Schlörer, N.",
@@ -3641,7 +3661,33 @@ class BaseEnvironmentPredictor {
 /** Sole shared forward model: local graph parameters, no compound answer lookup. */
 export class NMRGraphPredictor extends BaseEnvironmentPredictor {
  static override predict1HFromStructureGraph(structure:ParsedChemicalStructure,options?:{solvent?:NMRSolvent;spectrometerFrequencyMHz?:number;temperatureK?:number}){
-   return enrichAtomicPrediction(super.predict1HFromStructureGraph(structure,options),structure.smiles??'','1H_NMR',options);
+   const result=NMRGraphPredictor.predict1HRules(structure,options);
+   // v1.4.0 stop 12 (useV140H1 and v140.solvent, default off): solvent shift by environment class instead of one global number (h1SolventRules.ts)
+   const solvent=options?.solvent;
+   if(!v140SolventActive()||!solvent||solvent==='CDCl3'||solvent==='Unknown')return result;
+   const cfg=V12_CONFIG.v140Solvent;
+   if(!cfg.table[solvent]&&cfg.exchangeableSdPpm[solvent]===undefined)return result;
+   const graph=StructureParserAdapter.parseSmilesGraph((structure.smiles||'').trim()).graph;
+   if(!graph)return result;
+   return applySolventClasses(result,NMRGraphPredictor.predict1HRules(structure,{...options,solvent:'CDCl3'}),graph,solvent);
+ }
+ /** The 1H prediction with the rule layers of v1.4.0 (alkene / oxygen / coverage), in the given solvent. */
+ private static predict1HRules(structure:ParsedChemicalStructure,options?:{solvent?:NMRSolvent;spectrometerFrequencyMHz?:number;temperatureK?:number}){
+   const base=enrichAtomicPrediction(super.predict1HFromStructureGraph(structure,options),structure.smiles??'','1H_NMR',options);
+   // v1.4.0 (useV140H1, default off): additive rules from the Ambit-HNMR knowledge base for alkene / allylic / oxygen-bearing C-H (h1AdditiveRules.ts)
+   const groups={alkene:v140AlkeneActive(),oxygen:v140OxygenActive()};
+   const coverage=v140CoverageActive();   // v1.4.0 stop 10: rules for environments that had none (h1CoverageRules.ts)
+   const cal2=v140Calibration2Active();   // v1.4.0 stop 13: class corrections from tier-2 / candidate values (h1Calibration2.ts)
+   const round3=v140Round3Active();   // v1.4.1 stop 22: aromatic S-H class, cyclopropane / cyclobutane classes (h1Round3.ts); the =CH2 splitting of sulfone / phosphonate / CH(OH)R is in h1AdditiveRules
+   if(!groups.alkene&&!groups.oxygen&&!coverage&&!cal2&&!round3)return base;
+   const graph=StructureParserAdapter.parseSmilesGraph((structure.smiles||'').trim()).graph;
+   if(!graph)return base;
+   const added=groups.alkene||groups.oxygen?applyAdditiveH1(base,graph,groups):base;
+   const covered=coverage?applyCoverageH1(added,graph):added;
+   const calibrated=cal2?applyCalibration2H1(covered,graph):covered;
+   const third=round3?applyRound3H1(calibrated,graph):calibrated;
+   // v1.4.2 stop 26: class shifts from measured nmrshiftdb2 CDCl3 spectra, gated per class by v140.oxygen / v140.calibration2 (+ round3 for the small carbocycles) (h1Nmrshiftdb2.ts)
+   return groups.oxygen||cal2?applyNmrshiftdb2H1(third,graph,{oxygen:groups.oxygen,calibration2:cal2,round3}):third;
  }
  static override predict13CFromStructureGraph(structure:ParsedChemicalStructure,options?:{solvent?:NMRSolvent;temperatureK?:number}){
    return enrichAtomicPrediction(super.predict13CFromStructureGraph(structure,options),structure.smiles??'','13C_NMR',options);

@@ -1,0 +1,585 @@
+{
+ "meta": {
+  "round": 3,
+  "stop": 22,
+  "note": "Third round, first part (planner list 2026-11-13). Values: planner list, Reich collection (hand-read) unless stated. Used only with the flag v140.round3. A signal with validationOnly: true is never used for calibration."
+ },
+ "compounds": [
+  {
+   "compound": "cyclopropanecarboxylic acid",
+   "smiles": "OC(=O)C1CC1",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "round": 3,
+   "source": "Reich Collection (organicchemistrydata.org), values read from the figure, planner list 2026-11-13",
+   "substituent": "CO2H",
+   "signals": [
+    {
+     "label": "Hg (ring CH bearing R)",
+     "smarts": "[CH;r3]",
+     "ppm": 1.57,
+     "nH": 1
+    },
+    {
+     "label": "ring CH2 (mean of Hc 1.05 / Ht 0.88)",
+     "smarts": "[CH2;r3]",
+     "ppm": 0.965,
+     "nH": 4,
+     "note": "two CH2 carbons, each with a cis H (Hc 1.05) and a trans H (Ht 0.88); compared as their mean because the predictor gives one environment"
+    }
+   ]
+  },
+  {
+   "compound": "cyclopropanecarboxaldehyde",
+   "smiles": "O=CC1CC1",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "round": 3,
+   "source": "Reich Collection (organicchemistrydata.org), values read from the figure, planner list 2026-11-13",
+   "substituent": "CHO",
+   "signals": [
+    {
+     "label": "Hg (ring CH bearing R)",
+     "smarts": "[CH;r3]",
+     "ppm": 1.79,
+     "nH": 1
+    },
+    {
+     "label": "ring CH2 (mean of Hc 1.03 / Ht 0.99)",
+     "smarts": "[CH2;r3]",
+     "ppm": 1.01,
+     "nH": 4,
+     "note": "two CH2 carbons, each with a cis H (Hc 1.03) and a trans H (Ht 0.99); compared as their mean because the predictor gives one environment"
+    }
+   ]
+  },
+  {
+   "compound": "cyclopropyl methyl ketone",
+   "smiles": "CC(=O)C1CC1",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "round": 3,
+   "source": "Reich Collection (organicchemistrydata.org), values read from the figure, planner list 2026-11-13",
+   "substituent": "COCH3",
+   "signals": [
+    {
+     "label": "Hg (ring CH bearing R)",
+     "smarts": "[CH;r3]",
+     "ppm": 1.83,
+     "nH": 1
+    },
+    {
+     "label": "ring CH2 (mean of Hc 0.93 / Ht 0.77)",
+     "smarts": "[CH2;r3]",
+     "ppm": 0.85,
+     "nH": 4,
+     "note": "two CH2 carbons, each with a cis H (Hc 0.93) and a trans H (Ht 0.77); compared as their mean because the predictor gives one environment"
+    }
+   ]
+  },
+  {
+   "compound": "cyclopropanecarbonitrile",
+   "smiles": "N#CC1CC1",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "round": 3,
+   "source": "Reich Collection (organicchemistrydata.org), values read from the figure, planner list 2026-11-13",
+   "substituent": "CN",
+   "signals": [
+    {
+     "label": "Hg (ring CH bearing R)",
+     "smarts": "[CH;r3]",
+     "ppm": 1.29,
+     "nH": 1
+    },
+    {
+     "label": "ring CH2 (mean of Hc 1.04 / Ht 0.96)",
+     "smarts": "[CH2;r3]",
+     "ppm": 1,
+     "nH": 4,
+     "note": "two CH2 carbons, each with a cis H (Hc 1.04) and a trans H (Ht 0.96); compared as their mean because the predictor gives one environment"
+    }
+   ]
+  },
+  {
+   "compound": "vinylcyclopropane",
+   "smiles": "C=CC1CC1",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "round": 3,
+   "source": "Reich Collection (organicchemistrydata.org), values read from the figure, planner list 2026-11-13",
+   "substituent": "CH=CH2",
+   "signals": [
+    {
+     "label": "Hg (ring CH bearing R)",
+     "smarts": "[CH;r3]",
+     "ppm": 1.35,
+     "nH": 1
+    },
+    {
+     "label": "ring CH2 (mean of Hc 0.34 / Ht 0.63)",
+     "smarts": "[CH2;r3]",
+     "ppm": 0.485,
+     "nH": 4,
+     "note": "two CH2 carbons, each with a cis H (Hc 0.34) and a trans H (Ht 0.63); compared as their mean because the predictor gives one environment"
+    }
+   ]
+  },
+  {
+   "compound": "cyclopropylbenzene",
+   "smiles": "c1ccccc1C1CC1",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "round": 3,
+   "source": "Reich Collection (organicchemistrydata.org), values read from the figure, planner list 2026-11-13",
+   "substituent": "Ph",
+   "signals": [
+    {
+     "label": "Hg (ring CH bearing R)",
+     "smarts": "[CH;r3]",
+     "ppm": 1.83,
+     "nH": 1
+    },
+    {
+     "label": "ring CH2 (mean of Hc 0.65 / Ht 0.89)",
+     "smarts": "[CH2;r3]",
+     "ppm": 0.77,
+     "nH": 4,
+     "note": "two CH2 carbons, each with a cis H (Hc 0.65) and a trans H (Ht 0.89); compared as their mean because the predictor gives one environment"
+    }
+   ]
+  },
+  {
+   "compound": "chlorocyclopropane",
+   "smiles": "ClC1CC1",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "round": 3,
+   "source": "Reich Collection (organicchemistrydata.org), values read from the figure, planner list 2026-11-13",
+   "substituent": "Cl",
+   "signals": [
+    {
+     "label": "Hg (ring CH bearing R)",
+     "smarts": "[CH;r3]",
+     "ppm": 2.93,
+     "nH": 1
+    },
+    {
+     "label": "ring CH2 (mean of Hc 0.78 / Ht 0.87)",
+     "smarts": "[CH2;r3]",
+     "ppm": 0.825,
+     "nH": 4,
+     "note": "two CH2 carbons, each with a cis H (Hc 0.78) and a trans H (Ht 0.87); compared as their mean because the predictor gives one environment"
+    }
+   ]
+  },
+  {
+   "compound": "bromocyclopropane",
+   "smiles": "BrC1CC1",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "round": 3,
+   "source": "Reich Collection (organicchemistrydata.org), values read from the figure, planner list 2026-11-13",
+   "substituent": "Br",
+   "signals": [
+    {
+     "label": "Hg (ring CH bearing R)",
+     "smarts": "[CH;r3]",
+     "ppm": 2.79,
+     "nH": 1
+    },
+    {
+     "label": "ring CH2 (mean of Hc 0.85 / Ht 0.96)",
+     "smarts": "[CH2;r3]",
+     "ppm": 0.905,
+     "nH": 4,
+     "note": "two CH2 carbons, each with a cis H (Hc 0.85) and a trans H (Ht 0.96); compared as their mean because the predictor gives one environment"
+    }
+   ]
+  },
+  {
+   "compound": "iodocyclopropane",
+   "smiles": "IC1CC1",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "round": 3,
+   "source": "Reich Collection (organicchemistrydata.org), values read from the figure, planner list 2026-11-13",
+   "substituent": "I",
+   "signals": [
+    {
+     "label": "Hg (ring CH bearing R)",
+     "smarts": "[CH;r3]",
+     "ppm": 2.27,
+     "nH": 1
+    },
+    {
+     "label": "ring CH2 (mean of Hc 0.78 / Ht 1.04)",
+     "smarts": "[CH2;r3]",
+     "ppm": 0.91,
+     "nH": 4,
+     "note": "two CH2 carbons, each with a cis H (Hc 0.78) and a trans H (Ht 1.04); compared as their mean because the predictor gives one environment"
+    }
+   ]
+  },
+  {
+   "compound": "cyclopropanol",
+   "smiles": "OC1CC1",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "round": 3,
+   "source": "Reich Collection (organicchemistrydata.org), values read from the figure, planner list 2026-11-13",
+   "substituent": "OH",
+   "signals": [
+    {
+     "label": "Hg (ring CH bearing R)",
+     "smarts": "[CH;r3]",
+     "ppm": 3.36,
+     "nH": 1
+    },
+    {
+     "label": "ring CH2 (mean of Hc 0.48 / Ht 0.4)",
+     "smarts": "[CH2;r3]",
+     "ppm": 0.44,
+     "nH": 4,
+     "note": "two CH2 carbons, each with a cis H (Hc 0.48) and a trans H (Ht 0.4); compared as their mean because the predictor gives one environment"
+    }
+   ]
+  },
+  {
+   "compound": "cyclopropylamine",
+   "smiles": "NC1CC1",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "round": 3,
+   "source": "Reich Collection (organicchemistrydata.org), values read from the figure, planner list 2026-11-13",
+   "substituent": "NH2",
+   "signals": [
+    {
+     "label": "Hg (ring CH bearing R)",
+     "smarts": "[CH;r3]",
+     "ppm": 2.24,
+     "nH": 1
+    },
+    {
+     "label": "ring CH2 (mean of Hc 0.22 / Ht 0.33)",
+     "smarts": "[CH2;r3]",
+     "ppm": 0.275,
+     "nH": 4,
+     "note": "two CH2 carbons, each with a cis H (Hc 0.22) and a trans H (Ht 0.33); compared as their mean because the predictor gives one environment"
+    }
+   ]
+  },
+  {
+   "compound": "nitrocyclopropane",
+   "smiles": "[O-][N+](=O)C1CC1",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "round": 3,
+   "source": "Reich Collection (organicchemistrydata.org), values read from the figure, planner list 2026-11-13",
+   "substituent": "NO2",
+   "signals": [
+    {
+     "label": "Hg (ring CH bearing R)",
+     "smarts": "[CH;r3]",
+     "ppm": 4.21,
+     "nH": 1
+    },
+    {
+     "label": "ring CH2 (mean of Hc 1.6 / Ht 1.13)",
+     "smarts": "[CH2;r3]",
+     "ppm": 1.365,
+     "nH": 4,
+     "note": "two CH2 carbons, each with a cis H (Hc 1.6) and a trans H (Ht 1.13); compared as their mean because the predictor gives one environment"
+    }
+   ]
+  },
+  {
+   "compound": "cyclopropyltrimethylsilane",
+   "smiles": "C[Si](C)(C)C1CC1",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "round": 3,
+   "source": "Reich Collection (organicchemistrydata.org), values read from the figure, planner list 2026-11-13",
+   "substituent": "SiR3 (taken as SiMe3: the list says SiR3)",
+   "signals": [
+    {
+     "label": "Hg (ring CH bearing R)",
+     "smarts": "[CH;r3]",
+     "ppm": -0.67,
+     "nH": 1
+    },
+    {
+     "label": "ring CH2 (mean of Hc 0.36 / Ht 0.49)",
+     "smarts": "[CH2;r3]",
+     "ppm": 0.425,
+     "nH": 4,
+     "note": "two CH2 carbons, each with a cis H (Hc 0.36) and a trans H (Ht 0.49); compared as their mean because the predictor gives one environment"
+    }
+   ]
+  },
+  {
+   "compound": "cyclopropane",
+   "smiles": "C1CC1",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "round": 3,
+   "source": "Reich Collection (organicchemistrydata.org), values read from the figure, planner list 2026-11-13; JCP-67-4165",
+   "signals": [
+    {
+     "label": "CH2",
+     "smarts": "[CH2;r3]",
+     "ppm": 0.2,
+     "nH": 6,
+     "note": "same compound as the round-1 entry (Reich 0.22): one independent compound"
+    }
+   ]
+  },
+  {
+   "compound": "cyclopropylmethanol",
+   "smiles": "OCC1CC1",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "round": 3,
+   "source": "Reich Collection (organicchemistrydata.org), values read from the figure, planner list 2026-11-13 (assignment read from the figure: validation only)",
+   "validationOnly": true,
+   "signals": [
+    {
+     "label": "ring CH",
+     "smarts": "[CH;r3]",
+     "ppm": 1.08,
+     "nH": 1,
+     "validationOnly": true
+    },
+    {
+     "label": "CH2OH",
+     "smarts": "[CH2;!r3]",
+     "ppm": 3.25,
+     "nH": 2,
+     "validationOnly": true
+    },
+    {
+     "label": "ring CH2 (mean of cis 0.05 / trans 0.21)",
+     "smarts": "[CH2;r3]",
+     "ppm": 0.13,
+     "nH": 4,
+     "validationOnly": true
+    }
+   ]
+  },
+  {
+   "compound": "(chloromethyl)cyclopropane",
+   "smiles": "ClCC1CC1",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "round": 3,
+   "source": "Reich Collection (organicchemistrydata.org), values read from the figure, planner list 2026-11-13 (assignment read from the figure: validation only)",
+   "validationOnly": true,
+   "signals": [
+    {
+     "label": "ring CH",
+     "smarts": "[CH;r3]",
+     "ppm": 1.23,
+     "nH": 1,
+     "validationOnly": true
+    },
+    {
+     "label": "CH2Cl",
+     "smarts": "[CH2;!r3]",
+     "ppm": 3.44,
+     "nH": 2,
+     "validationOnly": true
+    },
+    {
+     "label": "ring CH2 (mean of cis 0.35 / trans 0.67)",
+     "smarts": "[CH2;r3]",
+     "ppm": 0.51,
+     "nH": 4,
+     "validationOnly": true
+    }
+   ]
+  },
+  {
+   "compound": "(bromomethyl)cyclopropane",
+   "smiles": "BrCC1CC1",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "round": 3,
+   "source": "Reich Collection (organicchemistrydata.org), values read from the figure, planner list 2026-11-13 (assignment read from the figure: validation only)",
+   "validationOnly": true,
+   "signals": [
+    {
+     "label": "ring CH",
+     "smarts": "[CH;r3]",
+     "ppm": 1.3,
+     "nH": 1,
+     "validationOnly": true
+    },
+    {
+     "label": "CH2Br",
+     "smarts": "[CH2;!r3]",
+     "ppm": 3.33,
+     "nH": 2,
+     "validationOnly": true
+    },
+    {
+     "label": "ring CH2 (mean of cis 0.36 / trans 0.76)",
+     "smarts": "[CH2;r3]",
+     "ppm": 0.56,
+     "nH": 4,
+     "validationOnly": true
+    }
+   ]
+  },
+  {
+   "compound": "cyclobutane",
+   "smiles": "C1CCC1",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "round": 3,
+   "source": "Pretsch (planner list 2026-11-13)",
+   "signals": [
+    {
+     "label": "CH2",
+     "smarts": "[CH2;r4]",
+     "ppm": 1.94,
+     "nH": 8,
+     "note": "same compound as the round-1 entry (Reich 1.98): one independent compound"
+    }
+   ]
+  },
+  {
+   "compound": "cyclobutanone",
+   "smiles": "O=C1CCC1",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "round": 3,
+   "source": "Reich Collection (organicchemistrydata.org), values read from the figure, planner list 2026-11-13",
+   "signals": [
+    {
+     "label": "alpha CH2",
+     "smarts": "[CH2;r4][C;r4]=O",
+     "ppm": 2.99,
+     "nH": 4
+    },
+    {
+     "label": "beta CH2",
+     "smarts": "[CH2;r4;!$([CH2][C]=O)]",
+     "ppm": 1.94,
+     "nH": 2
+    }
+   ]
+  },
+  {
+   "compound": "cyclobutane-1,2-dione",
+   "smiles": "O=C1CCC1=O",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "round": 3,
+   "source": "Reich Collection (organicchemistrydata.org), values read from the figure, planner list 2026-11-13",
+   "signals": [
+    {
+     "label": "CH2",
+     "smarts": "[CH2;r4]",
+     "ppm": 2.98,
+     "nH": 4
+    }
+   ]
+  },
+  {
+   "compound": "3,3-diphenylcyclobutanone",
+   "smiles": "O=C1CC(C1)(c1ccccc1)c1ccccc1",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "round": 3,
+   "source": "Reich Collection (organicchemistrydata.org), values read from the figure, planner list 2026-11-13",
+   "signals": [
+    {
+     "label": "CH2",
+     "smarts": "[CH2;r4]",
+     "ppm": 3.82,
+     "nH": 4
+    }
+   ]
+  },
+  {
+   "compound": "benzocyclobutene",
+   "smiles": "C1Cc2ccccc12",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "round": 3,
+   "source": "Reich Collection (organicchemistrydata.org), values read from the figure, planner list 2026-11-13",
+   "signals": [
+    {
+     "label": "CH2",
+     "smarts": "[CH2;r4]",
+     "ppm": 3.14,
+     "nH": 4
+    }
+   ]
+  },
+  {
+   "compound": "3-bromocyclobutanone",
+   "smiles": "O=C1CC(Br)C1",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "round": 3,
+   "source": "Reich Collection (organicchemistrydata.org), values read from the figure, planner list 2026-11-13",
+   "signals": [
+    {
+     "label": "CH2 (mean of 3.48 / 3.77)",
+     "smarts": "[CH2;r4]",
+     "ppm": 3.625,
+     "nH": 4,
+     "note": "two CH2 carbons, each with a cis and a trans H (3.48 / 3.77); compared as the mean"
+    },
+    {
+     "label": "CH (CHBr)",
+     "smarts": "[CH;r4]",
+     "ppm": 4.5,
+     "nH": 1
+    }
+   ]
+  },
+  {
+   "compound": "benzenethiol (Reich 3.29)",
+   "smiles": "Sc1ccccc1",
+   "solvent": "unspecified",
+   "tier": 2,
+   "grade": "B",
+   "round": 3,
+   "source": "Reich Collection (organicchemistrydata.org), values read from the figure, planner list 2026-11-13 (solvent not stated); the round-2 entry carries 3.40 (CDCl3, 89.56 MHz)",
+   "signals": [
+    {
+     "label": "SH",
+     "smarts": "[SH]c",
+     "ppm": 3.29,
+     "nH": 1,
+     "exchangeable": true
+    }
+   ]
+  }
+ ]
+}

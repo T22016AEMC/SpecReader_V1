@@ -10,7 +10,9 @@ export interface GraphSearchHints {aromatic?:boolean;carbonyl?:boolean;oxygen?:b
  observedH1Signals?:number|null;observedC13Signals?:number|null}
 export interface DeNovoSearchResult {smiles:string[];status:'BOUNDED'|'UNSUPPORTED'|'UNAVAILABLE';visited:number;note:string;termination:SearchTermination;complete:boolean;partialHypotheses:string[];rejectedByComposition:number;error?:string;derivations?:Record<string,AssemblyDerivation>;elapsedMs?:number;frontierPeak?:number;formulaSources?:Record<string,string[]>;
  /** P1b: how the structures were produced (exhaustive enumerator or legacy fallback), completeness and scoring cap. */
- enumeration?:import('../enumeration/types').EnumerationDiagnostics}
+ enumeration?:import('../enumeration/types').EnumerationDiagnostics;
+ /** v1.4.2 stop 36 (deferredSecondPassSchedule ROUND2): runs the deferred readings of this round-1 result later and returns the joined result. Removed before the result leaves the search. */
+ resumeDeferred?:(timeMs:number,maxStates:number)=>Promise<DeNovoSearchResult>}
 export interface GraphSearchOptions {maxResults?:number;maxStates?:number;timeMs?:number;beamWidth?:number;hints?:GraphSearchHints;maxFrontier?:number;shouldCancel?:()=>boolean;onProgress?:(p:GraphSearchProgress)=>void}
 export interface GraphSearchProgress {visited:number;candidateCount:number;elapsedMs:number;frontier:number}
 type Edge={a:number;b:number;order:number};

@@ -4,6 +4,9 @@ import {executeSixStepAnalysis} from '../../src/engines/reasoning/sixStepAnalysi
 import {initializeRDKit} from '../../src/engines/scientificEngines/rdkitAdapter';
 import {canonNoStereo, fixtureSpectra, SHAPE_BUDGET} from '../helpers/v121Golden';
 import {loadV123} from '../helpers/v123Samples';
+import {usePreV142Defaults} from '../helpers/v142PreDefaults';
+// v1.4.2 stop 36 (E): this file pins results recorded under the defaults before 1.4.2; the new rule sets (on by default since 1.4.2) are switched to their old values here. No expected value changed.
+usePreV142Defaults();
 
 // v1.3.0 ranking tie-break: candidates with the same ROUNDED finalScore are ordered by the unrounded ledger total first (higher first); flag off keeps the v1.2.3 order (contradiction count first).
 // SYNTHETIC sample CR1 (p-cresol type, tests/fixtures/v130): p-cresol and a triaryl carbinol both round to 68; the ledger totals are 68.48 and 67.83, the carbinol has fewer contradicting reasons.

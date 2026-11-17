@@ -18,6 +18,8 @@ export interface BFSet {
   /** v1.2.1: forbidden fragments (SMARTS); a molecule that contains one is not an output. The caller passes the list (this file imports nothing from src/engines). */
   forbidden?: string[];
   equivalencePools?: {group: string; demands: number[]}[];
+  /** v1.4.0 stop 15 (flag v140.coverage): two atoms of the SAME equivalence group are not held apart by the singlet rule (a no-H-neighbour atom may be bound to a carbon with hydrogen when both are members of one group). Default false = the v1.2 rule. */
+  singletSameGroupExempt?: boolean;
 }
 
 const VALENCE: Record<string, number> = {C: 4, N: 3, O: 2, F: 1, Cl: 1, Br: 1, I: 1, S: 2};
@@ -110,7 +112,9 @@ export async function bruteForceV12(formula: Record<string, number>, set: BFSet)
     if (hOnFree !== hFree || !connected()) return;
     const hCount = (i: number) => fixedH[i] + (free[i] ? left[i] : 0);
     // singlet rule, stated on the final molecule: no bond from a no-H-neighbour atom to a carbon that carries hydrogen
+    const exemptPair = (a: number, b: number) => Boolean(set.singletSameGroupExempt) && group[a] !== null && group[a] === group[b];
     for (const [a, b] of chosen) {
+      if (exemptPair(a, b)) continue;
       if (noHC[a] && el[b] === 'C' && hCount(b) > 0) return;
       if (noHC[b] && el[a] === 'C' && hCount(a) > 0) return;
     }
