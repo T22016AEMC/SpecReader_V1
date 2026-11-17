@@ -218,6 +218,14 @@ export const V12_CONFIG = {
    * ALL RANGES, GATES, SHARES AND CAPS ARE TEXTBOOK-STYLE RANGES OR ENGINEERING JUDGEMENT (工程判斷, 未查證; 未經校準); nothing was fitted to a fixture peak list. +-10 cm-1 (bandUncertaintyCm1) is engineering judgement.
    */
   useV142IR: true as boolean,
+  /**
+   * v1.4.3 (formula selection of the no-formula search, a bug fix; notes/v1.4.3/BPA_BISECT.md). DEFAULT ON. false = every path is identical to v1.4.2. Works inside planFormulaSearch only (so only while the v1.2.1 planning gate is open). Three changes:
+   * (1) the 1H feasibility of a formula is checked BEFORE the representative of its (k, C) key is chosen: an infeasible formula cannot stand for its O count, the best FEASIBLE one does (a group is dropped only when no member is feasible).
+   * (2) the "missing exchangeable H" add-back of the ordering score (planScore) is not used when the 1H table already lists a peak that can only be read as OH/NH (exchangeable-marked, above exchangeable.alwaysAbovePpm, or a singlet in the solvent's OH window
+   *     AND above the aromatic C-H class, i.e. not competing with an ordinary C-H class); and
+   * (3) when it is used, it gives back exactly what scoreComposition charged: weights.exchangeableMissing x e x (partialCoverageHydrogenFactor while the 1H table is not confirmed complete), not always the full weight.
+   */
+  useV143Select: true as boolean,
   v142IR: {alkeneOOP: true as boolean, negativeEvidence: false as boolean, bandUncertaintyCm1: 10,
     /** stop 30: the negative-evidence rule of ONE group (nitrile / C-nitro / terminal alkyne C-H), each DEFAULT FALSE. A rule is on when useV142IR AND (negativeEvidence OR its own flag): negativeEvidence keeps its meaning "all three together" (?exp=ir2neg is unchanged). */
     negNitrile: false as boolean, negNitro: false as boolean, negAlkyne: false as boolean,

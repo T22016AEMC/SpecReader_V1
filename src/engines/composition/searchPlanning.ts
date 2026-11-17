@@ -6,8 +6,8 @@ import {V12_CONFIG} from '../constraints/v12Config';
 import {buildProblem, parseFormula} from '../enumeration/problem';
 import {Searcher} from '../enumeration/search';
 import {COMPOSITION_CONFIG} from './compositionConfig';
-import {v123EsterMethineActive,v123NameSlotsActive,v130DbeDemotionActive,vinylWindowsActive} from './planningGate';
-import {hiddenExchangeableEvidence} from './functionalGroupBounds';
+import {v123EsterMethineActive,v123NameSlotsActive,v130DbeDemotionActive,v143SelectActive,vinylWindowsActive} from './planningGate';
+import {hiddenExchangeableEvidence,listedExchangeableSignal} from './functionalGroupBounds';
 import type {CompositionHypothesis, NotSearchedReason, OxygenEvidenceFloor} from './types';
 
 /**
@@ -122,9 +122,14 @@ export function planFormulaSearch(hypotheses: CompositionHypothesis[], oxygenFlo
   const P = V12_CONFIG.planning;
   const notSearched = new Map<string, NotSearched>();
   const mark = (h: CompositionHypothesis, reason: NotSearchedReason, text: string) => notSearched.set(h.id, {reason, text});
-  const hidden = hiddenExchangeableEvidence(evidence.observations).present;
+  // v1.4.3 (useV143Select): (2) a peak the 1H table already lists as exchangeable is not "a hidden OH", so the add-back is off; (3) the add-back returns what scoreComposition charged (the weight times the partial-coverage factor of an unconfirmed table), not always the full weight.
+  const sel = v143SelectActive();
+  const hidden = hiddenExchangeableEvidence(evidence.observations).present && !(sel && listedExchangeableSignal(evidence.observations).present);
+  const h1Counted = evidence.observations.filter(o => o.modality === '1H_NMR' && !o.optional);
+  const h1Complete = h1Counted.every(o => o.relativeIntegral !== null && o.relativeIntegral > 0 && o.coverage === 'CONFIRMED_COMPLETE');
+  const addBack = COMPOSITION_CONFIG.weights.exchangeableMissing * (sel && !h1Complete ? COMPOSITION_CONFIG.weights.partialCoverageHydrogenFactor : 1);
   /** Score used for ordering only: with hidden-exchangeable evidence the prior against missing exchangeable H is not charged. */
-  const planScore = (h: CompositionHypothesis) => h.score + (hidden ? COMPOSITION_CONFIG.weights.exchangeableMissing * eOf(h) : 0);
+  const planScore = (h: CompositionHypothesis) => h.score + (hidden ? addBack * eOf(h) : 0);
   const scoreOrder = (a: CompositionHypothesis, b: CompositionHypothesis) => (Math.abs(planScore(a) - planScore(b)) > SCORE_TIE ? planScore(b) - planScore(a) : 0);
   // v1.3.0 (G5): a strong C=O in the IR needs at least one double bond or ring, so a formula with DBE 0 is demoted: it is ordered (and, among the variants of one O count, chosen) after every formula with DBE ≥ 1,
   // never removed. If the C=O reading is wrong (a water band, a ring band) the cost is that the true formula is searched later (or in round 2), not that it is lost. Flag off: no demotion.
@@ -146,41 +151,50 @@ export function planFormulaSearch(hypotheses: CompositionHypothesis[], oxygenFlo
     byKey.set(key, [...(byKey.get(key) ?? []), h]);
   }
   const kept: CompositionHypothesis[] = [];
+  let checked = 0, ms = 0;
+  // v1.4.3 (1): with useV143Select the 1H feasibility is computed BEFORE the representative of a key is chosen (once per formula, cached); an infeasible formula cannot stand for its O count or its e / N variant slot.
+  const feasCache = new Map<string, Feasibility>();
+  const check = (h: CompositionHypothesis): Feasibility => {
+    let f = feasCache.get(h.formula);
+    if (!f) { f = feasibility(h.formula, evidence); feasCache.set(h.formula, f); checked++; ms += f.ms; }
+    return f;
+  };
+  const ok = (h: CompositionHypothesis) => !sel || check(h).feasible;
   for (const group of byKey.values()) {
     const k = kOf(group[0]), floor = oxygenFloor?.floor ?? 0;
     const priority = (h: CompositionHypothesis) => (!oxygenFloor || oOf(h) === floor || oOf(h) === Math.max(1, k) * floor ? 0 : 1);
     // N O variants = N distinct O counts, each with its best formula (H / N variants of the same O count share the slot) …
     group.sort(better);
     const bestOfO = new Map<number, CompositionHypothesis>();
-    for (const h of group) if (!bestOfO.has(oOf(h))) bestOfO.set(oOf(h), h);
+    for (const h of group) if (!bestOfO.has(oOf(h)) && ok(h)) bestOfO.set(oOf(h), h);
     const reps = [...bestOfO.values()].sort((x, y) => priority(x) - priority(y) || better(x, y));
     const n = variantLimit(k);
     const keep = new Set(reps.slice(0, n));
     // … and, when the best formula of a kept O count has no extra exchangeable H, also its best formula with some (the e > 0 variant is not swallowed by e = 0).
     for (const rep of [...keep]) {
       if (eOf(rep) > 0) continue;
-      const withE = group.find(h => oOf(h) === oOf(rep) && eOf(h) > 0);
+      const withE = group.find(h => oOf(h) === oOf(rep) && eOf(h) > 0 && ok(h));
       if (withE) keep.add(withE);
     }
     // v1.2.3 (A1): a kept O count also keeps its best N-free formula (when the best formula of that O count has N), so a formula with N cannot swallow the N-free one of the same (k, C, O).
     if (v123NameSlotsActive()) for (const rep of [...keep]) {
       if ((rep.counts.N ?? 0) === 0) continue;
-      const noN = group.find(h => oOf(h) === oOf(rep) && (h.counts.N ?? 0) === 0 && eOf(h) === eOf(rep)) ?? group.find(h => oOf(h) === oOf(rep) && (h.counts.N ?? 0) === 0);
+      const noN = group.find(h => oOf(h) === oOf(rep) && (h.counts.N ?? 0) === 0 && eOf(h) === eOf(rep) && ok(h)) ?? group.find(h => oOf(h) === oOf(rep) && (h.counts.N ?? 0) === 0 && ok(h));
       if (noN) keep.add(noN);
     }
     kept.push(...keep);
     for (const h of group) {
       if (keep.has(h)) continue;
+      if (sel && feasCache.get(h.formula)?.feasible === false) { mark(h, 'H1_INFEASIBLE', `¹H 清單不可行：${feasCache.get(h.formula)!.reason}`); continue; }
       const sameO = [...keep].some(x => oOf(x) === oOf(h));
       mark(h, 'OXYGEN_VARIANT_LIMIT', sameO ? '同 O 數只保留分數最高的一個（H、N 的變體不算 O 變體）；有額外可交換 H 的變體另外保留分數最高的一個' : `同骨架 O 變體超過保留數（每個 k／C 數最多 ${n} 個 O 變體）`);
     }
   }
   // A5 for every kept formula (the DBE sort key needs the readings), then the order inside each k.
-  let checked = 0, ms = 0;
   const feasible = new Map<string, PlannedFormula>();
   for (const h of kept) {
-    const f = feasibility(h.formula, evidence);
-    checked++; ms += f.ms;
+    const f = sel ? check(h) : feasibility(h.formula, evidence);
+    if (!sel) { checked++; ms += f.ms; }
     if (!f.feasible) { mark(h, 'H1_INFEASIBLE', `¹H 清單不可行：${f.reason}`); continue; }
     const needed = f.dbeNeeded === null ? null : f.dbeNeeded + (oxygenFloor?.strongCarbonyl ? 1 : 0);
     feasible.set(h.id, {hypothesis: h, order: 0, feasibility: f, dbe: {dbe: h.dbe, needed, excess: needed === null ? 0 : Math.max(0, h.dbe - needed)}});

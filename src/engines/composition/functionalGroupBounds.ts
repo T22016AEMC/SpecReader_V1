@@ -4,6 +4,8 @@ import {COMPOSITION_CONFIG as CFG} from './compositionConfig';
 import type {NmrEvidence} from './nmrComposition';
 import {strongCarbonylBands,strongIrBands} from '../constraints/requiredSubstructures';
 import {v132BestFindingActive,v132WindowsActive} from './planningGate';
+import {V12_CONFIG} from '../constraints/v12Config';
+import {exchangeableSingletRange} from '../constraints/shiftClasses';
 import type {ElementCounts,OxygenEvidenceFloor} from './types';
 
 export type FeatureKey='CARBONYL'|'ESTER_ACID'|'ANHYDRIDE'|'AMIDE'|'NITRILE'|'ALKYNE'|'AROMATIC'|'NITRO'|'OXYGEN_SINGLE'|'AMINE';
@@ -120,4 +122,24 @@ export function hiddenExchangeableEvidence(observations:ObservedEvidence[]):{pre
  const h1Broad=observations.some(o=>o.modality==='1H_NMR'&&!o.optional&&(o.shape==='BROAD'||o.multiplicity==='br'||o.multiplicity==='br s'));
  const h1Any=observations.some(o=>o.modality==='1H_NMR'&&!o.optional);
  return {present:ir.length>0&&h1Any&&!h1Broad,observationIds:ir.map(o=>o.id)};
+}
+
+/**
+ * v1.4.3: the 1H table already LISTS an exchangeable peak, so an OH is not "missing from the table" and the missing-exchangeable add-back of the ordering score has no reason to be used.
+ * Same definition as the EXCHANGEABLE shift class (shiftClasses.classifySignal) for a non-optional 1H signal: marked exchangeable; or above exchangeable.alwaysAbovePpm; or a singlet inside the solvent's OH window
+ * (exchangeableSingletRange: DMSO-d6 4–12, CDCl3 0.5–6, other / unknown solvents the union) — with one added condition: for the last two the shift is above the top of the aromatic C-H class (ARO_CH, 8.5 ppm), where no ordinary
+ * C-H class competes (a CH3 singlet at 2.3 ppm in CDCl3 or a ring singlet at 7.1 ppm in DMSO-d6 is in the window too, but is not evidence that an OH was listed). A broad signal is the case hiddenExchangeableEvidence already handles.
+ */
+export function listedExchangeableSignal(observations:ObservedEvidence[]):{present:boolean;observationIds:string[]} {
+ const aroTop=Math.max(...V12_CONFIG.shiftClasses.filter(c=>c.id==='ARO_CH').map(c=>c.rangePpm[1]));
+ const ex=V12_CONFIG.exchangeable;
+ const ids=observations.filter(o=>{
+  if(o.modality!=='1H_NMR'||o.optional)return false;
+  if(o.exchangeable)return true;
+  if(!(o.value>aroTop))return false;
+  if(o.value>ex.alwaysAbovePpm)return true;
+  const [lo,hi]=exchangeableSingletRange(o.metadata.solvent??'');
+  return o.multiplicity==='s'&&o.value>=lo&&o.value<=hi;
+ }).map(o=>o.id);
+ return {present:ids.length>0,observationIds:ids};
 }
