@@ -1,7 +1,8 @@
 import type {WorkbenchOrchestrator} from './workbenchOrchestrator';
 import type {ExperimentalSpectrumData,ExtendedSpectrumModality} from '../types/spectrum';
 import type {ExtraChemicalEvidenceInput} from './chemicalFeatureEngine';
-export type ModeAResult=ReturnType<typeof WorkbenchOrchestrator.runModeAPipeline>&{inputSpectra?:AnalysisInput['spectra'];runtime?:{rdkitAvailable:boolean}};
+import {activeExperiments,type ExperimentName} from './constraints/experimentFlags';
+export type ModeAResult=ReturnType<typeof WorkbenchOrchestrator.runModeAPipeline>&{inputSpectra?:AnalysisInput['spectra'];runtime?:{rdkitAvailable:boolean;experiments?:ExperimentName[]}};
 export type AnalysisInput={spectra:Partial<Record<ExtendedSpectrumModality,ExperimentalSpectrumData>>;extraInput:ExtraChemicalEvidenceInput};
 /** Inert UI state: no engine, formula enumeration or candidate search on mount. */
 export function emptyModeAState():ModeAResult {
@@ -18,6 +19,9 @@ export function executeAnalysisWorker(input:AnalysisInput,options:{signal?:Abort
   const finish=()=>{clearTimeout(timeout);if(cancelTimeout)clearTimeout(cancelTimeout);options.signal?.removeEventListener('abort',cancel);worker.terminate();};
   worker.onmessage=e=>{if(e.data.type==='progress'){options.onProgress?.(e.data.progress);return;}finish();if(e.data.error)reject(new Error(e.data.error));else resolve(e.data.result);};
   worker.onerror=()=>{finish();reject(new Error('背景分析執行失敗；輸入已保留。'));};
-  options.signal?.addEventListener('abort',cancel,{once:true});worker.postMessage(input);
+  options.signal?.addEventListener('abort',cancel,{once:true});
+  // v1.4.1 stop 20: V12_CONFIG is module-level, so the worker has its own copy; tell it which experiments (?exp=) are on. Nothing is sent when none is on (= the behaviour before).
+  const experiments=activeExperiments();if(experiments.length)worker.postMessage({type:'experiments',names:experiments});
+  worker.postMessage(input);
  });
 }

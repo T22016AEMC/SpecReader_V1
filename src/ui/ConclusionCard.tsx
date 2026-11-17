@@ -1,4 +1,5 @@
 import React, {useState} from 'react';
+import {Nmrshiftdb2Notice} from './Nmrshiftdb2Notice';
 
 /**
  * Conclusion card (top candidates) and compact row (the others) of the 「預測結構」 tab, v1.2.2 P4 (DESIGN_REPORT B1.3).
@@ -24,6 +25,8 @@ export interface CandidateView {
   reasoning: () => React.ReactNode;
   /** The 「支持與矛盾」 area content. */
   evidence: () => React.ReactNode;
+  /** v1.4.2 stop 35 (D): the card shows a ¹H prediction result (conclusion.ts cardShowsH1Prediction); the nmrshiftdb2 notice is shown with it. */
+  showsH1?: boolean;
 }
 
 const EVIDENCE_OPEN = '展開支持與矛盾';
@@ -48,6 +51,7 @@ export function ConclusionCard({c}: {c: CandidateView}) {
       <ul className="list-disc space-y-0.5 pl-4 text-xs text-slate-300">
         {c.bullets.map((b, i) => <li key={i}>{b}</li>)}
       </ul>
+      {c.showsH1 && <Nmrshiftdb2Notice testId="card-nmrshiftdb2-notice" className="mt-1" />}
       <p className="mt-1.5 text-[11px] text-amber-200" data-testid="candidate-source">{c.sourceLine}</p>
       {c.reasoning()}
       <div className="mt-auto flex flex-wrap gap-2 border-t border-slate-800 pt-2">
@@ -100,6 +104,7 @@ export function CompactCandidateRow({c}: {c: CandidateView}) {
             <div>{c.structure()}</div>
             <div>
               <ul className="list-disc space-y-0.5 pl-4 text-xs text-slate-300">{c.bullets.map((b, i) => <li key={i}>{b}</li>)}</ul>
+              {c.showsH1 && <Nmrshiftdb2Notice testId="card-nmrshiftdb2-notice" className="mt-1" />}
               <p className="mt-1.5 text-[11px] text-amber-200" data-testid="candidate-source">{c.sourceLine}</p>
               {c.reasoning()}
             </div>

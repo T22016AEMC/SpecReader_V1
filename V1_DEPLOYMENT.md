@@ -2,7 +2,7 @@
 
 Repository：[T22016AEMC/SpecReader_V1](https://github.com/T22016AEMC/SpecReader_V1)，公開、main。使用者已明確授權公開原始碼。
 
-獨立服務：[specreader-v1](https://specreader-v1.onrender.com)，Render `srv-db6udpgu01pc73bl1tog`，My Workspace `tea-db6qffon74is738k4q30`，Singapore，Web Service／Node／free。不修改 EluSim 或任何其他服務。最終科學版已 LIVE；版本狀態與測試使用 `validation/public-deployment.json`、`validation/public-smoke.json`確認，不能把基準部署算作最新科學版本。
+獨立服務：[specreader-v1](https://specreader-v1.onrender.com)，Render `<Render 服務 ID>`，My Workspace `<Render Workspace ID>`，Singapore，Web Service／Node／free。不修改 EluSim 或任何其他服務。最終科學版已 LIVE；版本狀態與測試使用 `validation/public-deployment.json`、`validation/public-smoke.json`確認，不能把基準部署算作最新科學版本。
 
 ## 設定
 

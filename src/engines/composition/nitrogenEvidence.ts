@@ -2,7 +2,7 @@ import type {ExperimentalSpectrumData} from '../../types/spectrum';
 import type {ObservedEvidence} from '../reasoning/types';
 import {COMPOSITION_CONFIG as CFG} from './compositionConfig';
 import {extractMsEvidence} from './msComposition';
-import {v123NitrogenEvidenceActive} from './planningGate';
+import {v123NitrogenEvidenceActive,v132WindowsActive} from './planningGate';
 import type {CompositionReason} from './types';
 
 /**
@@ -55,7 +55,9 @@ export function assessNitrogenEvidence(args:{observations:ObservedEvidence[];spe
  const alkylAromatic=inRange(CFG.irAlkylAromaticRingRange).length>0&&inRange(CFG.irAlkylBendRange).length>0;
  const strong=(o:ObservedEvidence)=>rel(o)!==null&&rel(o)!>=CFG.irStrongRelativeIntensity;
  if(!alkylAromatic){
-  pairs:for(const a of inRange(CFG.irNitroAsymRange).filter(strong))for(const s of inRange(CFG.irNitroSymRange).filter(strong)){
+  pairs:for(const a of inRange(v132WindowsActive()?CFG.windowsV132.nitroAsymRange:CFG.irNitroAsymRange).filter(strong))for(const s of inRange(v132WindowsActive()?CFG.windowsV132.nitroSymRange:CFG.irNitroSymRange).filter(strong)){
+   // v1.3.2 (stop 6): a symmetric band above 1360 is the ALIPHATIC regime (Coates: 1380–1350) and pairs only with an asymmetric band >= 1535; a ring band (~1516) with a methyl bend (~1375) is not a nitro pair
+   if(v132WindowsActive()&&s.value>CFG.windowsV132.nitroAromaticSymMaxCm1&&a.value<CFG.windowsV132.nitroAliphaticAsymMinCm1)continue;
    const ratio=a.relativeIntensity!/s.relativeIntensity!;
    // v1.2.3 (A4): an asymmetric candidate near 1510 that a ring band explains (another band at 1575–1625, or aromatic evidence) is nitro only with 1H support (an aromatic H at or above 7.9 ppm).
    if(v123&&within(a.value,LA.nitroRingAsymRange)&&(aromatic||ir.some(q=>q.id!==a.id&&within(q.value,LA.ringPartnerRange)))&&!args.observations.some(o=>o.modality==='1H_NMR'&&!o.optional&&o.value>=LA.nitroAromaticH1MinPpm))continue;

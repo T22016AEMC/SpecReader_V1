@@ -2,6 +2,8 @@ import {describe, expect, it} from 'vitest';
 import {canPackDemands, orbitPartition, sameOrbit, type AutGraph} from '../../src/engines/enumeration/automorphism';
 import {requiredFromEvidence, strongIrBands} from '../../src/engines/constraints/requiredSubstructures';
 import type {ObservedEvidence} from '../../src/engines/reasoning/types';
+import {V12_CONFIG} from '../../src/engines/constraints/v12Config';
+import {openV132Gates} from '../helpers/v132Gates';
 
 // Exactness of the orbit computation against trying every permutation, on seeded random labelled graphs (including highly symmetric ones).
 function rng(seed: number) { let s = seed >>> 0; return () => ((s = (Math.imul(s, 1664525) + 1013904223) >>> 0) / 2 ** 32); }
@@ -86,12 +88,29 @@ describe('strong-evidence rules (requiredSubstructures)', () => {
   const ir = (value: number, relativeIntensity: number | null) => ob({id: `IR:${value}`, modality: 'IR', value, relativeIntensity});
   const h = (value: number, integral: number, multiplicity: string, jHz: number[] = []) => ob({id: `H:${value}`, modality: '1H_NMR', value, relativeIntegral: integral, multiplicity, jHz});
   const ids = (o: ObservedEvidence[]) => requiredFromEvidence(o).map(r => r.id);
-  it('a strong C=O needs ≥ 0.5 × the strongest band in 1650–1800; weak or unknown-intensity bands do not count', () => {
-    expect(ids([ir(1720, 100), ir(2950, 40)])).toEqual(['STRONG_CARBONYL']);
-    expect(ids([ir(1720, 40), ir(2950, 100)])).toEqual([]);
-    expect(ids([ir(1720, 50), ir(2950, 100)])).toEqual(['STRONG_CARBONYL']);
-    expect(ids([ir(1720, null), ir(2950, null)])).toEqual([]);
-    expect(ids([ir(1620, 100)])).toEqual([]);
+  // v1.3.2: the 0.5 rule is the useV132 = false (v1.3.1) behaviour; with the flag on the 1700–1800 window is judged at 0.30 (tests/v12/v132StrongCarbonyl.test.ts), 1650–1700 keeps 0.5.
+  it('a strong C=O needs ≥ 0.5 × the strongest band in 1650–1800; weak or unknown-intensity bands do not count (useV132 = false, v1.3.1)', () => {
+    const was = V12_CONFIG.useV132; V12_CONFIG.useV132 = false;
+    try {
+      expect(ids([ir(1720, 100), ir(2950, 40)])).toEqual(['STRONG_CARBONYL']);
+      expect(ids([ir(1720, 40), ir(2950, 100)])).toEqual([]);
+      expect(ids([ir(1720, 50), ir(2950, 100)])).toEqual(['STRONG_CARBONYL']);
+      expect(ids([ir(1720, null), ir(2950, null)])).toEqual([]);
+      expect(ids([ir(1620, 100)])).toEqual([]);
+    } finally { V12_CONFIG.useV132 = was; }
+  });
+  it('v1.3.2 (useV132 = true): a strong C=O is ≥ 0.30 × the strongest band in 1700–1800 and still ≥ 0.5 × in 1650–1700; unknown-intensity bands do not count', () => {
+    const restore = openV132Gates();   // the whole gate chain useV123..useV132, not only useV132 (vitest.flagoff.config.ts has useV123 = false)
+    try {
+      expect(ids([ir(1720, 100), ir(2950, 40)])).toEqual(['STRONG_CARBONYL']);
+      expect(ids([ir(1720, 40), ir(2950, 100)])).toEqual(['STRONG_CARBONYL']);
+      expect(ids([ir(1720, 30), ir(2950, 100)])).toEqual(['STRONG_CARBONYL']);
+      expect(ids([ir(1720, 29), ir(2950, 100)])).toEqual([]);
+      expect(ids([ir(1680, 40), ir(2950, 100)])).toEqual([]);
+      expect(ids([ir(1680, 50), ir(2950, 100)])).toEqual(['STRONG_CARBONYL']);
+      expect(ids([ir(1720, null), ir(2950, null)])).toEqual([]);
+      expect(ids([ir(1620, 100)])).toEqual([]);
+    } finally { restore(); }
   });
   it('a nitrile needs 2210–2260 at ≥ 0.3 of the strongest band', () => {
     expect(ids([ir(2230, 35), ir(1000, 100)])).toEqual(['NITRILE']);

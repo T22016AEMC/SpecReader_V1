@@ -90,3 +90,11 @@ export function conclusionBullets(input: BulletInput): string[] {
   lines.push(input.userFormula ? `分子式：使用者指定 ${input.userFormula}` : `分子式：未指定，由證據組出 ${input.candidateFormula}`);
   return lines;
 }
+
+/**
+ * v1.4.2 stop 35 (D): true when a Mode A candidate card shows a ¹H prediction result: a ¹H spectrum line (the card bullets and the 「支持與矛盾」 summary) or a ¹H entry
+ * of the score ledger (the 逐筆明細 table). Such a card shows the nmrshiftdb2 notice (some ¹H class shifts may come from nmrshiftdb2, V12_CONFIG.v142Nmrshiftdb2).
+ */
+export function cardShowsH1Prediction(evidence: readonly TraceEvidenceLike[], ledgerModalities: readonly (string | undefined)[] = []): boolean {
+  return summarizeCandidateEvidence(perSignalEvidence(evidence)).some(s => s.modality === '1H_NMR') || ledgerModalities.includes('1H_NMR');
+}

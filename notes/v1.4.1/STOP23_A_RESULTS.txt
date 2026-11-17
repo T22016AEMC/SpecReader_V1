@@ -1,0 +1,40 @@
+=== A conditions
+fits: CYCLOPROPANE_METHINE_HETERO n=6 delta -0.72 leave-one-out 0.21 (calibrate); CYCLOPROPANE_METHINE_OTHER n=7 delta -1.21 leave-one-out 0.14 (calibrate); class-level leave-one-out 0.18; pooled leave-one-out 0.27
+cond1 grouping chemical: true; cond2 each group >= 3 compounds: true; cond3a leave-one-out lower (groups and class): true; cond3b regression gone: false; cond4 CH2 classes stay pooled: true; ADOPT: false
+condition 3 detail: calibration items of the cyclopropane methine that get worse by > 0.15 ppm (|error after| - |error before|)
+item | truth | before | after pooled (deployed) | after refinement (in the engine)
+cyclopropanecarboxylic acid Hg (ring CH bearing R) | 1.57 | +1.20 | +0.22 | -0.01
+cyclopropanecarboxaldehyde Hg (ring CH bearing R) | 1.79 | +1.08 | +0.10 | -0.13
+cyclopropyl methyl ketone Hg (ring CH bearing R) | 1.83 | +1.04 | +0.06 | -0.17
+cyclopropanecarbonitrile Hg (ring CH bearing R) | 1.29 | +1.41 | +0.43 | +0.20
+vinylcyclopropane Hg (ring CH bearing R) | 1.35 | +1.15 | +0.17 | -0.06
+cyclopropylbenzene Hg (ring CH bearing R) | 1.83 | +1.14 | +0.16 | -0.07
+chlorocyclopropane Hg (ring CH bearing R) | 2.93 | +0.77 | -0.21 | +0.05
+bromocyclopropane Hg (ring CH bearing R) | 2.79 | +0.71 | -0.27 | -0.01
+iodocyclopropane Hg (ring CH bearing R) | 2.27 | +1.03 | +0.05 | +0.31
+cyclopropanol Hg (ring CH bearing R) | 3.36 | +0.19 | -0.79 | -0.53
+cyclopropylamine Hg (ring CH bearing R) | 2.24 | +0.86 | -0.12 | +0.14
+nitrocyclopropane Hg (ring CH bearing R) | 4.21 | +0.74 | -0.24 | +0.02
+cyclopropyltrimethylsilane Hg (ring CH bearing R) | -0.67 | +1.44 | +0.46 | +0.23
+cyclopropanol ring CH: before +0.19, pooled -0.79, refinement -0.53
+items worse by > 0.15 under the refinement: cyclopropanol
+
+=== A condition 4
+class | pooled leave-one-out | refined class-level leave-one-out
+CYCLOPROPANE_CH2 | 0.30 | 0.31
+CYCLOBUTANE_CH2 | 0.35 | 0.44
+
+=== old categories (only categories that differ between merged and refinement, and the cyclo categories)
+category | n | before round3 | merged (deployed) | refinement
+cyclobutane_CH | 2 | 0.78 | 0.51 | 0.51
+cyclopropane_CH | 1 | 1.03 | 0.44 | 0.44
+ALL old signals | 395 | 0.17 | 0.17 | 0.17
+
+=== 31 single-compound 1H scores
+compound | round3 off | merged (deployed) | refinement
+changed by merged: 0 of 31; changed by refinement: 0 of 31; refinement worse than round3 off by > 2 points: 0
+
+=== 55-structure panel
+structure | SMILES | round3 off | merged (deployed) | refinement
+benzocyclobutene | C1Cc2ccccc12 | 77.8 | 62.3 | 62.3
+

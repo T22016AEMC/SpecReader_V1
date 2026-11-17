@@ -7,6 +7,9 @@ import {ENUMERATION_CONFIG} from '../src/engines/enumeration/enumerationConfig';
 import {V12_CONFIG} from '../src/engines/constraints/v12Config';
 import {FORMULA_INCOMPATIBLE_VOIDS} from '../src/engines/constraints/atomInventory';
 import {h1Diphenylpropane, h1Ethyl, irAromatic, msC9, summarise} from './helpers/p1bScenarios';
+import {usePreV142Defaults} from './helpers/v142PreDefaults';
+// v1.4.2 stop 36 (E): this file pins results recorded under the defaults before 1.4.2; the new rule sets (on by default since 1.4.2) are switched to their old values here. No expected value changed.
+usePreV142Defaults();
 
 // P1b stage 2 — complete flows through the same entry the Web Worker uses (RDKit init + executeSixStepAnalysis). All spectra are
 // SYNTHETIC peak lists. The tests check program behaviour (status, completeness, candidate sets), never chemical accuracy.

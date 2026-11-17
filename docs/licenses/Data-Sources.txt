@@ -1,0 +1,36 @@
+Data sources (these are sources of published data and references; they are NOT licenses)
+
+SpecReader's own analysis code contains published numbers and refers to published works. They are listed here so that the origin is visible. The citation fields below are copied from the citation registry in
+src/engines/scientificEngines/nmrAtomicEnvironmentModel.ts and from the source comments named in each entry; nothing else is added. No spectrum or table of these works is reproduced as a file: the numbers are
+values inside the program, and a "see the comment in <file>" below points to where the repository states how a number was taken.
+
+1. Residual-solvent, water and trace-impurity peaks (the table TRACE_IMPURITY_SHIFT_TABLE in src/engines/scientificEngines/nmrAtomicEnvironmentModel.ts; used to recognise solvent / water / impurity peaks)
+   - Gottlieb, H. E.; Kotlyar, V.; Nudelman, A. "NMR Chemical Shifts of Common Laboratory Solvents as Trace Impurities". The Journal of Organic Chemistry, 1997. DOI 10.1021/jo971176v.
+     Registry note: experimental 1H and 13C chemical shifts of residual solvent peaks, H2O/HDO and 36 common laboratory solvents in CDCl3, (CD3)2SO, (CD3)2CO, CD3CN, CD3OD, D2O and C6D6. Also the source of the TMS reference and the HDO shift.
+   - Fulmer, G. R.; Miller, A. J. M.; Sherden, N. H.; Gottlieb, H. E.; Nudelman, A.; Stoltz, B. M.; Bercaw, J. E.; Goldberg, K. I. "NMR Chemical Shifts of Trace Impurities: Common Laboratory Solvents, Organics, and
+     Gases in Deuterated Solvents Relevant to the Organometallic Chemist". Organometallics, 2010. DOI 10.1021/om100106e.
+     Registry note: experimental residual solvent and trace impurity shifts across THF-d8, CD2Cl2, Toluene-d8, C6D6, CDCl3 and CD3CN.
+   - Babij, N. R.; McCusker, E. O.; Whiteker, G. T.; Canturk, B.; Choy, N.; Creemer, L. C.; De Amicis, C. V.; Hewlett, N. M.; Johnson, P. L.; Knobelsdorf, J. A.; Li, F.; Lorsbach, B. A.; Nugent, B. M.; Ryan, S. J.;
+     Smith, M. R.; Yang, Q. "NMR Chemical Shifts of Trace Impurities: Industrially Preferred Solvents Used in Process and Green Chemistry". Organic Process Research & Development, 2016. DOI 10.1021/acs.oprd.5b00417.
+     Registry note: experimental 1H and 13C chemical shifts of process and green chemistry solvents in CDCl3, DMSO-d6, D2O, CD3OD and CD3CN.
+
+2. Calibration constants taken from Fulmer 2010, Supporting Information, Table S1 (the same article as above)
+   - Solvent shift by environment class (src/engines/scientificEngines/h1SolventRules.ts; only used when the v1.4.0 1H rules are switched on): for every compound and signal with a value in CDCl3 and in the other solvent,
+     shift(solvent) - shift(CDCl3), grouped by the class of the environment. The deployed value of an adopted class is the mean over the compounds of Table S1; the selection rule is written in the header comment of that file.
+   - Calibration points of some 1H environment rules (src/engines/scientificEngines/h1AdditiveRules.ts, h1CoverageRules.ts; same condition): the source comments name the points that are "tier 1, Fulmer 2010 SI Table S1"
+     (for example N,N-dimethylformamide CH 8.02, tetrahydrofuran OCH2 3.76, 1,2-dimethoxyethane CH3 3.40). The same comments also name points of other origin (marked "RSC SI", "Reich", "user-looked-up", "SDBS /
+     ChemicalBook") that are used to calibrate or to validate other rules; the repository gives no further citation details for them than those words, so none are given here.
+
+3. Pretsch (the registry entry PRETSCH_EMPIRICAL_TABLES in src/engines/scientificEngines/nmrAtomicEnvironmentModel.ts)
+   - Pretsch, E.; Bühlmann, P.; Badertscher, M. "Structure Determination of Organic Compounds: Tables of Spectral Data". Springer Reference Tables, 2020, 5th Ed. (registry fields: "Shoolery & Grant-Paul Additivity").
+     Registry note: empirical substituent additivity increments for aliphatic (Shoolery / Grant-Paul), alkene and aromatic (Z_ortho, Z_meta, Z_para, Z_ipso) 1H and 13C chemical shifts.
+   - The additive 1H rules of the v1.4.0 layer read their numbers from the Ambit-HNMR knowledge base (credited in its own section of this file), which the source comment describes as "itself built on the additive schemes
+     of Pretsch". The repository's design notes state that the textbook shift ranges used elsewhere (Silverstein, Pretsch type tables) are engineering defaults whose page numbers were not checked.
+
+4. nmrshiftdb2 (v1.4.2 stop 26; only used when the v1.4.0 1H rules are switched on: useV140H1 with v140.oxygen / v140.calibration2)
+   Contains information from nmrshiftdb2 (www.nmrshiftdb.org), which is made available here under the nmrshiftdb2 Database License.
+   nmrshiftdb2 Database License: https://nmrshiftdb.nmr.uni-koeln.de/nmrshiftdbhtml/nmrshiftdb2datalicense.txt
+   - What is used: eight 1H class shifts (eleven in stop 26; stop 28 revoked or split the ones that failed the adoption gate) (src/engines/scientificEngines/h1Nmrshiftdb2.ts, V12_CONFIG.v142Nmrshiftdb2.rules in src/engines/constraints/v12Config.ts) computed from MEASURED CDCl3 1H spectra of
+     nmrshiftdb2 (file nmrshiftdb2withsignals.sd; computed spectra excluded). The program contains these numbers and their statistics only, no spectrum or structure of the database.
+   - The truth values behind the numbers (only the adopted classes, each with its nmrshiftdb2 ID, spectrum number and solvent) are kept with the full license text in the repository folder
+     tests/fixtures/v140/nmrshiftdb2/ (not part of the deployed site); the extraction method is scripts/nmrshiftdb2/extract_h1.py.

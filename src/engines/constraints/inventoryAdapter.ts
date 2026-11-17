@@ -1,6 +1,7 @@
 import type {FragmentAlternativeSet, FragmentAtomSpec, FragmentBondSpec, FragmentSpec, RequiredSubstructureSpec} from '../enumeration/types';
 import type {InventoryAlternative, RingInstancePlan} from './atomInventory';
 import {V12_CONFIG, type RingTemplateDef} from './v12Config';
+import {v140CoverageActive} from '../composition/planningGate';
 
 export interface InventorySetInfo {
   alternativeId: string;
@@ -58,7 +59,21 @@ function multisets(n: number, m: number): number[][] {
  * InventoryAlternative → fragment sets for the enumerator: one single-atom open fragment (fixed H) per kind of atom, the remaining formula
  * atoms as H = 0 open atoms, and the aromatic CH as ring templates. Every substitution pattern of the rings is its own set (docs/P1C_DESIGN.md D4).
  */
-export function inventoryToFragmentSets(alt: InventoryAlternative, options: {required?: RequiredSubstructureSpec[]} = {}): AdaptedInventory {
+export function inventoryToFragmentSets(alt: InventoryAlternative, options: {required?: RequiredSubstructureSpec[]; nitroVariant?: boolean} = {}): AdaptedInventory {
+  // v1.4.0 stop 10 (v140.coverage): the atoms of the inventory are free and neutral, so a nitro group (R-[N+](=O)[O-], charged) could never be built from them; nitromethane (CH3NO2, 4.33 s) therefore had no candidate at all.
+  // When a signal is read as a nitroalkane C-H (class NITRO_CH) and the unassigned atoms hold one N and two O, the alternative is ALSO offered with a fixed nitro fragment (the same charged form as CHARGED_GROUPS 'NITRO' of the adapter).
+  if (options.nitroVariant === undefined && v140CoverageActive() && alt.groups.some(g => g.shiftClasses.includes('NITRO_CH')) && (alt.zeroHAtoms.N ?? 0) >= 1 && (alt.zeroHAtoms.O ?? 0) >= 2) {
+    const plain = inventoryToFragmentSets(alt, {...options, nitroVariant: false});
+    const zero: Record<string, number> = {...alt.zeroHAtoms, N: alt.zeroHAtoms.N - 1, O: alt.zeroHAtoms.O - 2};
+    for (const el of Object.keys(zero)) if (zero[el] <= 0) delete zero[el];
+    const withNitro = inventoryToFragmentSets({...alt, zeroHAtoms: zero}, {...options, nitroVariant: true});
+    const nitro: FragmentSpec = {id: 'nitro', atoms: [{element: 'N', charge: 1, open: true}, {element: 'O'}, {element: 'O', charge: -1}], bonds: [{a: 0, b: 1, order: 2}, {a: 0, b: 2, order: 1}], count: 1};
+    const sets2 = withNitro.sets.map(s => ({...s, baseId: s.id, id: `${s.id}/nitro`, fragments: [...s.fragments, nitro]}));
+    const info2: Record<string, InventorySetInfo> = {};
+    for (const s of sets2) info2[s.id] = {...withNitro.info[s.baseId], patternLabel: [withNitro.info[s.baseId]?.patternLabel, 'nitro'].filter(Boolean).join(' + ')};
+    for (const s of sets2) delete (s as {baseId?: string}).baseId;
+    return {sets: [...plain.sets, ...sets2], info: {...plain.info, ...info2}, truncated: plain.truncated || withNitro.truncated};
+  }
   const frags: FragmentSpec[] = [];
   // Atoms of identical kind (element, H, flags) are interchangeable whatever signal they belong to, so they share one fragment (count = n).
   // A group that must be topologically equivalent keeps its own fragment and label.

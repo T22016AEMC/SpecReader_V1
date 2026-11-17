@@ -6,6 +6,9 @@ import {initializeRDKit} from '../../src/engines/scientificEngines/rdkitAdapter'
 import {measureV131, V131_CASES} from '../helpers/v131Samples';
 import type {V131Measure} from '../helpers/v131Samples';
 import {measureV130, V130_CASES} from '../helpers/v130Samples';
+import {usePreV142Defaults} from '../helpers/v142PreDefaults';
+// v1.4.2 stop 36 (E): this file pins results recorded under the defaults before 1.4.2; the new rule sets (on by default since 1.4.2) are switched to their old values here. No expected value changed.
+usePreV142Defaults();
 
 // v1.3.1 (A) acceptance (useV131 on): the rank of the target of every parsimony sample against the v1.3.0 baseline (tests/goldens/v131.baseline.json, flag off). Step budget only, dense IR baseline.
 // Rules: no sample gets worse (the protected samples BPA, di-p-tolyl ether, unsymmetric biaryl, ester, amide, acid keep rank 1 and carry no penalty); the p-cresol with OH in 1H and no 3335 band improves from 3 to 2;

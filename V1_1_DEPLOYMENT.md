@@ -10,7 +10,7 @@
 
 Repository：https://github.com/T22016AEMC/SpecReader_V1 （使用者已授權Public）。基準3a90a41；修復分支fix/v11-evidence-guided-search，驗證後快轉main；不重置或清除既有成果。
 
-沿用免費獨立Render Web Service `srv-db6udpgu01pc73bl1tog`，Workspace `tea-db6qffon74is738k4q30`，https://specreader-v1.onrender.com 。不建立付費資源、不改其他服務。發佈前實查部署仍為3a90a41；本輪是否更新完成，應以健康端點revision與GitHub main實際對照，不能只看推送或Live。
+沿用免費獨立Render Web Service `<Render 服務 ID>`，Workspace `<Render Workspace ID>`，https://specreader-v1.onrender.com 。不建立付費資源、不改其他服務。發佈前實查部署仍為3a90a41；本輪是否更新完成，應以健康端點revision與GitHub main實際對照，不能只看推送或Live。
 
 Build：`npm install -g pnpm@11.25.0 && pnpm install --frozen-lockfile && pnpm run build`
 
@@ -32,7 +32,7 @@ Start：`node dist/server.mjs`；process.env.PORT、0.0.0.0、production靜態�
 
 ## 實際公開驗收紀錄（2026-10-15）
 
-科學／UI程式Commit `ca3c9ff3dd987180169fda365c02effda9903fee`，Render部署 `dep-db87p3dg1s2s739c7c60` 於07:12:06 UTC為Live。07:14:54 UTC健康端點確認version1.1.3及相同revision；10個HTTP／靜態路由檢查全過（未知API按預期404），包含RDKit WASM及Mode A Worker `modeA.worker-C2SIly0G.js`。
+科學／UI程式Commit `ca3c9ff3dd987180169fda365c02effda9903fee`，Render部署 `<Render 部署 ID>` 於07:12:06 UTC為Live。07:14:54 UTC健康端點確認version1.1.3及相同revision；10個HTTP／靜態路由檢查全過（未知API按預期404），包含RDKit WASM及Mode A Worker `modeA.worker-C2SIly0G.js`。
 
 接續在公開HTTPS站執行完整Chrome測試：**14/14通過**，包括實際五點拖曳、縮放、套用／往返、人工寬窄覆寫、NMR／MS欄位、六模態獨立、手動分析Worker與Mode B。公開index資源為`index-DYZnqmUr.js`。與Windows本機index雜湊可能不同；以實際Render revision及公開操作為證據。
 

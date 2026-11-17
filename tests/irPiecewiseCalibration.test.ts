@@ -155,7 +155,8 @@ describe('E. real absorption bands survive the hotfix.1 detection thresholds',()
   for(const [c] of found)expect(after.some(x=>Math.abs(x-c)<=6),`band ${c} lost by hotfix.1 thresholds`).toBe(true);
  });
  it('after piecewise calibration of the synthetic image, the traced strong bands 1600 and 1510 are kept',()=>{
-  const s=piecewise(syntheticSegmentedIRImage([]),[3000,1500,500]);   // no marks: only the traced curve
+  // v1.3.2: calibration no longer marks peaks by itself; the page-1 button "自動尋峰" does, so this test asks for the peaks detected on the traced curve.
+  const s=SpectrumParser.reRunAutoPeakDetection(piecewise(syntheticSegmentedIRImage([]),[3000,1500,500]));   // no marks: only the traced curve
   const xs=prepareIR(s).peaks.map(p=>p.x);
   for(const cm of [1600,1510,1240,2960])expect(xs.some(x=>Math.abs(x-cm)<=TOL),`traced ${cm}`).toBe(true);
  });

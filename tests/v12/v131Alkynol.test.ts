@@ -3,6 +3,9 @@ import {V12_CONFIG} from '../../src/engines/constraints/v12Config';
 import {activeForbiddenFragments, FORBIDDEN_FRAGMENTS, forbiddenById, V123_FORBIDDEN_FRAGMENTS, V131_FORBIDDEN_FRAGMENTS} from '../../src/engines/constraints/forbiddenFragments';
 import {initializeRDKit, matchingSMARTS} from '../../src/engines/scientificEngines/rdkitAdapter';
 import {NO_PLAUSIBILITY_EVIDENCE, plausibilityViolations} from '../../src/engines/scientificEngines/structurePlausibility';
+import {usePreV142Defaults} from '../helpers/v142PreDefaults';
+// v1.4.2 stop 36 (E): this file pins results recorded under the defaults before 1.4.2; the new rule sets (on by default since 1.4.2) are switched to their old values here. No expected value changed.
+usePreV142Defaults();
 
 // v1.3.1 (B): the ynol C#C–OH is a forbidden fragment. SYNTHETIC molecules only. It must hit the ynols and none of the 30+ legal molecules; no IR/N evidence unlocks it.
 beforeAll(() => initializeRDKit(), 60000);

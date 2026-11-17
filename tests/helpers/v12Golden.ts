@@ -5,6 +5,7 @@ import {SignalCharacterizationEngine} from '../../src/engines/signalCharacteriza
 import {SpectrumParser} from '../../src/engines/spectrumParser';
 import type {ImageSpectrumCalibration} from '../../src/types/spectrum';
 import {ENUMERATION_CONFIG} from '../../src/engines/enumeration/enumerationConfig';
+import {STEP_ONLY_TIME_MS} from './v121Golden';
 import {h1Diphenylpropane, h1Ethyl, irAromatic, mk, msC9} from './p1bScenarios';
 
 // Golden for the useV12Constraints=false guarantee (docs/P1C_DESIGN.md §5 "旗標黃金"). Everything here is SYNTHETIC and generic.
@@ -61,9 +62,9 @@ export function irAndPeakTables() {
   };
 }
 
-/** Scenarios of the golden (budgets are step based, so the output does not depend on timing). */
+/** Scenarios of the golden (budgets are step based, so the output does not depend on timing). timeMs is STEP_ONLY_TIME_MS (3 600 000 ms), not 120000: the enumerator gives every alternative set a wall-clock slice of timeMs / sets, and at 120000 ms a busy machine (parallel test files, 3x slower) hit that slice in one set (TIME_BUDGET added, leaves 102962 -> 101367). The golden file holds no timeMs, so no expected value changes. */
 export async function legacyGoldenScenarios() {
-  const opts = {timeMs: 120000, maxStates: 4_000_000};
+  const opts = {timeMs: STEP_ONLY_TIME_MS, maxStates: 4_000_000};
   // The bounded legacy supplement runs on a wall-clock limit (500 ms), so its step counts differ between runs; it is switched off here
   // to keep the golden deterministic. Every other part of the pipeline is unchanged. The supplement path itself is covered by p1bPipeline.test.ts.
   const cfg = ENUMERATION_CONFIG as {legacySupplementWhenIncomplete: boolean};
@@ -75,8 +76,8 @@ async function scenarios(opts: {timeMs: number; maxStates: number}) {
   return {
     diphenylpropaneFormula: await pipelineSnapshot({'1H_NMR': h1Diphenylpropane(), IR: irAromatic()}, {molecularFormula: 'C15H16'}, opts),
     ethylEsterFormula: await pipelineSnapshot({MS: msC9(), '1H_NMR': h1Ethyl()}, {molecularFormula: 'C9H10O2'}, opts),
-    ethylNoFormula: await pipelineSnapshot({MS: msC9(), '1H_NMR': h1Ethyl()}, {}, {timeMs: 120000, maxStates: 60000}),
-    h1OnlyNoFormula: await pipelineSnapshot({'1H_NMR': h1Ethyl()}, {}, {timeMs: 120000, maxStates: 60000}),
+    ethylNoFormula: await pipelineSnapshot({MS: msC9(), '1H_NMR': h1Ethyl()}, {}, {timeMs: STEP_ONLY_TIME_MS, maxStates: 60000}),
+    h1OnlyNoFormula: await pipelineSnapshot({'1H_NMR': h1Ethyl()}, {}, {timeMs: STEP_ONLY_TIME_MS, maxStates: 60000}),
     tables: irAndPeakTables(),
   };
 }

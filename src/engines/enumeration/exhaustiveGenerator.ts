@@ -11,13 +11,14 @@ import {readingKinds} from '../constraints/readingKinds';
 const pipelineStrain = (v12: boolean) => (v12 ? V12_CONFIG.pipelineStrainProfile : CFG.pipelineStrainProfile);
 import {h1SignalsFromObservations, irAldehydeContext} from '../constraints/v12Evidence';
 import {matchesSMARTS, matchingSMARTS} from '../scientificEngines/rdkitAdapter';
-import {forbiddenFragmentsActive, v123EsterMethineActive, vinylWindowsActive} from '../composition/planningGate';
+import {forbiddenFragmentsActive, v123DeferredSecondPassActive, v123EsterMethineActive, vinylWindowsActive} from '../composition/planningGate';
 import {activeForbiddenFragments, v123LeafFragments} from '../constraints/forbiddenFragments';
 import {parseFormula} from './problem';
 import {adaptLocalStructures} from './adapter';
 import {ENUMERATION_CONFIG as CFG} from './enumerationConfig';
 import {enumerateStructures} from './enumerate';
-import type {CandidateOrigin, EnumerationDiagnostics, EnumerationResult, EnumerationRunDiagnostic, FragmentAlternativeSet, IncompleteReason, RequiredSubstructureSpec, RunPlanning, V12RunDiagnostic} from './types';
+import type {CandidateOrigin, EnumerationDiagnostics, EnumerationResult, EnumerationRunDiagnostic, FragmentAlternativeSet, IncompleteReason, RejectionStats, RequiredSubstructureSpec, RunPlanning, V12RunDiagnostic} from './types';
+import type {InventoryAlternative, InventoryGroup} from '../constraints/atomInventory';
 
 const FORMULA_INCOMPATIBLE = ['FORMULA_ELEMENT_SHORTAGE', 'FORMULA_HYDROGEN_SHORTAGE', 'FORMULA_HYDROGEN_EXCESS', 'VALENCE_PARITY'];
 
@@ -334,6 +335,74 @@ interface PlannedContext {
 const BUDGET_REASONS: IncompleteReason[] = ['TIME_BUDGET', 'STATE_BUDGET', 'CANDIDATE_LIMIT', 'ALTERNATIVE_SET_NOT_RUN'];
 
 /**
+ * v1.4.2 stop 34 (V12_CONFIG.v123.deferredSecondPass): the two passes of round 1 of an alkene-exception formula. A reading with a deferred group (a signal read as alkene CH OR as an
+ * ester / acetal O–CH, see shiftClasses' esterMethine gate) goes to the second pass as it is; when every deferred group of it can also be the alkene CH, its alkene-only copy (the
+ * group constrained to an alkene CH, as when the IR is confirmed complete) takes its place in the first pass. Readings without a deferred group stay in the first pass. Order kept.
+ */
+function deferredPasses(inv: ReturnType<typeof buildAtomInventory>, sets: FragmentAlternativeSet[], info: Record<string, InventorySetInfo>, required: RequiredSubstructureSpec[]) {
+  const altOf = new Map(inv.alternatives.map(a => [a.id, a]));
+  const primary: FragmentAlternativeSet[] = [], deferred: FragmentAlternativeSet[] = [], extraInfo: Record<string, InventorySetInfo> = {}, copied = new Set<string>();
+  const alkeneOnly = (g: InventoryGroup): InventoryGroup => {
+    const {deferred: _d, ...rest} = g;
+    return {...rest, shiftClass: 'VINYL_CH', shiftClasses: ['VINYL_CH'], alkene: V12_CONFIG.vinylRequiresAlkene && !g.aromatic && !g.exchangeable};
+  };
+  for (const s of sets) {
+    const i = info[s.id];
+    if (!i?.hasVinyl) continue;
+    const alt = altOf.get(i.alternativeId);
+    const dg = alt ? alt.groups.filter(g => g.deferred) : [];
+    if (!alt || !dg.length) { primary.push(s); continue; }
+    deferred.push(s);
+    if (copied.has(alt.id)) continue;
+    copied.add(alt.id);
+    if (!dg.every(g => g.shiftClasses.includes('VINYL_CH'))) continue;
+    const groups = alt.groups.map(g => (g.deferred ? alkeneOnly(g) : g));
+    const alkene = groups.filter(g => g.alkene);
+    const copy: InventoryAlternative = {
+      ...alt, id: `${alt.id}~alkene`, groups,
+      applied: [...alt.applied.filter(a => a.id !== 'ALKENE_CH'), ...(alkene.length ? [{id: 'ALKENE_CH' as const, detail: `${alkene.map(g => g.groupId).join('、')}：烯基 CH 必須恰有一個非芳香 C=C 雙鍵`, observationIds: alkene.map(g => g.observationId)}] : [])],
+    };
+    const adapted = inventoryToFragmentSets(copy, {required});
+    primary.push(...adapted.sets); Object.assign(extraInfo, adapted.info);
+  }
+  return {primary, deferred, info: extraInfo};
+}
+
+/** Adds the rejection counters of two passes. */
+function addRejected(a: RejectionStats, b: RejectionStats): RejectionStats {
+  const add = (x: Record<string, number> = {}, y: Record<string, number> = {}) => { const o = {...x}; for (const [k, v] of Object.entries(y)) o[k] = (o[k] ?? 0) + v; return o; };
+  const out: RejectionStats = {sanitizeFailed: a.sanitizeFailed + b.sanitizeFailed, duplicatesMerged: a.duplicatesMerged + b.duplicatesMerged, notConnected: a.notConnected + b.notConnected, forbiddenByRule: add(a.forbiddenByRule, b.forbiddenByRule), strainByRule: add(a.strainByRule, b.strainByRule), approximate: a.approximate || b.approximate};
+  if (a.v12 || b.v12) {
+    const z: NonNullable<RejectionStats['v12']> = {aromaticFailed: 0, requiredFailed: 0, equivalenceFailed: 0, alkeneFailed: 0};
+    const x = a.v12 ?? z, y = b.v12 ?? z;
+    out.v12 = {aromaticFailed: x.aromaticFailed + y.aromaticFailed, requiredFailed: x.requiredFailed + y.requiredFailed, equivalenceFailed: x.equivalenceFailed + y.equivalenceFailed, alkeneFailed: x.alkeneFailed + y.alkeneFailed,
+      ...(x.forbiddenById || y.forbiddenById ? {forbiddenById: add(x.forbiddenById, y.forbiddenById)} : {}), ...(x.requiredById || y.requiredById ? {requiredById: add(x.requiredById, y.requiredById)} : {})};
+  }
+  return out;
+}
+
+/**
+ * Joins the two passes into one result. `second` was called with the candidates of `first` as known, so its candidate list already holds both. A step stop of the second pass
+ * at its own cap is reported as ROUND1_DEFERRED_STEP_CAP (on the run and on its sets), not as the round-1 cap.
+ */
+function joinPasses(first: EnumerationResult | null, second: EnumerationResult, secondCapBinding: boolean): EnumerationResult {
+  const fix = (r: IncompleteReason): IncompleteReason => (secondCapBinding && r === 'STATE_BUDGET' ? 'ROUND1_DEFERRED_STEP_CAP' : r);
+  const secondRan = second.status !== 'INVALID_REQUEST';
+  const secondSets = second.sets.map(s => ({...s, incompleteReasons: s.incompleteReasons.map(fix)}));
+  const secondReasons = second.incompleteReasons.map(fix);
+  if (!first) return {...second, sets: secondSets, incompleteReasons: [...new Set(secondReasons)]};
+  const reasons = [...new Set([...first.incompleteReasons, ...secondReasons])];
+  const fl = first.stats.leafCost, sl = second.stats.leafCost;
+  const leafCost = fl && sl ? {leaves: fl.leaves + sl.leaves, parseMs: fl.parseMs + sl.parseMs, checksMs: fl.checksMs + sl.checksMs, orbitChecks: fl.orbitChecks + sl.orbitChecks, orbitMs: fl.orbitMs + sl.orbitMs, requiredMatches: fl.requiredMatches + sl.requiredMatches} : fl ?? sl;
+  return {
+    status: reasons.length ? 'INCOMPLETE' : 'COMPLETE', incompleteReasons: reasons,
+    candidates: secondRan ? second.candidates : first.candidates,
+    errors: [...first.errors, ...second.errors], sets: [...first.sets, ...secondSets],
+    stats: {visited: first.stats.visited + second.stats.visited, leaves: first.stats.leaves + second.stats.leaves, elapsedMs: first.stats.elapsedMs + second.stats.elapsedMs, rejected: addRejected(first.stats.rejected, second.stats.rejected), ...(leafCost ? {leafCost} : {})},
+  };
+}
+
+/**
  * One round of the planned search for one formula. Round 1 runs the readings without an alkene CH (or, by the alkene exception, the alkene readings)
  * under the step cap and never falls back to the flexible-atom or legacy search: a formula without a usable reading reports ROUND1_NO_TEMPLATE_READING
  * (visited 0). Round 2 runs the alkene readings only. A run is complete only when every reading of the formula has run to the end.
@@ -375,62 +444,100 @@ async function generatePlanned(request: StructureGenerationRequest, c: PlannedCo
     ? emptyResult(['ROUND1_NO_TEMPLATE_READING', ...(vinylSets.length ? ['VINYL_READINGS_NOT_RUN' as const] : [])], '第一輪沒有可容納此分子式的模板讀法；沒有退回彈性原子讀法或舊搜尋')
     : emptyResult([], '沒有可執行的烯基讀法（都與分子式不相容）');
   if (!runSets.length) return noReading();
-  const result = await enumerateStructures({
-    formula: parsed.counts, alternatives: runSets,
-    forbid: {...v123LeafFragments(), ...(request.plausibility && CFG.pipelineEarlyPlausibilityPrune ? {plausibility: request.plausibility, plausibilityLeaf: false} : {}), strain: pipelineStrain(true)},
-    symmetryPruning: V12_CONFIG.symmetryPruning,
-    budget: {
-      timeMs: eb.timeMs, maxStates: cap, maxCandidates: eb.maxCandidates ?? CFG.analysis.maxCandidatesPerFormula, shouldCancel: request.budget.shouldCancel,
-      onProgress: request.budget.onProgress ? p => request.budget.onProgress!({visited: p.visited, candidateCount: p.candidates, elapsedMs: p.elapsedMs, frontier: 0}) : undefined,
-    },
+  const forbid = {...v123LeafFragments(), ...(request.plausibility && CFG.pipelineEarlyPlausibilityPrune ? {plausibility: request.plausibility, plausibilityLeaf: false} : {}), strain: pipelineStrain(true)};
+  const budgetOf = (maxStates: number, timeMs: number, offset = 0) => ({
+    timeMs, maxStates, maxCandidates: eb.maxCandidates ?? CFG.analysis.maxCandidatesPerFormula, shouldCancel: request.budget.shouldCancel,
+    onProgress: request.budget.onProgress ? (p: {visited: number; candidates: number; elapsedMs: number}) => request.budget.onProgress!({visited: offset + p.visited, candidateCount: p.candidates, elapsedMs: p.elapsedMs, frontier: 0}) : undefined,
   });
-  if (result.status === 'INVALID_REQUEST') return noReading();
-  const runs: V12RunDiagnostic['runs'] = [];
-  for (const k of inv.kCombinations) {
-    const mine = result.sets.filter(x => info[x.id]?.k === k.k && info[x.id]?.extraExchangeable === k.extraExchangeable);
-    if (!mine.length) continue;
-    const reasons = [...new Set(mine.flatMap(x => x.incompleteReasons))].filter(r => r !== 'INVALID_ALTERNATIVE_SET');
-    const runnable = mine.filter(x => x.complete !== null);
-    runs.push({
-      k: k.k, extraExchangeable: k.extraExchangeable, alternatives: new Set(mine.map(x => info[x.id].alternativeId)).size, sets: mine.length,
-      complete: runnable.length ? runnable.every(x => x.complete === true) : null, visited: mine.reduce((a, x) => a + x.visited, 0), leaves: mine.reduce((a, x) => a + x.leaves, 0),
-      candidates: mine.reduce((a, x) => a + x.newCandidates, 0), incompleteReasons: reasons as IncompleteReason[],
+  // v1.4.2 stop 34: the alkene readings first (as when the IR is confirmed complete), then the deferred ester / acetal readings under their own cap.
+  // v1.4.2 stop 36: V12_CONFIG.v123.deferredSecondPassSchedule decides when the deferred readings run (ROUND2 = after round 1, the default; AFTER = stop 34 / 35, see v12Config).
+  const passes = exception && v123DeferredSecondPassActive() ? deferredPasses(inv, runSets, info, c.requiredSpecs) : null;
+  const schedule = V12_CONFIG.v123.deferredSecondPassSchedule;
+  type SecondPass = {cap: number; visited: number; elapsedMs: number; newCandidates: number; capHit: boolean};
+  // A formula with the k = 1 raise (cap = v123.round1MaxStatesK1) gets deferredSecondPassMaxStates; any other formula at most its own round-1 cap (150 000).
+  const cap2Of = (poolLeft: number) => Math.min(cap >= V12_CONFIG.v123.round1MaxStatesK1 ? V12_CONFIG.v123.deferredSecondPassMaxStates : Math.min(V12_CONFIG.v123.deferredSecondPassMaxStates, cap), poolLeft);
+  const runSecond = async (first: EnumerationResult | null, timeMs: number, poolLeft: number): Promise<{result: EnumerationResult; secondPass: SecondPass | null}> => {
+    const firstVisited = first?.stats.visited ?? 0, cap2 = cap2Of(poolLeft);
+    const second = await enumerateStructures({
+      formula: parsed.counts, alternatives: passes!.deferred, forbid, symmetryPruning: V12_CONFIG.symmetryPruning, budget: budgetOf(cap2, timeMs, firstVisited),
+      ...(first ? {known: new Map(first.candidates.map(x => [x.smiles, x.alternativeSetIds]))} : {}),
     });
-  }
-  const incompatibleSets = result.sets.filter(x => x.error && FORMULA_INCOMPATIBLE.includes(x.error.code));
-  const otherErrors = result.sets.filter(x => x.error && !FORMULA_INCOMPATIBLE.includes(x.error.code));
-  const raw = result.incompleteReasons.filter(r => r !== 'INVALID_ALTERNATIVE_SET');
-  // The cap is a round-1 limit, not the analysis budget; in round 2 every budget stop belongs to the alkene readings.
-  const mapped = raw.map((r): IncompleteReason => (round === 1 && capBinding && r === 'STATE_BUDGET' ? 'ROUND1_STEP_CAP' : round === 2 && capBinding && r === 'STATE_BUDGET' ? (request.planning!.capKind === 'SHARE' ? 'ROUND2_STEP_CAP' : 'ROUND2_EXPLORE_CAP') : round === 2 && BUDGET_REASONS.includes(r) ? 'VINYL_READINGS_BUDGET' : r));
-  const extraReasons: IncompleteReason[] = [...inv.incompleteReasons, ...(patternTruncated && !inv.incompleteReasons.includes('INVENTORY_ALTERNATIVES_TRUNCATED') ? ['INVENTORY_ALTERNATIVES_TRUNCATED' as const] : [])];
-  const incompleteReasons = [...new Set<IncompleteReason>([...mapped, ...(otherErrors.length ? ['INVALID_ALTERNATIVE_SET' as const] : []), ...(pending ? ['VINYL_READINGS_NOT_RUN' as const] : []), ...extraReasons])];
-  const complete = incompleteReasons.length === 0;
-  const smiles = result.candidates.map(x => x.smiles);
-  const origins: Record<string, CandidateOrigin> = {};
-  for (const x of result.candidates) {
-    const seen = new Set<string>(), from: {k: number; extraExchangeable: number}[] = [];
-    for (const sid of x.alternativeSetIds) { const i = info[sid]; if (i && !seen.has(`${i.k}/${i.extraExchangeable}`)) { seen.add(`${i.k}/${i.extraExchangeable}`); from.push({k: i.k, extraExchangeable: i.extraExchangeable}); } }
-    origins[x.smiles] = {source: 'ENUMERATOR', relaxed: false, v12: from, round: round === 2 ? 2 : 1};
-  }
-  const run: EnumerationRunDiagnostic = {
-    used: true, fallbackReason: null, formula: request.formula!, status: result.status, complete, incompleteReasons,
-    readings: result.sets.map(x => ({id: x.id, localIds: [], complete: x.complete, error: x.error ? `${x.error.code}：${x.error.message}` : null, newCandidates: x.newCandidates})),
-    incompatibleReadings: incompatibleSets.length, candidates: smiles.length, visited: result.stats.visited, leaves: result.stats.leaves, elapsedMs: result.stats.elapsedMs, rejected: result.stats.rejected,
-    conversions: [], notes: [...baseNotes, runs.map(r => `k=${r.k}, 額外可交換 H=${r.extraExchangeable}`).join('；')],
-    v12: c.diag('INVENTORY', null, sets.length, patternTruncated, runs, result.stats.leafCost ?? null), planning: planning(result.stats.visited, smiles.length, round === 2 || exception, result.stats.elapsedMs),
+    return {
+      result: joinPasses(first, second, cap2 < poolLeft),
+      secondPass: {cap: cap2, visited: second.stats.visited, elapsedMs: second.stats.elapsedMs, newCandidates: second.sets.reduce((a, s) => a + s.newCandidates, 0), capHit: cap2 < poolLeft && second.incompleteReasons.includes('STATE_BUDGET')},
+    };
   };
-  const derivations: NonNullable<DeNovoSearchResult['derivations']> = {};
-  const h1Ids = c.h1.signals.filter(x => !x.optional).map(x => x.observationId);
-  for (const x of result.candidates) {
-    const first = info[x.alternativeSetIds[0]];
-    derivations[x.smiles] = {localStructureIds: [], operations: [`1H 原子清單窮舉（第 ${round} 輪；k=${first?.k}，額外可交換 H=${first?.extraExchangeable}${first?.patternLabel ? `；${first.patternLabel}` : ''}；讀法 ${x.alternativeSetIds.join('、')}）`], observationIds: h1Ids};
+  if (passes && passes.deferred.length) {
+    Object.assign(info, passes.info);
+    const first0 = passes.primary.length ? await enumerateStructures({formula: parsed.counts, alternatives: passes.primary, forbid, symmetryPruning: V12_CONFIG.symmetryPruning, budget: budgetOf(cap, eb.timeMs)}) : null;
+    const first = first0 && first0.status !== 'INVALID_REQUEST' ? first0 : null;
+    if (first?.incompleteReasons.includes('CANCELLED')) return finish(first, null);
+    if (schedule === 'ROUND2' && first) {
+      // ROUND2: the deferred pass runs later (structureGenerator calls resumeDeferred after the round-2 alkene readings); until then the formula has the alkene pass only.
+      // A formula without an alkene pass (first = null) keeps the stop-34 order (its deferred pass runs here).
+      const out = finish(first, null);
+      out.resumeDeferred = async (timeMs: number, maxStates: number) => {
+        const r = await runSecond(first, timeMs, Math.max(0, maxStates));
+        return finish(r.result, r.secondPass);
+      };
+      return out;
+    }
+    // AFTER (stop 34 / 35): the second pass may use only deferredSecondPassTimeFraction of the time the formula has left after the first pass; the rest goes back to the formulas after it.
+    const r = await runSecond(first, V12_CONFIG.v123.deferredSecondPassTimeFraction * Math.max(0, eb.timeMs - (first?.stats.elapsedMs ?? 0)), Math.max(0, eb.maxStates - (first?.stats.visited ?? 0)));
+    return finish(r.result, r.secondPass);
   }
-  const reasonsMap: Record<string, SearchTermination> = {CANCELLED: 'CANCELLED', TIME_BUDGET: 'TIME_BUDGET', STATE_BUDGET: 'STATE_BUDGET', CANDIDATE_LIMIT: 'OUTPUT_BUDGET'};
-  const firstStop = (['CANCELLED', 'TIME_BUDGET', 'STATE_BUDGET', 'CANDIDATE_LIMIT'] as const).find(r => result.incompleteReasons.includes(r));
-  return {
-    smiles, status: 'BOUNDED', visited: result.stats.visited, termination: firstStop ? reasonsMap[firstStop] : 'GRAMMAR_EXHAUSTED', complete,
-    note: `1H 原子清單窮舉（第 ${round} 輪）：${result.stats.visited} 步；${complete ? 'COMPLETE' : `INCOMPLETE（${incompleteReasons.join('、')}）`}；${smiles.length} 個去重候選`,
-    partialHypotheses: [...(request.hints.couplingNotes ?? [])], rejectedByComposition: result.stats.rejected.sanitizeFailed,
-    derivations, elapsedMs: result.stats.elapsedMs, frontierPeak: 0, enumeration: emptyDiagnostics(run, origins),
-  };
+  return finish(await enumerateStructures({formula: parsed.counts, alternatives: runSets, forbid, symmetryPruning: V12_CONFIG.symmetryPruning, budget: budgetOf(cap, eb.timeMs)}), null);
+
+  function finish(result: EnumerationResult, secondPass: SecondPass | null): DeNovoSearchResult {
+    if (result.status === 'INVALID_REQUEST') return noReading();
+    const runs: V12RunDiagnostic['runs'] = [];
+    for (const k of inv.kCombinations) {
+      const mine = result.sets.filter(x => info[x.id]?.k === k.k && info[x.id]?.extraExchangeable === k.extraExchangeable);
+      if (!mine.length) continue;
+      const reasons = [...new Set(mine.flatMap(x => x.incompleteReasons))].filter(r => r !== 'INVALID_ALTERNATIVE_SET');
+      const runnable = mine.filter(x => x.complete !== null);
+      runs.push({
+        k: k.k, extraExchangeable: k.extraExchangeable, alternatives: new Set(mine.map(x => info[x.id].alternativeId)).size, sets: mine.length,
+        complete: runnable.length ? runnable.every(x => x.complete === true) : null, visited: mine.reduce((a, x) => a + x.visited, 0), leaves: mine.reduce((a, x) => a + x.leaves, 0),
+        candidates: mine.reduce((a, x) => a + x.newCandidates, 0), incompleteReasons: reasons as IncompleteReason[],
+      });
+    }
+    const incompatibleSets = result.sets.filter(x => x.error && FORMULA_INCOMPATIBLE.includes(x.error.code));
+    const otherErrors = result.sets.filter(x => x.error && !FORMULA_INCOMPATIBLE.includes(x.error.code));
+    const raw = result.incompleteReasons.filter(r => r !== 'INVALID_ALTERNATIVE_SET');
+    // The cap is a round-1 limit, not the analysis budget; in round 2 every budget stop belongs to the alkene readings.
+    const mapped = raw.map((r): IncompleteReason => (round === 1 && capBinding && r === 'STATE_BUDGET' ? 'ROUND1_STEP_CAP' : round === 2 && capBinding && r === 'STATE_BUDGET' ? (request.planning!.capKind === 'SHARE' ? 'ROUND2_STEP_CAP' : 'ROUND2_EXPLORE_CAP') : round === 2 && BUDGET_REASONS.includes(r) ? 'VINYL_READINGS_BUDGET' : r));
+    const extraReasons: IncompleteReason[] = [...inv.incompleteReasons, ...(patternTruncated && !inv.incompleteReasons.includes('INVENTORY_ALTERNATIVES_TRUNCATED') ? ['INVENTORY_ALTERNATIVES_TRUNCATED' as const] : [])];
+    const incompleteReasons = [...new Set<IncompleteReason>([...mapped, ...(otherErrors.length ? ['INVALID_ALTERNATIVE_SET' as const] : []), ...(pending ? ['VINYL_READINGS_NOT_RUN' as const] : []), ...extraReasons])];
+    const complete = incompleteReasons.length === 0;
+    const smiles = result.candidates.map(x => x.smiles);
+    const origins: Record<string, CandidateOrigin> = {};
+    for (const x of result.candidates) {
+      const seen = new Set<string>(), from: {k: number; extraExchangeable: number}[] = [];
+      for (const sid of x.alternativeSetIds) { const i = info[sid]; if (i && !seen.has(`${i.k}/${i.extraExchangeable}`)) { seen.add(`${i.k}/${i.extraExchangeable}`); from.push({k: i.k, extraExchangeable: i.extraExchangeable}); } }
+      origins[x.smiles] = {source: 'ENUMERATOR', relaxed: false, v12: from, round: round === 2 ? 2 : 1};
+    }
+    const run: EnumerationRunDiagnostic = {
+      used: true, fallbackReason: null, formula: request.formula!, status: result.status, complete, incompleteReasons,
+      readings: result.sets.map(x => ({id: x.id, localIds: [], complete: x.complete, error: x.error ? `${x.error.code}：${x.error.message}` : null, newCandidates: x.newCandidates})),
+      incompatibleReadings: incompatibleSets.length, candidates: smiles.length, visited: result.stats.visited, leaves: result.stats.leaves, elapsedMs: result.stats.elapsedMs, rejected: result.stats.rejected,
+      conversions: [], notes: [...baseNotes, runs.map(r => `k=${r.k}, 額外可交換 H=${r.extraExchangeable}`).join('；')],
+      v12: c.diag('INVENTORY', null, sets.length, patternTruncated, runs, result.stats.leafCost ?? null), planning: planning(result.stats.visited, smiles.length, round === 2 || exception, result.stats.elapsedMs),
+    };
+    const derivations: NonNullable<DeNovoSearchResult['derivations']> = {};
+    const h1Ids = c.h1.signals.filter(x => !x.optional).map(x => x.observationId);
+    for (const x of result.candidates) {
+      const first = info[x.alternativeSetIds[0]];
+      derivations[x.smiles] = {localStructureIds: [], operations: [`1H 原子清單窮舉（第 ${round} 輪；k=${first?.k}，額外可交換 H=${first?.extraExchangeable}${first?.patternLabel ? `；${first.patternLabel}` : ''}；讀法 ${x.alternativeSetIds.join('、')}）`], observationIds: h1Ids};
+    }
+    const reasonsMap: Record<string, SearchTermination> = {CANCELLED: 'CANCELLED', TIME_BUDGET: 'TIME_BUDGET', STATE_BUDGET: 'STATE_BUDGET', CANDIDATE_LIMIT: 'OUTPUT_BUDGET'};
+    const firstStop = (['CANCELLED', 'TIME_BUDGET', 'STATE_BUDGET', 'CANDIDATE_LIMIT'] as const).find(r => result.incompleteReasons.includes(r) || (r === 'STATE_BUDGET' && result.incompleteReasons.includes('ROUND1_DEFERRED_STEP_CAP')));
+    const secondNote = secondPass ? `（烯基讀法之後另跑酯／縮醛延後讀法：${secondPass.visited} 步／上限 ${secondPass.cap}、新增 ${secondPass.newCandidates} 個${secondPass.capHit ? '、用完上限' : ''}）` : '';
+    return {
+      smiles, status: 'BOUNDED', visited: result.stats.visited, termination: firstStop ? reasonsMap[firstStop] : 'GRAMMAR_EXHAUSTED', complete,
+      note: `1H 原子清單窮舉（第 ${round} 輪）${secondNote}：${result.stats.visited} 步；${complete ? 'COMPLETE' : `INCOMPLETE（${incompleteReasons.join('、')}）`}；${smiles.length} 個去重候選`,
+      partialHypotheses: [...(request.hints.couplingNotes ?? [])], rejectedByComposition: result.stats.rejected.sanitizeFailed,
+      derivations, elapsedMs: result.stats.elapsedMs, frontierPeak: 0, enumeration: emptyDiagnostics(run, origins),
+    };
+  }
 }

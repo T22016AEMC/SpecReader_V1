@@ -204,6 +204,15 @@ export async function generateForCompositions(args:{userFormula:string|null;comp
     if(s2.termination==='CANCELLED')cancelled=true;
    }
   }
+  // v1.4.2 stop 36 (deferredSecondPassSchedule ROUND2): the deferred readings left by round 1, after the round-2 alkene readings, each an equal part of the clock left.
+  const resumable=entries.filter(e=>e.search?.resumeDeferred);
+  for(let j=0;j<resumable.length&&!cancelled;j++){
+   const e=resumable[j],left=resumable.length-j,before=e.search!;
+   const s=await before.resumeDeferred!(Math.max(0,eBudget.timeMs-(performance.now()-started))/left,Math.max(0,eBudget.maxStates-usedStates));
+   usedStates+=s.visited-before.visited;e.search=s;
+   if(s.termination==='CANCELLED')cancelled=true;
+  }
+  for(const e of entries)if(e.search)delete e.search.resumeDeferred;
   // Join the formulas into one outcome (same accumulation as the v1.2.0 loop; the scoring cap is applied at the end).
   const runs:CompositionSearchRun[]=[],enumRuns:EnumerationRunDiagnostic[]=[],originsAcc:NonNullable<EnumerationDiagnostics['origins']>={};
   const merged:DeNovoSearchResult={smiles:[],status:'BOUNDED',visited:0,note:'',termination:'GRAMMAR_EXHAUSTED',complete:true,partialHypotheses:[],rejectedByComposition:0,derivations:{},formulaSources:{},elapsedMs:0,frontierPeak:0};

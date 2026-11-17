@@ -1,0 +1,8 @@
+{
+  "name": "specreader-median-select",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SpecReader's own lower-median quickselect; installed in place of median-quickselect through pnpm-workspace.yaml overrides (v1.4.2 stop 33)",
+  "main": "index.js",
+  "types": "index.d.ts"
+}

@@ -12,6 +12,9 @@ import {s1Analysis} from './s1Analysis';
 import {CompositionPanelView} from '../../src/components/CompositionPanel';
 import {buildCompositionPanel, type PanelModel} from '../../src/engines/enumeration/compositionPanelModel';
 import {isSearchedRow} from '../../src/ui/diagnosticSummary';
+import {usePreV142Defaults} from '../helpers/v142PreDefaults';
+// v1.4.2 stop 36 (E): this file pins results recorded under the defaults before 1.4.2; the new rule sets (on by default since 1.4.2) are switched to their old values here. No expected value changed.
+usePreV142Defaults();
 
 // What the result tabs actually print for the real analysis of the SYNTHETIC fixture S1 (tests/fixtures/v121/S1.json, hand-written):
 // the page's own summaries (rows, hidden notice, one-line summaries, template sentences said once), not only the pure helpers behind them.

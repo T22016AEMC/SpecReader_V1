@@ -1,14 +1,19 @@
-import {beforeAll, describe, expect, it} from 'vitest';
+import {afterAll, beforeAll, describe, expect, it} from 'vitest';
 import {initializeRDKit} from '../../src/engines/scientificEngines/rdkitAdapter';
 import {enumerateStructures, type FragmentAlternativeSet, type FragmentSpec} from '../../src/engines/enumeration';
 import {parseFormula} from '../../src/engines/enumeration/problem';
 import {bruteForceV12, type BFSet} from './bruteForceV12';
 import {FORBIDDEN_FRAGMENTS} from '../../src/engines/constraints/forbiddenFragments';
+import {V12_CONFIG} from '../../src/engines/constraints/v12Config';
 
 // C1: the v1.2 enumerator against the independent brute force (tests/v12/bruteForceV12.ts, imports nothing from src/engines).
 // Every case compares the COMPLETE canonical-SMILES sets. Equivalence groups, adjacency limits, aromatic flags, required substructures and
 // pools are each checked on their own and together; the incremental symmetry pruning is switched on and off. All cases are generic and synthetic.
-beforeAll(() => initializeRDKit(), 60000);
+// v1.4.0 stop 15: the blocks above the last describe pin the v1.2 singlet rule, so they run with v140.coverage off whatever the suite configuration is (vitest.flagon140.config.ts turns it on, which lets same-group atoms sit next to
+// each other: the last describe covers that reading against its own brute-force variant).
+const wasV140 = {h1: V12_CONFIG.useV140H1, cov: V12_CONFIG.v140.coverage};
+beforeAll(async () => { await initializeRDKit(); V12_CONFIG.v140.coverage = false; }, 60000);
+afterAll(() => { V12_CONFIG.useV140H1 = wasV140.h1; V12_CONFIG.v140.coverage = wasV140.cov; });
 
 const counts = (formula: string) => { const p = parseFormula(formula); if (!p.ok) throw new Error(p.error.message); return p.counts; };
 const CH3 = (extra: object = {}, count = 1, id = 'CH3'): FragmentSpec => ({id, count, atoms: [{element: 'C', fixedH: 3, open: true, ...extra}], bonds: []});
@@ -266,5 +271,68 @@ describe('C1 seeded random battery (symmetry pruning on and off, against brute f
     expect(nonEmpty).toBeGreaterThan(100);
     expect(withEq.length).toBeGreaterThan(100);
     expect(withAlkene.length).toBeGreaterThan(10);
+  }, 600000);
+});
+
+// ---------------------------------------------------------------------------------------------------- v1.4.0 stop 15: the same comparison with useV140H1 and v140.coverage on
+// With the flag on, a no-H-neighbour atom may be bound to a carbon with hydrogen when both belong to one equivalence group (search.ts singletSameGroupExempt). The reference has the same switch (BFSet.singletSameGroupExempt).
+describe('C1 with v140.coverage on (same-group atoms are not held apart by the singlet rule)', () => {
+  beforeAll(() => { V12_CONFIG.useV140H1 = true; V12_CONFIG.v140.coverage = true; });
+  afterAll(() => { V12_CONFIG.v140.coverage = false; V12_CONFIG.useV140H1 = wasV140.h1; });
+  async function bothOn(formula: string, set: Omit<FragmentAlternativeSet, 'id'>, exempt: boolean, prune?: boolean) {
+    const r = await enumerateStructures({formula, alternatives: [{id: 'S', ...set}], symmetryPruning: prune, budget: {maxStates: 2e9, timeMs: 120000}});
+    const ours = r.status === 'INVALID_REQUEST' ? [] : r.candidates.map(c => c.smiles).sort();
+    if (r.status !== 'INVALID_REQUEST') expect(r.status, formula).toBe('COMPLETE');
+    const bfSet: BFSet = {
+      fragments: set.fragments.map(f => ({atoms: f.atoms, bonds: f.bonds, count: f.count})), equivalentGroups: set.equivalentGroups, required: set.required, equivalencePools: set.equivalencePools,
+      forbidden: FORBIDDEN_FRAGMENTS.map(f => f.smarts), singletSameGroupExempt: exempt,
+    };
+    return {ours, reference: [...(await bruteForceV12(counts(formula), bfSet))].sort()};
+  }
+  const sameOn = async (formula: string, set: Omit<FragmentAlternativeSet, 'id'>) => {
+    const a = await bothOn(formula, set, true, true);
+    expect(a.ours, `${formula} (flag on, symmetry pruning on)`).toEqual(a.reference);
+    const b = await bothOn(formula, set, true, false);
+    expect(b.ours, `${formula} (flag on, symmetry pruning off)`).toEqual(a.reference);
+    return a.ours;
+  };
+  it('two no-H-neighbour methyls of one group may bond to each other (C2H6: ethane); without the group they cannot (the v1.2 rule: empty)', async () => {
+    expect(await sameOn('C2H6', {fragments: [CH3({noHCarbonNeighbors: true, group: 'g'}, 2, 'M')], equivalentGroups: ['g']})).toEqual(['CC']);
+    expect(await sameOn('C2H6', {fragments: [CH3({noHCarbonNeighbors: true}, 2, 'M')]})).toEqual([]);
+  });
+  it('the reference without the exemption gives the empty set for the group case, so the exemption is what the enumerator follows', async () => {
+    const set = {fragments: [CH3({noHCarbonNeighbors: true, group: 'g'}, 2, 'M')], equivalentGroups: ['g']};
+    expect((await bothOn('C2H6', set, false)).reference).toEqual([]);
+    expect((await bothOn('C2H6', set, true)).reference).toEqual(['CC']);
+  });
+  it('two no-H-neighbour CH2 of one group around an oxygen (C2H4O): the ring bond between them is allowed', async () => {
+    const out = await sameOn('C2H4O', {fragments: [CH2({noHCarbonNeighbors: true, group: 'g'}, 2, 'E'), O0()], equivalentGroups: ['g']});
+    expect(out).toContain('C1CO1');
+  });
+  it('a group of no-H-neighbour methyls next to a plain CH2 pair: the CH2 pair is still held apart from the no-H atoms (not the same group)', async () => {
+    await sameOn('C4H10', {fragments: [CH3({noHCarbonNeighbors: true, group: 'g'}, 2, 'M'), CH2({}, 2)], equivalentGroups: ['g']});
+  });
+  it('seed 6579 (the case of the stop-14 full-on run, a symmetric O-C-C-O-C-C-O shape): equals the flag-on reference', async () => {
+    const c = randomCase(6579)!;
+    expect(c).not.toBeNull();
+    const a = await bothOn(c.formula, c.set, true, true);
+    expect(a.ours, `seed 6579 ${c.formula}`).toEqual(a.reference);
+  });
+  // the random cases that contain a no-H-neighbour fragment AND an equivalence group are the only ones the exemption can change; the others are compared in the flag-off battery above
+  const affected = Array.from({length: 8000}, (_, i) => ({seed: 1000 + i, c: randomCase(1000 + i)}))
+    .filter(x => x.c !== null && x.c.set.fragments.some(f => f.atoms.some(a => a.noHCarbonNeighbors && a.group))) as {seed: number; c: NonNullable<ReturnType<typeof randomCase>>}[];
+  it('the random battery restricted to those cases: every case equals the flag-on brute force; the pruning switch never changes the output', async () => {
+    expect(affected.length).toBeGreaterThan(30);
+    let differsFromV12 = 0;
+    for (const {seed, c} of affected) {
+      const on = await bothOn(c.formula, c.set, true, true);
+      expect(on.ours, `seed ${seed} ${c.formula}`).toEqual(on.reference);
+      const off = await bothOn(c.formula, c.set, true, false);
+      expect(off.ours, `seed ${seed} (pruning off)`).toEqual(on.reference);
+      const v12 = await bothOn(c.formula, c.set, false, true);
+      if (JSON.stringify(v12.reference) !== JSON.stringify(on.reference)) differsFromV12++;
+    }
+    console.log('V140_C1_COVERAGE ' + JSON.stringify({affected: affected.length, differsFromV12Rule: differsFromV12}));
+    expect(differsFromV12).toBeGreaterThan(0);   // the exemption does change some outputs, so this block is not a copy of the flag-off one
   }, 600000);
 });

@@ -10,6 +10,9 @@ import {AXIS_CALIBRATION_CONFIG} from '../../src/engines/scientificEngines/axisC
 import {canonNoStereo, fixtureSpectra, loadFixture, STEP_ONLY_TIME_MS} from '../helpers/v121Golden';
 import {refPoint, syntheticSegmentedIRImage} from '../irAxisFixture';
 import type {ExperimentalSpectrumData} from '../../src/types/spectrum';
+import {usePreV142Defaults} from '../helpers/v142PreDefaults';
+// v1.4.2 stop 36 (E): this file pins results recorded under the defaults before 1.4.2; the new rule sets (on by default since 1.4.2) are switched to their old values here. No expected value changed.
+usePreV142Defaults();
 
 // v1.2.1 B4: a candidate with a carbonyl class but no strong IR band in that class's window is scored down (never rejected) when the IR is an image whose calibration is
 // trusted and whose trace covers the window. IR image: SYNTHETIC (tests/irAxisFixture.ts); the 1H comes from the hand-written E1 shape. Nothing here is a measured spectrum.

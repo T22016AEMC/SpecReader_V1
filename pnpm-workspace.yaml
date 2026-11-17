@@ -2,3 +2,6 @@ allowBuilds:
   esbuild: true
   '@google/genai': false
   protobufjs: false
+# v1.4.2 stop 33: median-quickselect 1.0.1 (pulled in by jcampconverter -> ml-array-median; no license file, no copyright line) is replaced by SpecReader's own implementation.
+overrides:
+  median-quickselect: link:./vendor/median-select

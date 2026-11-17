@@ -1,5 +1,6 @@
 import {ENUMERATION_CONFIG as CFG} from './enumerationConfig';
 import type {Problem} from './problem';
+import {v140CoverageActive} from '../composition/planningGate';
 
 /**
  * Backtracking search over the symmetric matrix of NEW bond orders (0…maxBondOrder) between atoms, in row-major order of
@@ -50,6 +51,8 @@ export class Searcher {
   private comps: number;
   private readonly elIndex: number[];
   private readonly hasNoHC: boolean;
+  /** v1.4.0 stop 10 (v140.coverage): the singlet rule does not apply between two atoms of ONE equivalence group (equivalent neighbours do not split each other: ClCH2-CH2Cl, dioxane, ethane). */
+  private readonly singletSameGroupExempt: boolean;
   private readonly hasAlkene: boolean;
   /** Double bonds per atom: from the fixed fragment bonds, and from the new bonds chosen so far. */
   private readonly fixedDbl: number[];
@@ -66,6 +69,7 @@ export class Searcher {
     const elNames = [...new Set(P.el)];
     this.elIndex = P.el.map(e => elNames.indexOf(e));
     this.hasNoHC = P.noHC.some(Boolean);
+    this.singletSameGroupExempt = v140CoverageActive();
     this.hasAlkene = P.alkene.some(Boolean);
     this.fixedDbl = new Array(n).fill(0);
     this.dbl = new Array(n).fill(0);
@@ -84,7 +88,7 @@ export class Searcher {
       if (rules.noPeroxide && P.el[i] === 'O' && P.el[j] === 'O') continue;
       if (rules.noNitrogenOxygen && ((P.el[i] === 'N' && P.el[j] === 'O') || (P.el[i] === 'O' && P.el[j] === 'N'))) continue;
       // v1.2 singlet rule: a no-H-carbon-neighbour atom is never bound to a carbon that carries a fixed hydrogen.
-      if ((P.noHC[i] && P.el[j] === 'C' && P.fixedH[j] > 0) || (P.noHC[j] && P.el[i] === 'C' && P.fixedH[i] > 0)) continue;
+      if (((P.noHC[i] && P.el[j] === 'C' && P.fixedH[j] > 0) || (P.noHC[j] && P.el[i] === 'C' && P.fixedH[i] > 0)) && !(this.singletSameGroupExempt && P.group[i] !== null && P.group[i] === P.group[j])) continue;
       this.pi.push(i); this.pj.push(j);
     }
     const PN = this.pi.length;
@@ -235,7 +239,7 @@ export class Searcher {
     if (this.hasAlkene && P.alkene[r] && this.dbl[r] + this.fixedDbl[r] !== 1) return false;
     // v1.2 singlet rule for carbons whose hydrogens are not fixed (flex / free): a carbon next to a no-H-neighbour atom may not keep an implicit H.
     if (this.hasNoHC && P.slack[r] && P.el[r] === 'C' && P.cap[r] - d[r] > 0) {
-      for (let y = 0; y < n; y++) if (P.noHC[y] && this.M[r * n + y] > 0) return false;
+      for (let y = 0; y < n; y++) if (P.noHC[y] && this.M[r * n + y] > 0 && !(this.singletSameGroupExempt && P.group[r] !== null && P.group[r] === P.group[y])) return false;
     }
     // A component made only of finished atoms can never be joined to the rest.
     if (n > 1) {

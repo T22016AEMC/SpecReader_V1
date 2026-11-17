@@ -1,0 +1,109 @@
+{
+ "note": "v1.3.2 stop 4: the eight with-a-mass scenarios, measured with useV132 = false (= v1.3.1)",
+ "samples": [
+  {
+   "sample": "v130/ALK1",
+   "formula": "C8H16",
+   "formulaRank": 2,
+   "hypotheses": 18,
+   "top3": [
+    "C7H12O",
+    "C8H16",
+    "C6H8O2"
+   ],
+   "searched": true,
+   "targetRank": 105
+  },
+  {
+   "sample": "v130/ALK0",
+   "formula": "C8H16",
+   "formulaRank": 2,
+   "hypotheses": 18,
+   "top3": [
+    "C7H12O",
+    "C8H16",
+    "C6H8O2"
+   ],
+   "searched": true,
+   "targetRank": null
+  },
+  {
+   "sample": "v132/CYHEX_A",
+   "formula": "C6H10",
+   "formulaRank": 2,
+   "hypotheses": 6,
+   "top3": [
+    "C5H6O",
+    "C6H10",
+    "C4H6N2"
+   ],
+   "searched": true,
+   "targetRank": 1
+  },
+  {
+   "sample": "v132/XYL_mod",
+   "formula": "C8H10",
+   "formulaRank": 3,
+   "hypotheses": 15,
+   "top3": [
+    "C7H6O",
+    "C6H2O2",
+    "C8H10"
+   ],
+   "searched": true,
+   "targetRank": 1
+  },
+  {
+   "sample": "M1",
+   "formula": "C6H12O3",
+   "formulaRank": 1,
+   "hypotheses": 30,
+   "top3": [
+    "C6H12O3",
+    "C5H12N2O2",
+    "C5H8O4"
+   ],
+   "searched": true,
+   "targetRank": 1
+  },
+  {
+   "sample": "v130/AMD1",
+   "formula": "C8H9NO",
+   "formulaRank": 2,
+   "hypotheses": 7,
+   "top3": [
+    "C7H5NO2",
+    "C8H9NO",
+    "C6H5N3O"
+   ],
+   "searched": true,
+   "targetRank": 1
+  },
+  {
+   "sample": "v130/EST1",
+   "formula": "C9H10O2",
+   "formulaRank": 1,
+   "hypotheses": 13,
+   "top3": [
+    "C9H10O2",
+    "C8H6O3",
+    "C7H6N2O2"
+   ],
+   "searched": true,
+   "targetRank": 1
+  },
+  {
+   "sample": "v130/HCA",
+   "formula": "C9H10O2",
+   "formulaRank": 1,
+   "hypotheses": 13,
+   "top3": [
+    "C9H10O2",
+    "C7H6N2O2",
+    "C8H10N2O"
+   ],
+   "searched": true,
+   "targetRank": 1
+  }
+ ]
+}

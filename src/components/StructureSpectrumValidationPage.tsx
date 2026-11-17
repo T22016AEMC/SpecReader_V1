@@ -13,6 +13,7 @@ import { BidirectionalValidationReport } from "../engines/scientificEngines/pred
 import { ExperimentalSpectrumData, ExtendedSpectrumModality } from "../types/spectrum";
 import { SpectrumViewer } from "./SpectrumViewer";
 import { StructureRenderer2D } from "./StructureRenderer2D";
+import { Nmrshiftdb2Notice } from "../ui/Nmrshiftdb2Notice";
 
 interface StructureSpectrumValidationPageProps {
   bidirectionalReport: BidirectionalValidationReport | null;
@@ -356,6 +357,8 @@ export const StructureSpectrumValidationPage: React.FC<
 
       {/* 理論預測光譜視覺化（預設獨立顯示理論預測光譜，僅在使用者主動開啟疊圖時疊加實驗光譜） */}
       {currentModalityReport.predictedSpectrum.predictionNotes?.map(note=><p key={note} className="text-xs text-slate-400">{note}</p>)}
+      {/* v1.4.2 stop 34: nmrshiftdb2 attribution with the 1H prediction result */}
+      {activeModality === "1H_NMR" && <Nmrshiftdb2Notice testId="h1-nmrshiftdb2-notice" />}
       <SpectrumViewer
         spectrum={
           enableExpOverlay && expSpec

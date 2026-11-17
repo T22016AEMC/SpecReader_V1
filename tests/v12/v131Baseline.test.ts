@@ -5,6 +5,9 @@ import {V12_CONFIG} from '../../src/engines/constraints/v12Config';
 import {initializeRDKit} from '../../src/engines/scientificEngines/rdkitAdapter';
 import {measureV131, V131_CASES} from '../helpers/v131Samples';
 import type {V131Measure} from '../helpers/v131Samples';
+import {usePreV142Defaults} from '../helpers/v142PreDefaults';
+// v1.4.2 stop 36 (E): this file pins results recorded under the defaults before 1.4.2; the new rule sets (on by default since 1.4.2) are switched to their old values here. No expected value changed.
+usePreV142Defaults();
 
 // v1.3.1 "before" baseline: every parsimony sample of tests/helpers/v131Samples.ts (dense IR baseline, step budget only) with useV131 = false equals the numbers recorded on the unchanged v1.3.0 engine (5559f2a):
 // the flag-off guarantee. Ranks, scores and order of the top six; no candidate carries a parsimony prior. Deterministic (no wall-clock budget).

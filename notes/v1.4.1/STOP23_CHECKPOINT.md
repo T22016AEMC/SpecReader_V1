@@ -1,0 +1,11 @@
+# 第二十三站 checkpoint（環丙烷次甲基細分、限制清單、旗標全開整套）
+- [開工 2026-11-13 10:00] 分支 v1.4.1，HEAD 44d1fc1，工作樹乾淨。已讀 STOP22_RESULTS／CHECKPOINT、RELEASE_NOTES_DRAFT、RELEASE_CANDIDATE_CHECKLIST。notes/v1.4.1/ 沒有 KNOWN_LIMITS.md（只有 notes/v1.4.0/KNOWN_LIMITS.md）。
+- [A] 先寫測試 tests/v14/v140Round3CyclopropaneSplit.test.ts＋helper tests/helpers/v140Round3Refine.ts（條件 1–4 由 fits＋引擎計算，部署表須與條件結果一致）。結果：條件 1、2、3a、4 成立；3b（環丙醇次甲基退步消失）不成立：改前 +0.19、合併 −0.79、細分 −0.53（仍退步 0.34 > 0.15）→ 維持合併，src 不動。細分情境另量 31／55／舊類別（STOP23_A_RESULTS.txt）；43 排名在細分下另跑。
+- [D 調查] 牆鐘來自 src enumerate.ts:84 每個備選集合的時間切片＝剩餘 timeMs／剩餘集合數；timeMs 是測試 helper（tests/helpers/v12Golden.ts）傳的 120000。並行時某集合超過自己的切片→incompleteReasons 多 TIME_BUDGET、leaves 102962→101367。golden JSON 不含 timeMs。處理：helper 改用 STEP_ONLY_TIME_MS（3 600 000，v121Golden 既有常數），不改期望值。
+- [C] ambitHnmrKnowledgeBase.ts 檔頭註解只拿掉單位；沒有測試斷言該註解（v140Kb／v141DeployedNotices 讀的是 README／NOTICES／docs 檔）。
+- [A/C/D 完成並 commit] f633ee5／5c87ee0／03efa6e。43 樣本在細分情境下 0 差異（S23_R3_REFINED_RANKS.txt）；31 譜 0 變動；55 面板同為苯并環丁烯 77.8→62.3；D 驗證：legacyGolden 單獨與和 4 個 golden 檔並行（92 s）皆過。 
+- [E 開跑 12:04] vitest.flagon140.config.ts（排除 tests/_scratch），log _s23_flagon.log
+- [E 全開整套 12:04–12:41] 118 檔 1856：26 檔 235 敗（_s23_fail_all.txt）。接著 FLAGON_EXCEPT=round3、ir141 重跑 26 個失敗檔（_s23_run_except.sh）
+- [E 完成 13:40] 全開整套 118 檔 1856：26 檔 235 敗。round3 關重跑：235（差集：全開獨有＝v140Round3『預設關』斷言 1；round3 關獨有＝p1bPipeline flow(i) 1，同跑負載逾時）。IR 關重跑：214，差集 21 個只在 IR 開才敗（evidenceMerge 2、resultTabsRender 1、v121bCarbonyl 1、v130Baseline 1、v131Baseline 1、v131Acceptance 2、v132Baseline 4、v132Stop4Acceptance 4、v132StrongCarbonyl 4、v132Windows 1），與 STOP18 相同。與 STOP18 全開 235 比對：只差 1 個（STOP18 的 v141FlagOnSnapshot 預設值測試已修，這次是 v140Round3『預設關』斷言）。
+- [F] dist 重建 13:39:22（HEAD 48133ae）；E2E 38/38（4.1 分）。接著 flagoff 整套 _s23_flagoff.log
+- [F 完成 14:30] flagoff 整套 118 檔 1856 全過 0 敗（2498 s）。文件（B）更新；整體完成，等使用者審；不升版、不推送。

@@ -14,7 +14,9 @@ export const V130_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)
 /** v1.3.0: samples in tests/fixtures/v130 are referenced as `v130/<id>`. */
 export const V131_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'fixtures', 'v131');
 /** v1.3.1: samples in tests/fixtures/v131 are referenced as `v131/<id>`. */
-export const loadV123 = (id: string): V121Fixture => id.startsWith('v131/') ? JSON.parse(fs.readFileSync(path.join(V131_DIR, `${id.slice(5)}.json`), 'utf8')) : id.startsWith('v130/') ? JSON.parse(fs.readFileSync(path.join(V130_DIR, `${id.slice(5)}.json`), 'utf8')) : id.startsWith('v121/') ? loadFixture(id.slice(5)) : JSON.parse(fs.readFileSync(path.join(V123_DIR, `${id}.json`), 'utf8'));
+export const V132_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'fixtures', 'v132');
+/** v1.3.2: samples in tests/fixtures/v132 are referenced as `v132/<id>`. */
+export const loadV123 = (id: string): V121Fixture => id.startsWith('v132/') ? JSON.parse(fs.readFileSync(path.join(V132_DIR, `${id.slice(5)}.json`), 'utf8')) : id.startsWith('v131/') ? JSON.parse(fs.readFileSync(path.join(V131_DIR, `${id.slice(5)}.json`), 'utf8')) : id.startsWith('v130/') ? JSON.parse(fs.readFileSync(path.join(V130_DIR, `${id.slice(5)}.json`), 'utf8')) : id.startsWith('v121/') ? loadFixture(id.slice(5)) : JSON.parse(fs.readFileSync(path.join(V123_DIR, `${id}.json`), 'utf8'));
 
 /** A class (p-cresol / BPA: nitrogen evidence, quota, implausible N structures) and B class (PMA / alkene controls: stop 3). */
 export const V123_A_SAMPLES = ['P1', 'P2', 'P3', 'P4', 'B1', 'v121/S2'] as const;

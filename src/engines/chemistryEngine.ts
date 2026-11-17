@@ -1,5 +1,6 @@
 import { ParsedChemicalStructure, StructureIntegrityReport } from "../types/spectrum";
 import { TheoreticalModelRegistry } from "../models/theoreticalModelRegistry";
+import { V12_CONFIG } from "./constraints/v12Config";
 
 const ATOMIC_WEIGHTS: Record<string, number> = {
   H: 1.00794,
@@ -397,7 +398,13 @@ export class StructureParserAdapter {
             targetValence = 0;
         }
         const effectiveBondOrder = Math.round(bondSum);
-        const implicitH = Math.max(0, targetValence + atom.formalCharge - effectiveBondOrder);
+        let implicitH = Math.max(0, targetValence + atom.formalCharge - effectiveBondOrder);
+        // v1.4.0 stop 8 (useV140H1 and v140.matching): an uncharged aromatic S (thiophene) with two aromatic bonds is divalent: its two 1.5 bonds sum to 3, which made the S look like S(IV) and gave it one phantom H (an SH at 1.55 ppm,
+        // and C4H5S for thiophene). Aromatic O has no such problem (its target valence 2 is below 3).
+        if (implicitH > 0 && atom.element === "S" && atom.isAromatic && atom.formalCharge === 0 && atom.neighbors.length === 2 && V12_CONFIG.useV140H1 && V12_CONFIG.v140.matching) implicitH = 0;
+        // v1.4.2 stop 28 (useV140H1 and v140.matching, the same place as the thiophene fix above): an uncharged aromatic N with three connections (N-substituted pyrrole / indole / imidazole N: n(C), n(-aryl), n(C=O))
+        // has no H. Its bonds (1 + 1.5 + 1.5) sum to 4, which made the N look like N(V) and gave it one phantom H (N-methylindole came out as C9H10N, with an N-H the molecule does not have). [nH] has an explicit count and is not touched.
+        if (implicitH > 0 && atom.element === "N" && atom.isAromatic && atom.formalCharge === 0 && atom.neighbors.length === 3 && V12_CONFIG.useV140H1 && V12_CONFIG.v140.matching) implicitH = 0;
         atom.implicitHydrogens = implicitH;
         atom.totalHydrogens = implicitH;
       }

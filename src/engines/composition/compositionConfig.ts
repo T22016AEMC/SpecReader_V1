@@ -136,6 +136,26 @@ export const COMPOSITION_CONFIG = {
     anhydrideLowRange: [1740, 1790] as [number, number],
   },
 
+  /**
+   * v1.3.2 stop 6 (v132.windows). Sources: Coates, Interpretation of Infrared Spectra (本機 PDF 論文), Table 11 (aliphatic nitro 1560–1540 / 1380–1350, aromatic nitro 1555–1485 / 1355–1320) and Koshelev,
+   * Applied Spectroscopy (aliphatic nitro 1540 strong / 1380 weaker). The numbers 1535, 1360, 1810, 1310 and the trapezoid slope are 工程判斷 (not calibrated).
+   *  - nitro symmetric band: window up to 1380. A symmetric band ABOVE nitroAromaticSymMaxCm1 (1360) belongs to the ALIPHATIC regime and only pairs with an asymmetric band at or above nitroAliphaticAsymMinCm1 (1535);
+   *    a methyl bend (~1375) with an aromatic-range asymmetric band (a ring band ~1516) is therefore not a nitro pair, and a 1375 band with no asymmetric band at all is nothing.
+   *  - strong C–O window up to 1310 (the lower edge stays 1000: a window down to 990 turns the strong =C–H out-of-plane band of a terminal alkene, 995–985 in Coates Table 2, into a "strong C–O"; measured).
+   *  - companion windows of the score: trapezoid, slope companionRampCm1.
+   * Tried and NOT adopted (a misjudgement on a synthetic control): broad O–H 3190–3610, nitrile upper edge 2280.
+   */
+  windowsV132: {
+    nitroSymRange: [1290, 1380] as [number, number],
+    /** asymmetric band: upper edge 1560 (Coates aliphatic 1560–1540; the stop-4 / v1.3.1 window ends at 1550, which cuts an aliphatic nitro at 1555). */
+    nitroAsymRange: [1475, 1560] as [number, number],
+    nitroAromaticSymMaxCm1: 1360,
+    nitroAliphaticAsymMinCm1: 1535,
+    coRange: [1000, 1310] as [number, number],
+    carbonylRange: [1650, 1810] as [number, number],
+    companionRampCm1: 10,
+  },
+
   // ---------------------------------------------------------------- 1H + IR composition without mass or 13C (v1.1.6)
   /** Multiples k for H = k·S (+ missing exchangeable H) and C = k·V + q when only 1H (and IR) is available. */
   h1OnlyMaxMultiple: 3,

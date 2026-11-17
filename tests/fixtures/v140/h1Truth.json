@@ -1,0 +1,79 @@
+{
+  "待規劃者補充，附出處": "烯丙基 CH2（allylic_CH2，碳上無 O）、縮醛（acetal_CH）、酯氧次甲基（ester_oxygen_methine）這幾類目前沒有可核對的值，保持空白；不得自行編造。S7 的其他含氧化合物（乙二醇、二甲氧基乙烷、二甘醇二甲醚、18-冠-6、碳酸二甲酯、丙二酸二甲酯）未經規劃者指定，不放。已放入的值只有規劃者在第三、四、五站指定的（第四站丙烯 4 筆；第五站乙烯、乙酸烯丙酯、碳酸二烯丙酯共 10 筆）。",
+  "source": {
+    "paper": "Fulmer 2010",
+    "full": "Fulmer GR, Miller AJM, Sherden NH, Gottlieb HE, Nudelman A, Stoltz BM, Bercaw JE, Goldberg KI. NMR Chemical Shifts of Trace Impurities: Common Laboratory Solvents, Organics, and Gases in Deuterated Solvents Relevant to the Organometallic Chemist. Organometallics 2010, 29, 2176-2179. Supporting Information, Table S7 (CDCl3, 1H NMR data by chemical shift in ppm).",
+    "doi": "10.1021/om100106e",
+    "url": "https://www.stoltz2.caltech.edu/publications/103-s-2010.pdf",
+    "table": "Table S7 (CDCl3)",
+    "verified": "規劃者 2026-11-09 查證；執行者同日下載該 PDF，逐筆對過 S7 表與 Table S1 的 CDCl3 欄（第三欄）。第三站 20 個位移（正己烷 CH2 比對兩組預測環境，共 21 筆）；第四站丙烯 4 個位移（共 25 筆）；第五站乙烯、乙酸烯丙酯、碳酸二烯丙酯 10 個位移（共 35 筆），皆相符。"
+  },
+  "entryFormat": {
+    "compound": "化合物名稱（與原表一致）",
+    "environment": "氫環境（原表 proton 欄）",
+    "smiles": "SMILES（預測器輸入）",
+    "atom": "H 所在原子在預測器結構圖的索引（= 預測環境的 atomIndices；用測試檔的 listEnvironments(smiles) 查）",
+    "nH": "預測器該環境的氫數（對應驗證用；原表不報氫數）",
+    "shiftPpm": "原表的實驗位移",
+    "multiplicity": "原表的多重性",
+    "solvent": "CDCl3",
+    "source": "Fulmer 2010 SI Table S7",
+    "note": "選填"
+  },
+  "classes": {
+    "terminal_vinyl_CH2": [
+      {"compound":"丙烯 propylene","environment":"CH2(1)","smiles":"C=CC","atom":0,"nH":1,"shiftPpm":4.94,"multiplicity":"dm (J 10)","solvent":"CDCl3","source":"Fulmer 2010 SI Table S7","note":"表中 (1)(2) 只是位置編號，表未標順反式；=CH2 的兩個氫。預測端兩個氫依位移由小到大與真值由小到大配對"},
+      {"compound":"丙烯 propylene","environment":"CH2(2)","smiles":"C=CC","atom":0,"nH":1,"shiftPpm":5.03,"multiplicity":"dm (J 17)","solvent":"CDCl3","source":"Fulmer 2010 SI Table S7","note":"同上"},
+      {"compound":"乙烯 ethylene","environment":"CH2","smiles":"C=C","atom":0,"nH":4,"shiftPpm":5.4,"multiplicity":"s","solvent":"CDCl3","source":"Fulmer 2010 SI Table S7","note":"四個氫等價"},
+      {"compound":"乙酸烯丙酯 allyl acetate","environment":"CHCH2(1)","smiles":"CC(=O)OCC=C","atom":0,"nH":1,"shiftPpm":5.32,"multiplicity":"ddt","solvent":"CDCl3","source":"Fulmer 2010 SI Table S7","note":"=CH2 的兩個氫；(1)(2) 只是表中編號，未標順反；依位移升序與預測配對"},
+      {"compound":"乙酸烯丙酯 allyl acetate","environment":"CHCH2(2)","smiles":"CC(=O)OCC=C","atom":0,"nH":1,"shiftPpm":5.24,"multiplicity":"ddt","solvent":"CDCl3","source":"Fulmer 2010 SI Table S7","note":"同上"},
+      {"compound":"碳酸二烯丙酯 diallyl carbonate","environment":"CHCH2(1)","smiles":"C=CCOC(=O)OCC=C","atom":0,"nH":2,"shiftPpm":5.37,"multiplicity":"ddt","solvent":"CDCl3","source":"Fulmer 2010 SI Table S7","note":"兩個等價烯丙基，每個環境 2H；依位移升序與預測配對"},
+      {"compound":"碳酸二烯丙酯 diallyl carbonate","environment":"CHCH2(2)","smiles":"C=CCOC(=O)OCC=C","atom":0,"nH":2,"shiftPpm":5.27,"multiplicity":"ddt","solvent":"CDCl3","source":"Fulmer 2010 SI Table S7","note":"同上"}
+    ],
+    "vinyl_CH": [
+      {"compound":"丙烯 propylene","environment":"CH","smiles":"C=CC","atom":1,"nH":1,"shiftPpm":5.83,"multiplicity":"m","solvent":"CDCl3","source":"Fulmer 2010 SI Table S7"},
+      {"compound":"乙酸烯丙酯 allyl acetate","environment":"CH","smiles":"CC(=O)OCC=C","atom":1,"nH":1,"shiftPpm":5.93,"multiplicity":"ddt","solvent":"CDCl3","source":"Fulmer 2010 SI Table S7"},
+      {"compound":"碳酸二烯丙酯 diallyl carbonate","environment":"CH","smiles":"C=CCOC(=O)OCC=C","atom":1,"nH":2,"shiftPpm":5.94,"multiplicity":"ddt","solvent":"CDCl3","source":"Fulmer 2010 SI Table S7"}
+    ],
+    "allylic_CH2": [],
+    "allylic_CH3": [
+      {"compound":"丙烯 propylene","environment":"CH3","smiles":"C=CC","atom":2,"nH":3,"shiftPpm":1.73,"multiplicity":"dt (J 6.4, 1.5)","solvent":"CDCl3","source":"Fulmer 2010 SI Table S7"}
+    ],
+    "acetal_CH": [],
+    "ester_oxygen_methine": [],
+    "ether_O_CH2": [
+      {"compound":"乙醚 diethyl ether","environment":"OCH2","smiles":"CCOCC","atom":1,"nH":4,"shiftPpm":3.48,"multiplicity":"q","solvent":"CDCl3","source":"Fulmer 2010 SI Table S7"},
+      {"compound":"四氫呋喃 tetrahydrofuran","environment":"OCH2 (2,5)","smiles":"C1CCOC1","atom":2,"nH":4,"shiftPpm":3.76,"multiplicity":"m","solvent":"CDCl3","source":"Fulmer 2010 SI Table S7"},
+      {"compound":"1,4-二氧六環 1,4-dioxane","environment":"CH2","smiles":"C1COCCO1","atom":0,"nH":8,"shiftPpm":3.71,"multiplicity":"s","solvent":"CDCl3","source":"Fulmer 2010 SI Table S7"}
+    ],
+    "ester_O_CH2": [
+      {"compound":"乙酸乙酯 ethyl acetate","environment":"OCH2","smiles":"CC(=O)OCC","atom":1,"nH":2,"shiftPpm":4.12,"multiplicity":"q","solvent":"CDCl3","source":"Fulmer 2010 SI Table S7"}
+    ],
+    "alcohol_O_CH2": [
+      {"compound":"乙醇 ethanol","environment":"OCH2","smiles":"CCO","atom":1,"nH":2,"shiftPpm":3.72,"multiplicity":"q","solvent":"CDCl3","source":"Fulmer 2010 SI Table S7"},
+      {"compound":"甲醇 methanol","environment":"CH3","smiles":"CO","atom":0,"nH":3,"shiftPpm":3.49,"multiplicity":"s","solvent":"CDCl3","source":"Fulmer 2010 SI Table S7","note":"O-CH3，類別鍵沿用 alcohol_O_CH2"},
+      {"compound":"異丙醇 2-propanol","environment":"CH","smiles":"CC(C)O","atom":1,"nH":1,"shiftPpm":4.04,"multiplicity":"sept","solvent":"CDCl3","source":"Fulmer 2010 SI Table S7","note":"O-CH 次甲基，類別鍵沿用 alcohol_O_CH2"}
+    ],
+    "allylic_oxygen_CH2": [
+      {"compound":"乙酸烯丙酯 allyl acetate","environment":"OCH2","smiles":"CC(=O)OCC=C","atom":2,"nH":2,"shiftPpm":4.57,"multiplicity":"ddd","solvent":"CDCl3","source":"Fulmer 2010 SI Table S7","note":"烯丙基接氧：同時受 alkene 與 oxygen 兩個子旗標影響（歸 oxygen 組，但烯丙基增量屬 alkene 項）"},
+      {"compound":"碳酸二烯丙酯 diallyl carbonate","environment":"OCH2","smiles":"C=CCOC(=O)OCC=C","atom":2,"nH":4,"shiftPpm":4.64,"multiplicity":"ddd","solvent":"CDCl3","source":"Fulmer 2010 SI Table S7","note":"同上；兩個等價 OCH2，共 4H"}
+    ],
+    "other": [
+      {"compound":"乙酸乙酯 ethyl acetate","environment":"CH3CO","smiles":"CC(=O)OCC","atom":4,"nH":3,"shiftPpm":2.05,"multiplicity":"s","solvent":"CDCl3","source":"Fulmer 2010 SI Table S7"},
+      {"compound":"乙酸乙酯 ethyl acetate","environment":"CH3 (of OCH2CH3)","smiles":"CC(=O)OCC","atom":0,"nH":3,"shiftPpm":1.26,"multiplicity":"t","solvent":"CDCl3","source":"Fulmer 2010 SI Table S7"},
+      {"compound":"乙醚 diethyl ether","environment":"CH3","smiles":"CCOCC","atom":0,"nH":6,"shiftPpm":1.21,"multiplicity":"t","solvent":"CDCl3","source":"Fulmer 2010 SI Table S7"},
+      {"compound":"四氫呋喃 tetrahydrofuran","environment":"CH2 (3,4)","smiles":"C1CCOC1","atom":0,"nH":4,"shiftPpm":1.85,"multiplicity":"m","solvent":"CDCl3","source":"Fulmer 2010 SI Table S7"},
+      {"compound":"乙醇 ethanol","environment":"CH3","smiles":"CCO","atom":0,"nH":3,"shiftPpm":1.25,"multiplicity":"t","solvent":"CDCl3","source":"Fulmer 2010 SI Table S7"},
+      {"compound":"異丙醇 2-propanol","environment":"CH3","smiles":"CC(C)O","atom":0,"nH":6,"shiftPpm":1.22,"multiplicity":"d","solvent":"CDCl3","source":"Fulmer 2010 SI Table S7"},
+      {"compound":"丁酮 ethyl methyl ketone","environment":"CH3CO","smiles":"CCC(C)=O","atom":3,"nH":3,"shiftPpm":2.14,"multiplicity":"s","solvent":"CDCl3","source":"Fulmer 2010 SI Table S7"},
+      {"compound":"丁酮 ethyl methyl ketone","environment":"CH2","smiles":"CCC(C)=O","atom":1,"nH":2,"shiftPpm":2.46,"multiplicity":"q","solvent":"CDCl3","source":"Fulmer 2010 SI Table S7"},
+      {"compound":"丁酮 ethyl methyl ketone","environment":"CH2CH3","smiles":"CCC(C)=O","atom":0,"nH":3,"shiftPpm":1.06,"multiplicity":"t","solvent":"CDCl3","source":"Fulmer 2010 SI Table S7"},
+      {"compound":"正己烷 n-hexane","environment":"CH3","smiles":"CCCCCC","atom":0,"nH":6,"shiftPpm":0.88,"multiplicity":"t","solvent":"CDCl3","source":"Fulmer 2010 SI Table S7"},
+      {"compound":"正己烷 n-hexane","environment":"CH2 (C2/C5)","smiles":"CCCCCC","atom":1,"nH":4,"shiftPpm":1.26,"multiplicity":"m","solvent":"CDCl3","source":"Fulmer 2010 SI Table S7","note":"原表只報一個 CH2 = 1.26 m；預測器分成 C2/C5 與 C3/C4 兩組，兩組各比對同一個值"},
+      {"compound":"正己烷 n-hexane","environment":"CH2 (C3/C4)","smiles":"CCCCCC","atom":2,"nH":4,"shiftPpm":1.26,"multiplicity":"m","solvent":"CDCl3","source":"Fulmer 2010 SI Table S7","note":"同上"},
+      {"compound":"甲苯 toluene","environment":"CH3","smiles":"Cc1ccccc1","atom":0,"nH":3,"shiftPpm":2.36,"multiplicity":"s","solvent":"CDCl3","source":"Fulmer 2010 SI Table S7"},
+      {"compound":"二氯甲烷 dichloromethane","environment":"CH2","smiles":"ClCCl","atom":1,"nH":2,"shiftPpm":5.3,"multiplicity":"s","solvent":"CDCl3","source":"Fulmer 2010 SI Table S7"},
+      {"compound":"乙酸烯丙酯 allyl acetate","environment":"CH3CO","smiles":"CC(=O)OCC=C","atom":5,"nH":3,"shiftPpm":2.09,"multiplicity":"s","solvent":"CDCl3","source":"Fulmer 2010 SI Table S7"}
+    ]
+  }
+}

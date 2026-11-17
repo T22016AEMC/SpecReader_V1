@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import {afterEach, beforeAll, describe, expect, it} from 'vitest';
+import {afterAll, afterEach, beforeAll, describe, expect, it} from 'vitest';
 import {V12_CONFIG} from '../../src/engines/constraints/v12Config';
 import {initializeRDKit} from '../../src/engines/scientificEngines/rdkitAdapter';
 import {executeSixStepAnalysis} from '../../src/engines/reasoning/sixStepAnalysis';
@@ -11,13 +11,22 @@ import {classifySignal, NO_IR} from '../../src/engines/constraints/shiftClasses'
 import type {H1Signal, IrAldehydeContext} from '../../src/engines/constraints/shiftClasses';
 import {h1SignalsFromObservations, irAldehydeContext} from '../../src/engines/constraints/v12Evidence';
 import {round2ShareCap} from '../../src/engines/composition/structureGenerator';
-import {canonNoStereo, fixtureSpectra, SHAPE_BUDGET} from '../helpers/v121Golden';
+import {ENUMERATION_CONFIG} from '../../src/engines/enumeration/enumerationConfig';
+import {canonNoStereo, fixtureSpectra, SHAPE_BUDGET, STEP_ONLY_TIME_MS} from '../helpers/v121Golden';
 import {loadV123, measureSample} from '../helpers/v123Samples';
 import type {SampleMeasure} from '../helpers/v123Samples';
+import {usePreV142Defaults} from '../helpers/v142PreDefaults';
+// v1.4.2 stop 36 (E): this file pins results recorded under the defaults before 1.4.2; the new rule sets (on by default since 1.4.2) are switched to their old values here. No expected value changed.
+usePreV142Defaults();
 
 // v1.2.3 stop 3: the ester / acetal O–CH classes (V12_CONFIG.esterMethine), the user-formula path, the k = 1 round-1 cap, and the narrowed round-2 share cap. SYNTHETIC samples only, step budget only.
 // SOURCE of the windows: one checked literature data point (isopropyl formate CH 5.14 ppm) plus engineering judgement; the 1.4.0 shift prediction replaces them.
-beforeAll(() => initializeRDKit(), 60000);
+// v1.3.2 (stop 3): the one wall clock left in these runs is the legacy beam search's hard-coded 500 ms per run (its step count is pooled into the formulas after it, so results depended on CPU speed and load).
+// As in the v1.2.1 flag golden, the test setting limits that search by its step count only (production value unchanged; restored afterwards). Assertions are untouched.
+const legacy = ENUMERATION_CONFIG.legacySupplement as {timeMsPerRun: number; maxStatesPerRun: number};
+const legacyWas = legacy.timeMsPerRun;
+beforeAll(async () => { legacy.timeMsPerRun = STEP_ONLY_TIME_MS; await initializeRDKit(); }, 60000);
+afterAll(() => { legacy.timeMsPerRun = legacyWas; });
 const was = {total: V12_CONFIG.useV123, ester: V12_CONFIG.v123.esterMethine, cap: V12_CONFIG.v123.round1CapK1};
 afterEach(() => { V12_CONFIG.useV123 = was.total; V12_CONFIG.v123.esterMethine = was.ester; V12_CONFIG.v123.round1CapK1 = was.cap; });
 const baseline = JSON.parse(fs.readFileSync(path.resolve(__dirname, '..', 'goldens', 'v123.baseline.json'), 'utf8')).samples as SampleMeasure[];
@@ -109,7 +118,7 @@ describe('user-typed formula: the 1H constraints no longer retreat on 5.09 ppm',
     const on = await retreat(true);
     expect(on.path).toBe('INVENTORY');
     expect(on.rank).toBe(1);
-  }, 120000);
+  }, 600000);
 });
 
 describe('no-formula acceptance, flag on', () => {
@@ -120,39 +129,39 @@ describe('no-formula acceptance, flag on', () => {
         expect(m.targetRank, id).not.toBeNull();
         expect(m.targetRank!, id).toBeLessThanOrEqual(3);
       }
-    }, 120000);
+    }, 600000);
     it(`other ester methine samples (${mode}): isopropyl acetate type and ethyl lactate type are in the top 5`, async () => {
       for (const id of ['Q1', 'Q2']) {
         const m = await run(id, mode);
         expect(m.targetRank, id).not.toBeNull();
         expect(m.targetRank!, id).toBeLessThanOrEqual(5);
       }
-    }, 120000);
+    }, 600000);
     it(`"5 ppm is really an alkene CH" controls (${mode}) are not worse than before, and the no-C=O sample (Q3) keeps its alkene reading`, async () => {
       for (const id of ['M4', 'M5', 'M5b', 'M6', 'M7', 'v121/G3', 'Q3']) {
         const b = base(id.replace('v121/', ''), mode), m = await run(id, mode);
         if (b.targetRank !== null) { expect(m.targetRank, id).not.toBeNull(); expect(m.targetRank!, id).toBeLessThanOrEqual(b.targetRank); }
         if (b.targetSearched) expect(m.targetSearched, id).toBe(true);
       }
-    }, 120000);
+    }, 600000);
     it(`p-cresol, BPA (${mode}) do not regress against the stop 2 result (rank 1)`, async () => {
       for (const id of ['P1', 'P2', 'P3', 'P4', 'B1', 'v121/S2']) expect((await run(id, mode)).targetRank, id).toBe(1);
-    }, 300000);
+    }, 900000);
   }
   it('bypass: with the flag off the PMA type is not found (the recorded 1.2.2 baseline)', async () => {
     for (const id of ['M1', 'M1b']) expect((await run(id, 'dense', false)).targetRank, id).toBeNull();
-  }, 120000);
+  }, 600000);
   it('3.2: without the k = 1 round-1 cap (150 000 steps) the PMA type is still not found; with 500 000 it is first', async () => {
     V12_CONFIG.v123.round1CapK1 = false;
     expect((await run('M1', 'dense')).targetRank).toBeNull();
     V12_CONFIG.v123.round1CapK1 = true;
     expect((await run('M1', 'dense')).targetRank).toBe(1);
     expect(V12_CONFIG.v123.round1MaxStatesK1).toBe(500_000);
-  }, 120000);
+  }, 600000);
   it('the ester switch alone matters: esterMethine off (cap on) leaves 5.09 without a plain reading and the PMA type is not found', async () => {
     V12_CONFIG.v123.esterMethine = false;
     expect((await run('M1b', 'dense')).targetRank).toBeNull();
-  }, 120000);
+  }, 600000);
 });
 
 describe('3.0: the round-2 share cap only limits a formula with N and no N-specific evidence', () => {
@@ -171,5 +180,5 @@ describe('3.0: the round-2 share cap only limits a formula with N and no N-speci
     }
     const p4 = await run('P4', 'sparse');
     expect(Math.max(...p4.runs.map(r => r.visited)) / p4.steps).toBeLessThan(0.6);
-  }, 120000);
+  }, 600000);
 });

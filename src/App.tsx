@@ -8,9 +8,9 @@ import type {CandidateView} from './ui/ConclusionCard';
 import {CandidateEvidence} from './ui/CandidateEvidence';
 import {FunctionalGroupTab} from './ui/FunctionalGroupTab';
 import {DiagnosisTab} from './ui/DiagnosisTab';
-import {buildDiagnosticSummary,buildFullFormulaTable,type CompositionSourcesLike} from './ui/diagnosticSummary';
+import {analysisPeakCounts,buildDiagnosticSummary,buildFullFormulaTable,type CompositionSourcesLike} from './ui/diagnosticSummary';
 import {filterIrEvidence,type FunctionalGroupRow,type IrFindingRow} from './ui/irEvidenceFilter';
-import {conclusionBullets,pickTopWarning,searchStatusSentence} from './ui/conclusion';
+import {cardShowsH1Prediction,conclusionBullets,pickTopWarning,searchStatusSentence} from './ui/conclusion';
 import {fmtIntegral,fmtMz,fmtScoreOf100,fmtShift13C,fmtShift1H,fmtWavenumber,shortenNumbers} from './ui/format';
 import type {ObservationLike} from './ui/obsLabel';
 import type {AnalysisProgress} from './engines/reasoning/types';
@@ -66,6 +66,7 @@ import {
   WorkbenchOrchestrator,
 } from "./engines/workbenchOrchestrator";
 import { TheoreticalModelRegistry } from "./models/theoreticalModelRegistry";
+import { SiteFooter } from "./ui/Nmrshiftdb2Notice";
 import {
   ExperimentalSpectrumData,
   ImageSpectrumCalibration,
@@ -859,6 +860,8 @@ export default function App() {
       dataCheck,
       h1Peaks: (h1?.peaks ?? []).map((pk) => ({ position: pk.x, integration: pk.integration, multiplicity: pk.multiplicity ?? undefined, jValues: pk.jValues })),
       irPeaks: (ir?.peaks ?? []).map((pk) => ({ position: pk.x, broad: Boolean(pk.isBroad || pk.shape === "broad" || pk.shape === "very_broad") })),
+      analysisIrPeaks: analysisPeakCounts(traceObservations, "IR"),
+      experiments: completedAnalysis.result.runtime?.experiments,
       irCalibrationText: ir ? `${calibrationStatus(ir).label}（${calibrationStatus(ir).detail}）` : undefined,
       hiddenIrGroups: irFilterResult.hiddenCount,
       shownIrGroups: irFilterResult.shownCount,
@@ -900,6 +903,8 @@ export default function App() {
         userFormula: generationInfo?.userFormula ?? null,
         candidateFormula: cand.molecularFormula,
       }),
+      // v1.4.2 stop 35 (D)：卡片顯示 ¹H 預測結果時，一併顯示 nmrshiftdb2 聲明
+      showsH1: cardShowsH1Prediction(record?.evidence ?? [], (cand.scientificScoreLedger?.entries ?? []).filter((e) => e.compatibility !== null).map((e) => e.sourceModality)),
       // 句尾「有界搜尋／未校準相容度…」只在區塊標題講一次；「候選來源：…」字串不變
       sourceLine: `來源：${cand.sourceProvenance || cand.candidateOrigin}${originTag ? `｜候選來源：${originTag}` : ""}`,
       selected: (selectedCandidate?.id || rankedCandidates[0]?.id) === cand.id,
@@ -1088,6 +1093,11 @@ export default function App() {
     if (!spec) return;
     const updated = SpectrumParser.reRunAutoPeakDetection(spec);
     updateSpectrumForModality(mod, updated);
+    const irImageUncalibrated = mod === "IR" && Boolean(spec.digitizedFromImage || spec.sourceType === "IMAGE_EXPERIMENTAL") && !SpectrumParser.isUserCalibratedSource(spec.imageCalibration?.source);
+    if (irImageUncalibrated) {
+      setUploadStatusMsg("IR 圖片尚未完成座標校正，無法自動尋峰；請先到第 2 頁校正，再按「自動尋峰」。");
+      return;
+    }
     setUploadStatusMsg(
       `已對 ${mod} 重新執行自動讀譜（共 ${updated.peaks.length} 筆訊號，已完整保留人工新增與編輯紀錄）。`
     );
@@ -3209,6 +3219,9 @@ export default function App() {
         )}
       </div>
       </main>
+
+      {/* v1.4.2 stop 34: site footer (nmrshiftdb2 attribution) */}
+      <SiteFooter />
 
       {/* 報告匯出 Modal */}
       <ReportExportModal

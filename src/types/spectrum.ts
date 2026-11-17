@@ -897,6 +897,8 @@ export interface ExperimentalSpectrumData {
   autoSuggestedPeaks?: SpectralPeak[];
   userEditedPeaks?: SpectralPeak[];
   deletedPeakIds?: string[];
+  /** v1.3.2: an image IR gets automatically detected peaks (ids `ir-auto-px<pixel>`) only after the user asked for them (the "自動尋峰" button); until then calibration leaves the peak list to the user's own marks. */
+  irAutoPeaksRequested?: boolean;
   confirmedPeaks?: SpectralPeak[];
   // Standard points, peaks & unified characterized signals
   points: DataPoint[];
