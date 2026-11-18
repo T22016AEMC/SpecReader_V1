@@ -85,3 +85,5 @@ const V142_NEG_FLAG = {nitrile: 'negNitrile', nitro: 'negNitro', alkyneCH: 'negA
 export const v142NegRuleActive = (id: V142NegRuleId): boolean => v142IRActive() && (V12_CONFIG.v142IR.negativeEvidence || V12_CONFIG.v142IR[V142_NEG_FLAG[id]]);
 /** Any of the three negative-evidence rules on (with only the total sub-flag in use this is exactly the stop-25 meaning: useV142IR AND negativeEvidence). */
 export const v142NegativeEvidenceActive = (): boolean => v142NegRuleActive('nitrile') || v142NegRuleActive('nitro') || v142NegRuleActive('alkyneCH');
+/** v1.4.3: formula selection fixes in planFormulaSearch (V12_CONFIG.useV143Select). Planning is the only place the function runs, so it needs the v1.2.1 planning gate and the flag; false = v1.4.2. */
+export const v143SelectActive = (): boolean => planningActive() && V12_CONFIG.useV143Select;

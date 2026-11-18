@@ -12,12 +12,14 @@ export const PRE_V142_DEFAULTS = {
   v140: {alkene: true, oxygen: true, matching: false, plausibility: false, coverage: false, solvent: false, calibration2: false, round3: false, parseFix: true},
   useV141IR: false,
   useV142IR: false,
+  /** v1.4.3: the formula-selection fix of planFormulaSearch (useV143Select) did not exist before 1.4.3; off = the v1.4.2 selection every pinned golden was recorded with. */
+  useV143Select: false,
 } as const;
 
 export function usePreV142Defaults(): void {
-  const c = V12_CONFIG as unknown as {useV140H1: boolean; useV141IR: boolean; useV142IR: boolean; v140: Record<string, boolean>};
-  const was = {useV140H1: c.useV140H1, useV141IR: c.useV141IR, useV142IR: c.useV142IR, v140: {...c.v140}};
-  c.useV140H1 = PRE_V142_DEFAULTS.useV140H1; c.useV141IR = PRE_V142_DEFAULTS.useV141IR; c.useV142IR = PRE_V142_DEFAULTS.useV142IR;
+  const c = V12_CONFIG as unknown as {useV140H1: boolean; useV141IR: boolean; useV142IR: boolean; useV143Select: boolean; v140: Record<string, boolean>};
+  const was = {useV140H1: c.useV140H1, useV141IR: c.useV141IR, useV142IR: c.useV142IR, useV143Select: c.useV143Select, v140: {...c.v140}};
+  c.useV140H1 = PRE_V142_DEFAULTS.useV140H1; c.useV141IR = PRE_V142_DEFAULTS.useV141IR; c.useV142IR = PRE_V142_DEFAULTS.useV142IR; c.useV143Select = PRE_V142_DEFAULTS.useV143Select;
   Object.assign(c.v140, PRE_V142_DEFAULTS.v140);
-  afterAll(() => { c.useV140H1 = was.useV140H1; c.useV141IR = was.useV141IR; c.useV142IR = was.useV142IR; Object.assign(c.v140, was.v140); });
+  afterAll(() => { c.useV140H1 = was.useV140H1; c.useV141IR = was.useV141IR; c.useV142IR = was.useV142IR; c.useV143Select = was.useV143Select; Object.assign(c.v140, was.v140); });
 }
