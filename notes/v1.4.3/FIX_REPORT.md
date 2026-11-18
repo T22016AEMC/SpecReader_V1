@@ -41,3 +41,21 @@ v121Planning 27／27、v121bPlanning 12／12、v123Nitrogen 13／13、v143Select
 2. 「with hidden-exchangeable evidence the order key does not charge …」（第 76 行）：合成分數把 e=2 少 0.6（全額），但 ¹H 表未確認完整時真實分數只少 0.3；加回改成 0.3 之後 e=0 排第一，不再是舊斷言的順序。
 原因：`scoreComposition` 在 ¹H 表未確認完整時 e 只扣 0.3×0.5，舊 planScore 卻加回完整 0.3，等於讓 e>0 多得 0.15／個。我把 planScore 改成「加回＝實際扣掉的量」（同係數），所以 e=0 與 e>0 平手，再由 DBE 過量、C、H 決定。你的指示是兩邊一致；另一種做法是改 scoreComposition（全域影響，超出這次範圍，沒做）。副作用就是 BPA-C 的目標式從第 2 掉到第 11，以及上面兩個舊斷言。
 另：可行性檢查變多（BPA-A：84→180 次、約 67→224 ms；其他樣本 ≤130 ms）。
+
+---
+# 第二輪（撤回加回量改動＋發布前驗證）
+- **撤回**：planScore 的漏列加回維持 v1.4.2 的完整 0.3×e，沒動組成分數。保留：可行性先於代表、「¹H 表已列可交換峰（含 >8.5 ppm 條件）不啟用加回」、旗標 useV143Select（預設 true）。commit 2e8d434；版本 1.4.3＝7021a14。
+- **重跑同一批樣本**（步數預算，flag on；順位＝第一層名單順位，名次＝第二層、平手算輸）：
+| 樣本 | 目標式 | 修改前（v1.4.2）順位／名次 | 現在 順位／名次 |
+|---|---|---|---|
+| BPA-A | C15H16O2 | 不在名單／找不到 | 2／3（共 17） |
+| BPA-B | C15H16O2 | 2／3 | 2／3 |
+| BPA-C | C15H16O2 | 2／— | 2／3（共 13） |
+| BPA-D（CDCl3） | C15H16O2 | 不在名單 | 不在名單（H1_INFEASIBLE）／找不到 |
+| P1、P2 | C7H8O | 1／1 | 1／1 |
+| M1、M1b | C6H12O3 | 4／1 | 4／1 |
+  停止條件未觸發：BPA-C 在前 3、舊樣本沒有變差。
+- **v121cPlanning 兩個失敗**撤回後都回到通過（第 57、76 行），沒有改任何斷言。規劃測試 v121Planning 27、v121bPlanning 12、v121cPlanning 19、v123Nitrogen 13、v143Select 11 全過。
+- **已知限制**：CDCl3 下 4–6 ppm 的尖銳酚 OH 不算「已列出」，維持 v1.4.2 的行為（寫在 `V12_CONFIG.useV143Select` 註解與 RELEASE_NOTES.md）。
+- **發布前驗證**（使用者指示不跑全套，只跑相關檔）：全套（139 檔、單一工作程序）跑到 6 個檔、0 失敗時依指示停止（見 CHECKPOINT.md）；改跑「會走到 planFormulaSearch／分子式篩選」的 52 個檔（靜態搜尋：直接 import planFormulaSearch／useV143Select／generateForCompositions／executeSixStepAnalysis，或 import 走完整流程的 helper；排除已通過的 6 檔）：**52 檔 870 測試全過**，4 個工作程序並行，1033 s。建置通過（dist 2026-11-18 23:26）；E2E **39／39**（4.7 分）。
+- **單一工作程序的原因**：第一輪我用專案的 `test` 腳本（`vitest run --maxWorkers=1`）跑全套，沒有覆蓋它；這個設定是專案原有的（RDKit WASM 記憶體與耗時型測試的穩定性），不是機器只有一個核心（16 個邏輯處理器）。這次改 4 個並行，沒有出現因並行造成的失敗。
