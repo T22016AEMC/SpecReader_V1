@@ -122,14 +122,11 @@ export function planFormulaSearch(hypotheses: CompositionHypothesis[], oxygenFlo
   const P = V12_CONFIG.planning;
   const notSearched = new Map<string, NotSearched>();
   const mark = (h: CompositionHypothesis, reason: NotSearchedReason, text: string) => notSearched.set(h.id, {reason, text});
-  // v1.4.3 (useV143Select): (2) a peak the 1H table already lists as exchangeable is not "a hidden OH", so the add-back is off; (3) the add-back returns what scoreComposition charged (the weight times the partial-coverage factor of an unconfirmed table), not always the full weight.
+  // v1.4.3 (useV143Select): a peak the 1H table already lists as exchangeable is not "a hidden OH", so the add-back is off. When it is on, it is the full weight as in v1.4.2 (the half-weight variant of the first v1.4.3 draft was withdrawn).
   const sel = v143SelectActive();
   const hidden = hiddenExchangeableEvidence(evidence.observations).present && !(sel && listedExchangeableSignal(evidence.observations).present);
-  const h1Counted = evidence.observations.filter(o => o.modality === '1H_NMR' && !o.optional);
-  const h1Complete = h1Counted.every(o => o.relativeIntegral !== null && o.relativeIntegral > 0 && o.coverage === 'CONFIRMED_COMPLETE');
-  const addBack = COMPOSITION_CONFIG.weights.exchangeableMissing * (sel && !h1Complete ? COMPOSITION_CONFIG.weights.partialCoverageHydrogenFactor : 1);
   /** Score used for ordering only: with hidden-exchangeable evidence the prior against missing exchangeable H is not charged. */
-  const planScore = (h: CompositionHypothesis) => h.score + (hidden ? addBack * eOf(h) : 0);
+  const planScore = (h: CompositionHypothesis) => h.score + (hidden ? COMPOSITION_CONFIG.weights.exchangeableMissing * eOf(h) : 0);
   const scoreOrder = (a: CompositionHypothesis, b: CompositionHypothesis) => (Math.abs(planScore(a) - planScore(b)) > SCORE_TIE ? planScore(b) - planScore(a) : 0);
   // v1.3.0 (G5): a strong C=O in the IR needs at least one double bond or ring, so a formula with DBE 0 is demoted: it is ordered (and, among the variants of one O count, chosen) after every formula with DBE ≥ 1,
   // never removed. If the C=O reading is wrong (a water band, a ring band) the cost is that the true formula is searched later (or in round 2), not that it is lost. Flag off: no demotion.

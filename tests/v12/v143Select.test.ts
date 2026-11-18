@@ -56,7 +56,7 @@ describe('(1) the 1H feasibility is checked before the representative is chosen'
   });
 });
 
-describe('(2) a listed exchangeable peak switches the add-back off; (3) the add-back returns what the composition score charged', () => {
+describe('(2) a listed exchangeable peak switches the add-back off (the add-back itself is unchanged)', () => {
   it('listedExchangeableSignal: DMSO-d6 singlet 9.19 yes; CDCl3 singlet 9.19 no; a CH3 singlet in CDCl3 and a ring singlet in DMSO-d6 no; above 10 ppm in any solvent yes; user-marked yes; optional (solvent) peaks no', () => {
     expect(listedExchangeableSignal([h1Obs('a', 9.19, 's', 'DMSO-d6')]).present).toBe(true);
     expect(listedExchangeableSignal([h1Obs('a', 9.19, 's', 'CDCl3')]).present).toBe(false);
@@ -67,19 +67,26 @@ describe('(2) a listed exchangeable peak switches the add-back off; (3) the add-
     expect(listedExchangeableSignal([h1Obs('a', 5.0, 'm', 'CDCl3', {exchangeable: true} as Partial<ObservedEvidence>)]).present).toBe(true);
     expect(listedExchangeableSignal([h1Obs('a', 9.19, 's', 'DMSO-d6', {optional: true})]).present).toBe(false);
   });
-  it('no listed peak: the add-back stays (hiddenExchangeable true) and with an unconfirmed table cancels exactly what was charged, so e = 0 and e = 2 tie and the lower C / H wins', () => {
+  it('the add-back is the full weight as in v1.4.2: no listed peak = same as flag off; a listed 9.19 singlet in DMSO-d6 switches it off (hiddenExchangeable false) only with the flag on', () => {
     const ir = {id: 'ir', modality: 'IR', value: 3369, shape: 'BROAD', optional: false, metadata: {}} as unknown as ObservedEvidence;
-    const ev = {observations: [ir, h1Obs('h', 6.9, 'd', 'DMSO-d6', {relativeIntegral: 2, coverage: 'PARTIAL'} as Partial<ObservedEvidence>)], irCoversAldehydeRegion: false, nitrogenAllowed: false};
-    // composition scores as scoreComposition gives them for an unconfirmed table: e = 2 is charged 0.3 x 2 x 0.5 = 0.3 more than e = 0
+    const base = h1Obs('h', 6.9, 'd', 'DMSO-d6', {relativeIntegral: 2, coverage: 'PARTIAL'} as Partial<ObservedEvidence>);
+    const none = {observations: [ir, base], irCoversAldehydeRegion: false, nitrogenAllowed: false};
+    const listed = {observations: [ir, base, h1Obs('oh', 9.19, 's', 'DMSO-d6', {relativeIntegral: 1, coverage: 'PARTIAL'} as Partial<ObservedEvidence>)], irCoversAldehydeRegion: false, nitrogenAllowed: false};
+    // composition scores: e = 2 is charged 0.3 x 2 x 0.5 = 0.3 more than e = 0; the full add-back 0.3 x 2 puts e = 2 ahead (+0.225 against -0.075)
     const g = [hyp('C15H18O2', 2, -0.375, 2), hyp('C15H16O2', 2, -0.075, 0)];
-    flag(true);
     V12_CONFIG.planning.maxOxygenVariantsPerKeyMultiple = 5;
-    const on = planFormulaSearch(g, null, ev, () => feas(true));
-    expect(on.hiddenExchangeable).toBe(true);
-    expect(names(on)[0]).toBe('C15H16O2');
+    for (const on of [true, false]) {
+      flag(on);
+      const r = planFormulaSearch(g, null, none, () => feas(true));
+      expect(r.hiddenExchangeable, `no listed peak, flag ${on}`).toBe(true);
+      expect(names(r)[0]).toBe('C15H18O2');
+    }
     flag(false);
-    const off = planFormulaSearch(g, null, ev, () => feas(true));
-    expect(names(off)[0]).toBe('C15H18O2'); // v1.4.2: the full 0.3 x 2 is given back, 0.3 more than was charged
+    expect(planFormulaSearch(g, null, listed, () => feas(true)).hiddenExchangeable).toBe(true);
+    flag(true);
+    const r = planFormulaSearch(g, null, listed, () => feas(true));
+    expect(r.hiddenExchangeable).toBe(false);
+    expect(names(r)[0]).toBe('C15H16O2');
   });
 });
 

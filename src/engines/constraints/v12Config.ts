@@ -222,8 +222,8 @@ export const V12_CONFIG = {
    * v1.4.3 (formula selection of the no-formula search, a bug fix; notes/v1.4.3/BPA_BISECT.md). DEFAULT ON. false = every path is identical to v1.4.2. Works inside planFormulaSearch only (so only while the v1.2.1 planning gate is open). Three changes:
    * (1) the 1H feasibility of a formula is checked BEFORE the representative of its (k, C) key is chosen: an infeasible formula cannot stand for its O count, the best FEASIBLE one does (a group is dropped only when no member is feasible).
    * (2) the "missing exchangeable H" add-back of the ordering score (planScore) is not used when the 1H table already lists a peak that can only be read as OH/NH (exchangeable-marked, above exchangeable.alwaysAbovePpm, or a singlet in the solvent's OH window
-   *     AND above the aromatic C-H class, i.e. not competing with an ordinary C-H class); and
-   * (3) when it is used, it gives back exactly what scoreComposition charged: weights.exchangeableMissing x e x (partialCoverageHydrogenFactor while the 1H table is not confirmed complete), not always the full weight.
+   *     AND above the aromatic C-H class, i.e. not competing with an ordinary C-H class). When the add-back is used it is the full weight, as in v1.4.2.
+   * Known limit: a sharp phenol OH at 4-6 ppm in CDCl3 does not count as listed (it overlaps ordinary C-H classes), so the v1.4.2 behaviour stays there.
    */
   useV143Select: true as boolean,
   v142IR: {alkeneOOP: true as boolean, negativeEvidence: false as boolean, bandUncertaintyCm1: 10,
